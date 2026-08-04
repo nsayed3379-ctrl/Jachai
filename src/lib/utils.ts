@@ -78,6 +78,10 @@ export function isValidBdPhone(raw: string): boolean {
   return /^\+8801[3-9]\d{8}$/.test(normalized);
 }
 
+export function isValidPassword(password: string): boolean {
+  return password.length >= 8;
+}
+
 export function truncateId(id: string, len = 8): string {
   return id ? id.slice(0, len) : id;
 }

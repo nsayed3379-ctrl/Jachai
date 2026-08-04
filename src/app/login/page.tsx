@@ -1,182 +1,94 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ApiClientError, authApi } from "@/lib/api";
+import { authApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import { isValidBdPhone, normalizeBdPhone } from "@/lib/utils";
-import type { UserRole } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { FieldError, FieldHint, Input, Label } from "@/components/ui/field";
-
-const RESEND_COOLDOWN_SECONDS = 60;
+import { FieldError, Input, Label } from "@/components/ui/field";
 
 export default function LoginPage() {
   const { login } = useAuth();
   const { show } = useToast();
   const router = useRouter();
 
-  const [step, setStep] = useState<"phone" | "otp">("phone");
   const [phone, setPhone] = useState("");
-  const [role, setRole] = useState<UserRole>("CONSUMER");
-  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [sending, setSending] = useState(false);
-  const [verifying, setVerifying] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
 
-  function startCooldown() {
-    setCooldown(RESEND_COOLDOWN_SECONDS);
-    const timer = setInterval(() => {
-      setCooldown((c) => {
-        if (c <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return c - 1;
-      });
-    }, 1000);
-  }
-
-  async function requestOtp() {
+  async function handleLogin() {
     setError(null);
     if (!isValidBdPhone(phone)) {
       setError("Enter a valid Bangladeshi mobile number (e.g. 01712345678).");
       return;
     }
-    setSending(true);
-    try {
-      await authApi.requestOtp(normalizeBdPhone(phone));
-      setStep("otp");
-      startCooldown();
-      show("OTP sent — it expires in 5 minutes.", "success");
-    } catch (err) {
-      if (err instanceof ApiClientError && err.status === 429) {
-        setError("Too many OTP requests — please wait before trying again.");
-      } else {
-        setError(errorMessage(err));
-      }
-    } finally {
-      setSending(false);
-    }
-  }
-
-  async function verifyOtp() {
-    setError(null);
-    if (code.trim().length < 4) {
-      setError("Enter the code you received.");
+    if (!password) {
+      setError("Enter your password.");
       return;
     }
-    setVerifying(true);
+    setSubmitting(true);
     try {
-      const tokens = await authApi.verifyOtp(normalizeBdPhone(phone), code.trim(), role);
+      const tokens = await authApi.login(normalizeBdPhone(phone), password);
       login(tokens);
       show("Logged in", "success");
       router.push("/");
     } catch (err) {
       setError(errorMessage(err));
     } finally {
-      setVerifying(false);
+      setSubmitting(false);
     }
   }
 
   return (
     <div className="max-w-sm mx-auto">
-      <h1 className="font-display text-2xl font-bold text-ink-900 text-center">
-        {step === "phone" ? "Log in or sign up" : "Enter your code"}
-      </h1>
+      <h1 className="font-display text-2xl font-bold text-ink-900 text-center">Log in</h1>
       <p className="mt-1.5 text-sm text-ink-500 text-center">
-        {step === "phone"
-          ? "We'll text you a one-time code — no password needed."
-          : `Sent to ${normalizeBdPhone(phone)}`}
+        Enter your mobile number and password to continue.
       </p>
 
       <div className="mt-6 space-y-4">
-        {step === "phone" && (
-          <>
-            <div>
-              <Label htmlFor="phone">Mobile number</Label>
-              <Input
-                id="phone"
-                inputMode="tel"
-                placeholder="01712345678"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && requestOtp()}
-              />
-            </div>
+        <div>
+          <Label htmlFor="phone">Mobile number</Label>
+          <Input
+            id="phone"
+            inputMode="tel"
+            placeholder="01712345678"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+          />
+        </div>
 
-            <div>
-              <Label>I'm signing up as</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setRole("CONSUMER")}
-                  className={`rounded border px-3 py-2 text-sm ${
-                    role === "CONSUMER" ? "border-brand-600 bg-brand-50 text-brand-800" : "border-ink-200 text-ink-600"
-                  }`}
-                >
-                  A customer
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole("BUSINESS_OWNER")}
-                  className={`rounded border px-3 py-2 text-sm ${
-                    role === "BUSINESS_OWNER" ? "border-brand-600 bg-brand-50 text-brand-800" : "border-ink-200 text-ink-600"
-                  }`}
-                >
-                  A business owner
-                </button>
-              </div>
-              <FieldHint>
-                Only used the first time this number signs up — an existing account keeps its
-                original role. One phone number can hold only one account type.
-              </FieldHint>
-            </div>
+        <div>
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+          />
+        </div>
 
-            <FieldError>{error}</FieldError>
+        <FieldError>{error}</FieldError>
 
-            <Button className="w-full" onClick={requestOtp} loading={sending}>
-              Send code
-            </Button>
-          </>
-        )}
+        <Button className="w-full" onClick={handleLogin} loading={submitting}>
+          Log in
+        </Button>
 
-        {step === "otp" && (
-          <>
-            <div>
-              <Label htmlFor="code">6-digit code</Label>
-              <Input
-                id="code"
-                inputMode="numeric"
-                autoFocus
-                placeholder="••••••"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && verifyOtp()}
-              />
-              <FieldError>{error}</FieldError>
-            </div>
-
-            <Button className="w-full" onClick={verifyOtp} loading={verifying}>
-              Verify &amp; continue
-            </Button>
-
-            <div className="flex justify-between text-xs text-ink-400">
-              <button onClick={() => setStep("phone")} className="hover:underline">
-                ← Change number
-              </button>
-              <button
-                onClick={requestOtp}
-                disabled={cooldown > 0 || sending}
-                className="hover:underline disabled:opacity-50"
-              >
-                {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}
-              </button>
-            </div>
-          </>
-        )}
+        <div className="flex justify-between text-xs text-ink-400">
+          <Link href="/signup" className="hover:underline">
+            New here? Create an account
+          </Link>
+          <Link href="/forgot-password" className="hover:underline">
+            Forgot password?
+          </Link>
+        </div>
       </div>
     </div>
   );

@@ -27,6 +27,7 @@ import type {
   ModerationQueueCounts,
   NidVerification,
   PageResponse,
+  PreferredLanguage,
   PreSignedUploadResponse,
   Report,
   ReportReason,
@@ -37,6 +38,7 @@ import type {
   TokenPairDto,
   UpdateBusinessRequest,
   UpdateReviewRequest,
+  UserProfile,
   UserRole,
   VerificationMethod,
   VisibilityStatus,
@@ -156,14 +158,47 @@ export const authApi = {
   requestOtp: (phoneNumber: string) =>
     request<void>("/api/v1/otp/request", { method: "POST", body: { phoneNumber }, auth: false }),
 
-  verifyOtp: (phoneNumber: string, code: string, roleIfNewAccount?: UserRole) =>
-    request<TokenPairDto>("/api/v1/otp/verify", {
+  register: (phoneNumber: string, code: string, password: string, role: UserRole) =>
+    request<TokenPairDto>("/api/v1/auth/register", {
       method: "POST",
-      body: { phoneNumber, code, roleIfNewAccount: roleIfNewAccount ?? null },
+      body: { phoneNumber, code, password, role },
+      auth: false,
+    }),
+
+  login: (phoneNumber: string, password: string) =>
+    request<TokenPairDto>("/api/v1/auth/login", {
+      method: "POST",
+      body: { phoneNumber, password },
+      auth: false,
+    }),
+
+  resetPassword: (phoneNumber: string, code: string, newPassword: string) =>
+    request<TokenPairDto>("/api/v1/auth/reset-password", {
+      method: "POST",
+      body: { phoneNumber, code, newPassword },
       auth: false,
     }),
 
   logout: () => request<void>("/api/v1/auth/logout", { method: "POST" }),
+};
+
+// ---------------------------------------------------------------------------
+// User profile
+// ---------------------------------------------------------------------------
+export const userApi = {
+  me: () => request<UserProfile>("/api/v1/users/me"),
+
+  update: (name: string | null, preferredLanguage: PreferredLanguage, profilePhotoUrl: string | null) =>
+    request<UserProfile>("/api/v1/users/me", {
+      method: "PUT",
+      body: { name, preferredLanguage, profilePhotoUrl },
+    }),
+
+  requestPhotoUploadUrl: (filename: string) =>
+    request<PreSignedUploadResponse>("/api/v1/users/me/photo/upload-url", {
+      method: "POST",
+      query: { filename },
+    }),
 };
 
 // ---------------------------------------------------------------------------

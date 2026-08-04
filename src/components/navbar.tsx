@@ -71,12 +71,17 @@ export function Navbar() {
 
         <div className="hidden md:flex items-center gap-2">
           {user ? (
-            <button
-              onClick={() => logout()}
-              className="px-3 py-2 rounded text-sm text-ink-600 hover:bg-ink-100"
-            >
-              Log out
-            </button>
+            <>
+              <Link href="/account" className="px-3 py-2 rounded text-sm text-ink-600 hover:bg-ink-100">
+                Account
+              </Link>
+              <button
+                onClick={() => logout()}
+                className="px-3 py-2 rounded text-sm text-ink-600 hover:bg-ink-100"
+              >
+                Log out
+              </button>
+            </>
           ) : (
             <Link
               href="/login"
@@ -132,9 +137,14 @@ export function Navbar() {
             </Link>
           )}
           {user ? (
-            <button onClick={() => logout()} className="text-left px-3 py-2 rounded hover:bg-ink-100 text-rose-600">
-              Log out
-            </button>
+            <>
+              <Link href="/account" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
+                Account
+              </Link>
+              <button onClick={() => logout()} className="text-left px-3 py-2 rounded hover:bg-ink-100 text-rose-600">
+                Log out
+              </button>
+            </>
           ) : (
             <Link href="/login" className="px-3 py-2 rounded bg-brand-700 text-white text-center" onClick={() => setMenuOpen(false)}>
               Log in

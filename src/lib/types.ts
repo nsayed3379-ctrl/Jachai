@@ -17,6 +17,17 @@ export interface DecodedAccessToken {
   exp: number;
 }
 
+export type PreferredLanguage = "en" | "bn";
+
+export interface UserProfile {
+  id: string;
+  phoneNumber: string;
+  role: UserRole;
+  name: string | null;
+  profilePhotoUrl: string | null;
+  preferredLanguage: PreferredLanguage;
+}
+
 // ---------------------------------------------------------------------------
 // Reference data
 // ---------------------------------------------------------------------------
