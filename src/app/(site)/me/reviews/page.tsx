@@ -49,7 +49,7 @@ function MyReviewsContent() {
             title="You haven't reviewed anything yet"
             description="Find a business and share your experience."
             action={
-              <Link href="/" className="text-sm text-brand-700 hover:underline">
+              <Link href="/" className="text-sm text-crimson-700 hover:underline">
                 Browse businesses →
               </Link>
             }
@@ -66,7 +66,7 @@ function MyReviewsContent() {
               <div key={r.id}>
                 <p className="text-xs text-ink-400 mb-1">
                   {cached ? (
-                    <Link href={`/business/${cached.slug}`} className="text-brand-700 hover:underline">
+                    <Link href={`/business/${cached.slug}`} className="text-crimson-700 hover:underline">
                       {cached.name}
                     </Link>
                   ) : (

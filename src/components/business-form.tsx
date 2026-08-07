@@ -298,7 +298,7 @@ export function BusinessForm({ existing }: Props) {
               onClick={() => toggleAttribute(a.id)}
               className={`text-xs rounded-full border px-3 py-1 ${
                 form.attributeIds.includes(a.id)
-                  ? "border-brand-600 bg-brand-50 text-brand-800"
+                  ? "border-crimson-600 bg-crimson-50 text-crimson-800"
                   : "border-ink-200 text-ink-600"
               }`}
             >

@@ -11,17 +11,17 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<Variant, string> = {
-  primary: "bg-brand-700 text-white hover:bg-brand-800 active:bg-brand-900 disabled:bg-ink-200",
+  primary: "bg-crimson-600 text-white shadow-sm hover:bg-crimson-700 active:bg-crimson-800 disabled:bg-ink-200",
   secondary: "bg-gold-400 text-ink-900 hover:bg-gold-500 disabled:bg-ink-100",
-  outline: "border border-ink-200 text-ink-800 bg-white hover:bg-ink-50 disabled:text-ink-300",
+  outline: "border border-ink-200 text-ink-800 bg-white hover:border-crimson-300 hover:text-crimson-700 disabled:text-ink-300",
   ghost: "text-ink-700 hover:bg-ink-100 disabled:text-ink-300",
   danger: "bg-rose-500 text-white hover:bg-rose-600 disabled:bg-ink-200",
 };
 
 const sizeClasses: Record<Size, string> = {
-  sm: "text-xs px-3 py-1.5 gap-1.5",
-  md: "text-sm px-4 py-2 gap-2",
-  lg: "text-base px-5 py-2.5 gap-2",
+  sm: "text-xs px-3.5 py-1.5 gap-1.5",
+  md: "text-sm px-5 py-2.5 gap-2",
+  lg: "text-base px-6 py-3 gap-2",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -31,9 +31,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={cn(
-          "inline-flex items-center justify-center rounded font-medium transition-colors",
-          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500",
-          "disabled:cursor-not-allowed",
+          "inline-flex items-center justify-center rounded-full font-semibold transition-all",
+          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-crimson-500",
+          "disabled:cursor-not-allowed disabled:shadow-none",
           variantClasses[variant],
           sizeClasses[size],
           className

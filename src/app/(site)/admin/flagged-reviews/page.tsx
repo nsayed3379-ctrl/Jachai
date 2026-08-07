@@ -149,7 +149,7 @@ function FlaggedReviewsContent() {
                   </Button>
                   <button
                     onClick={() => setExpanded(expanded === r.id ? null : r.id)}
-                    className="ml-auto text-xs text-brand-700 hover:underline"
+                    className="ml-auto text-xs text-crimson-700 hover:underline"
                   >
                     {expanded === r.id ? "Hide signals" : "View signal breakdown"}
                   </button>

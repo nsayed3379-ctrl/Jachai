@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 export function StarDisplay({ rating, size = "md" }: { rating: number; size?: "sm" | "md" | "lg" }) {
   const sizeClass = { sm: "text-sm", md: "text-lg", lg: "text-2xl" }[size];
   return (
-    <div className={cn("flex text-gold-400", sizeClass)} aria-label={`${rating} out of 5 stars`}>
+    <div className={cn("flex text-crimson-600", sizeClass)} aria-label={`${rating} out of 5 stars`}>
       {[1, 2, 3, 4, 5].map((n) => (
         <span key={n} className={n <= Math.round(rating) ? "" : "text-ink-200"}>
           ★
@@ -38,7 +38,7 @@ export function StarInput({
           onClick={() => onChange(n)}
           className={cn(
             "transition-transform hover:scale-110",
-            n <= active ? "text-gold-400" : "text-ink-200"
+            n <= active ? "text-crimson-600" : "text-ink-200"
           )}
         >
           ★

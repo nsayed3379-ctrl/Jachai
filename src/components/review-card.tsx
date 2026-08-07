@@ -82,35 +82,35 @@ export function ReviewCard({
         </div>
       )}
 
-      <div className="mt-3 flex items-center gap-4 text-xs">
+      <div className="mt-3 flex items-center gap-2 text-xs">
         <button
           onClick={() => vote("USEFUL")}
           disabled={!user || voting !== null}
-          className="text-ink-500 hover:text-brand-700 disabled:opacity-50"
+          className="rounded-full border border-ink-200 px-3 py-1.5 font-medium text-ink-600 hover:border-crimson-300 hover:text-crimson-700 disabled:opacity-50"
         >
           👍 Useful ({review.usefulCount})
         </button>
         <button
           onClick={() => vote("FUNNY")}
           disabled={!user || voting !== null}
-          className="text-ink-500 hover:text-brand-700 disabled:opacity-50"
+          className="rounded-full border border-ink-200 px-3 py-1.5 font-medium text-ink-600 hover:border-crimson-300 hover:text-crimson-700 disabled:opacity-50"
         >
           😄 Funny ({review.funnyCount})
         </button>
         <button
           onClick={() => vote("COOL")}
           disabled={!user || voting !== null}
-          className="text-ink-500 hover:text-brand-700 disabled:opacity-50"
+          className="rounded-full border border-ink-200 px-3 py-1.5 font-medium text-ink-600 hover:border-crimson-300 hover:text-crimson-700 disabled:opacity-50"
         >
           😎 Cool ({review.coolCount})
         </button>
 
         {isOwnReview && review.editable && (
           <div className="ml-auto flex gap-3">
-            <button onClick={() => onEdit?.(review)} className="text-brand-700 hover:underline">
+            <button onClick={() => onEdit?.(review)} className="text-crimson-700 hover:underline font-medium">
               Edit
             </button>
-            <button onClick={handleDelete} disabled={deleting} className="text-rose-600 hover:underline">
+            <button onClick={handleDelete} disabled={deleting} className="text-rose-600 hover:underline font-medium">
               Delete
             </button>
           </div>

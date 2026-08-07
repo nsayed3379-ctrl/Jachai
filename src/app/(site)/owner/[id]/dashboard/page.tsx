@@ -98,7 +98,7 @@ function ReviewsTab({ business }: { business: BusinessResponse }) {
             {r.content && <p className="mt-1.5 text-sm text-ink-700">{r.content}</p>}
             <div className="mt-2">
               {thread ? (
-                <Link href={`/owner/inbox/${thread.id}`} className="text-xs text-brand-700 hover:underline">
+                <Link href={`/owner/inbox/${thread.id}`} className="text-xs text-crimson-700 hover:underline">
                   Reply via message thread →
                 </Link>
               ) : (
@@ -384,7 +384,7 @@ function DashboardContent() {
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`px-4 py-2 text-sm border-b-2 -mb-px ${
-              tab === t.key ? "border-brand-700 text-brand-800 font-medium" : "border-transparent text-ink-500"
+              tab === t.key ? "border-crimson-600 text-crimson-700 font-medium" : "border-transparent text-ink-500"
             }`}
           >
             {t.label}

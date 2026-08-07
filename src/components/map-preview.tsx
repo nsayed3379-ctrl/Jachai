@@ -34,7 +34,7 @@ export function MapPreview({
       ) : (
         <div className="h-full w-full bg-[radial-gradient(circle_at_30%_30%,#EAF5F0,transparent_60%),radial-gradient(circle_at_70%_70%,#F4E4B9,transparent_55%)] bg-ink-50 flex items-center justify-center">
           <div className="text-center">
-            <div className="mx-auto h-9 w-9 rounded-full bg-brand-700 text-white flex items-center justify-center text-lg">
+            <div className="mx-auto h-9 w-9 rounded-full bg-crimson-600 text-white flex items-center justify-center text-lg">
               📍
             </div>
             <p className="mt-2 text-xs text-ink-400">

@@ -2,13 +2,13 @@ import { cn } from "@/lib/utils";
 
 export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
-    <div className={cn("rounded-md border border-ink-100 bg-white shadow-card", className)}>
+    <div className={cn("rounded-xl border border-ink-100/70 bg-white shadow-card", className)}>
       {children}
     </div>
   );
 }
 
-type BadgeTone = "brand" | "gold" | "rose" | "neutral";
+type BadgeTone = "brand" | "gold" | "rose" | "neutral" | "crimson";
 
 export function Badge({
   tone = "neutral",
@@ -24,6 +24,7 @@ export function Badge({
     gold: "bg-gold-50 text-gold-700 border-gold-200",
     rose: "bg-rose-500/10 text-rose-600 border-rose-500/30",
     neutral: "bg-ink-50 text-ink-600 border-ink-200",
+    crimson: "bg-crimson-50 text-crimson-700 border-crimson-200",
   };
   return (
     <span
@@ -40,7 +41,7 @@ export function Badge({
 
 export function Spinner({ className }: { className?: string }) {
   return (
-    <svg className={cn("animate-spin h-5 w-5 text-brand-600", className)} viewBox="0 0 24 24" fill="none">
+    <svg className={cn("animate-spin h-5 w-5 text-crimson-600", className)} viewBox="0 0 24 24" fill="none">
       <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
     </svg>
@@ -65,7 +66,7 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="text-center py-14 px-6 border border-dashed border-ink-200 rounded-md bg-sand-100/60">
+    <div className="text-center py-14 px-6 border border-dashed border-ink-200 rounded-xl bg-sand-100/60">
       <p className="font-display text-lg text-ink-800">{title}</p>
       {description && <p className="mt-1.5 text-sm text-ink-500 max-w-md mx-auto">{description}</p>}
       {action && <div className="mt-4">{action}</div>}
@@ -88,7 +89,7 @@ export function Pagination({
       <button
         onClick={() => onChange(Math.max(0, page - 1))}
         disabled={page === 0}
-        className="px-3 py-1.5 text-sm rounded border border-ink-200 disabled:opacity-30 hover:bg-ink-50"
+        className="px-4 py-1.5 text-sm font-medium rounded-full border border-ink-200 disabled:opacity-30 hover:border-crimson-300 hover:text-crimson-700"
       >
         Prev
       </button>
@@ -98,7 +99,7 @@ export function Pagination({
       <button
         onClick={() => onChange(Math.min(totalPages - 1, page + 1))}
         disabled={page >= totalPages - 1}
-        className="px-3 py-1.5 text-sm rounded border border-ink-200 disabled:opacity-30 hover:bg-ink-50"
+        className="px-4 py-1.5 text-sm font-medium rounded-full border border-ink-200 disabled:opacity-30 hover:border-crimson-300 hover:text-crimson-700"
       >
         Next
       </button>
@@ -108,7 +109,7 @@ export function Pagination({
 
 export function ErrorBanner({ message }: { message: string }) {
   return (
-    <div className="rounded-md border border-rose-500/30 bg-rose-500/5 px-4 py-3 text-sm text-rose-600">
+    <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 px-4 py-3 text-sm text-rose-600">
       {message}
     </div>
   );

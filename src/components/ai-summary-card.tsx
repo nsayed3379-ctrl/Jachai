@@ -37,8 +37,8 @@ export function AiSummaryCard({ businessId }: { businessId: string }) {
   if (!summary) return null;
 
   return (
-    <div className="rounded-md border border-brand-200 bg-brand-50/60 p-4">
-      <div className="flex items-center gap-2 text-brand-800">
+    <div className="rounded-xl border border-crimson-200 bg-crimson-50/60 p-4">
+      <div className="flex items-center gap-2 text-crimson-800">
         <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor">
           <path d="M10 1l1.9 5.6L17.5 8 11.9 9.9 10 15.5 8.1 9.9 2.5 8l5.6-1.4z" />
         </svg>

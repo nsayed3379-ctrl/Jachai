@@ -129,9 +129,12 @@ export default function BusinessDetailPage() {
   return (
     <div>
       {/* Cover + gallery */}
-      <div className="relative h-64 sm:h-80 w-full rounded-md overflow-hidden bg-ink-100">
+      <div className="relative h-64 sm:h-80 w-full rounded-2xl overflow-hidden bg-ink-100">
         {business.coverPhotoUrl ? (
-          <Image src={business.coverPhotoUrl} alt={business.name} fill className="object-cover" priority />
+          <>
+            <Image src={business.coverPhotoUrl} alt={business.name} fill className="object-cover" priority />
+            <div className="absolute inset-0 bg-gradient-to-t from-ink-900/50 via-transparent to-transparent" />
+          </>
         ) : (
           <div className="flex h-full items-center justify-center text-ink-300 font-display">
             {business.categoryName}
@@ -142,7 +145,7 @@ export default function BusinessDetailPage() {
       {gallery.length > 0 && (
         <div className="mt-2 grid grid-cols-4 sm:grid-cols-6 gap-2">
           {gallery.slice(0, 6).map((photo) => (
-            <div key={photo.id} className="relative h-16 sm:h-20 rounded overflow-hidden bg-ink-100">
+            <div key={photo.id} className="relative h-16 sm:h-20 rounded-lg overflow-hidden bg-ink-100">
               <Image src={photo.url} alt="" fill className="object-cover" sizes="120px" />
             </div>
           ))}
@@ -155,7 +158,7 @@ export default function BusinessDetailPage() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="font-display text-2xl font-bold text-ink-900">{business.name}</h1>
+                <h1 className="font-display text-3xl font-extrabold text-ink-900">{business.name}</h1>
                 {business.verified && <VerifiedBadge />}
               </div>
               <p className="mt-1 text-sm text-ink-500">
@@ -179,7 +182,7 @@ export default function BusinessDetailPage() {
           {business.attributes.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1.5">
               {business.attributes.map((attr) => (
-                <Badge key={attr} tone="brand">
+                <Badge key={attr} tone="crimson">
                   {attr}
                 </Badge>
               ))}
@@ -198,7 +201,7 @@ export default function BusinessDetailPage() {
 
           {!isOwnerOfThis && user && (
             <div className="mt-3">
-              <button onClick={fileClaim} disabled={claiming} className="text-xs text-ink-400 hover:text-brand-700 hover:underline">
+              <button onClick={fileClaim} disabled={claiming} className="text-xs text-ink-400 hover:text-crimson-700 hover:underline">
                 Is this your business? File a claim →
               </button>
             </div>
@@ -268,7 +271,7 @@ export default function BusinessDetailPage() {
         <div className="space-y-5">
           <MapPreview latitude={business.latitude} longitude={business.longitude} name={business.name} />
 
-          <div className="rounded-md border border-ink-100 bg-white p-4 shadow-card">
+          <div className="rounded-xl border border-ink-100/70 bg-white p-4 shadow-card">
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-400 mb-2">Contact</p>
             <p className="text-sm text-ink-700">{business.contactNumber}</p>
             {business.operatingHours && (
@@ -282,7 +285,7 @@ export default function BusinessDetailPage() {
           </div>
 
           {user?.role === "CONSUMER" && (
-            <div className="rounded-md border border-ink-100 bg-white p-4 shadow-card">
+            <div className="rounded-xl border border-ink-100/70 bg-white p-4 shadow-card">
               <p className="text-xs font-semibold uppercase tracking-wide text-ink-400 mb-2">
                 Message the owner
               </p>

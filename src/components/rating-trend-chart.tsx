@@ -23,7 +23,7 @@ export function RatingTrendChart({ rows }: { rows: unknown[][] }) {
           <span className="text-[11px] text-ink-500">{p.value.toFixed(1)}</span>
           <div className="w-full bg-ink-100 rounded-t overflow-hidden flex items-end" style={{ height: "100px" }}>
             <div
-              className="w-full bg-brand-600 rounded-t"
+              className="w-full bg-crimson-600 rounded-t"
               style={{ height: `${Math.max(4, (p.value / max) * 100)}%` }}
             />
           </div>

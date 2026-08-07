@@ -32,7 +32,7 @@ function BookmarkRow({ bookmark, onRemoved }: { bookmark: Bookmark; onRemoved: (
     <div className="flex items-center justify-between border-b border-ink-100 py-3 last:border-0">
       <div>
         {cached ? (
-          <Link href={`/business/${cached.slug}`} className="text-sm font-medium text-brand-700 hover:underline">
+          <Link href={`/business/${cached.slug}`} className="text-sm font-medium text-crimson-700 hover:underline">
             {cached.name}
           </Link>
         ) : (
@@ -120,7 +120,7 @@ function BookmarksContent() {
           <button
             onClick={() => selectCollection(null)}
             className={`block w-full text-left px-3 py-2 rounded text-sm ${
-              activeCollection === null ? "bg-brand-50 text-brand-800" : "hover:bg-ink-50 text-ink-700"
+              activeCollection === null ? "bg-crimson-50 text-crimson-800" : "hover:bg-ink-50 text-ink-700"
             }`}
           >
             All bookmarks
@@ -130,7 +130,7 @@ function BookmarksContent() {
               <button
                 onClick={() => selectCollection(c.id)}
                 className={`flex-1 text-left px-3 py-2 rounded text-sm truncate ${
-                  activeCollection === c.id ? "bg-brand-50 text-brand-800" : "hover:bg-ink-50 text-ink-700"
+                  activeCollection === c.id ? "bg-crimson-50 text-crimson-800" : "hover:bg-ink-50 text-ink-700"
                 }`}
               >
                 {c.name || "Unnamed collection"}
