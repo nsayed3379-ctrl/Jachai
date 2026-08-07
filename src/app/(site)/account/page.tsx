@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { userApi, uploadFileToPresignedUrl } from "@/lib/api";
 import { RoleGate } from "@/components/role-gate";
+import { useAuth } from "@/lib/auth-context";
+import { useTheme } from "@/lib/theme-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import type { PreferredLanguage } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -11,6 +13,8 @@ import { ErrorBanner, PageSpinner } from "@/components/ui/misc";
 
 function AccountContent() {
   const { show } = useToast();
+  const { setProfile: setAuthProfile } = useAuth();
+  const { theme, setTheme } = useTheme();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
@@ -31,6 +35,7 @@ function AccountContent() {
         setName(profile.name ?? "");
         setPreferredLanguage(profile.preferredLanguage);
         setProfilePhotoUrl(profile.profilePhotoUrl);
+        setAuthProfile(profile);
       })
       .catch((err) => setError(errorMessage(err)))
       .finally(() => setLoading(false));
@@ -54,7 +59,8 @@ function AccountContent() {
   async function save() {
     setSaving(true);
     try {
-      await userApi.update(name.trim() || null, preferredLanguage, profilePhotoUrl);
+      const updated = await userApi.update(name.trim() || null, preferredLanguage, profilePhotoUrl);
+      setAuthProfile(updated);
       show("Profile updated", "success");
     } catch (err) {
       show(errorMessage(err), "error");
@@ -130,6 +136,30 @@ function AccountContent() {
               }`}
             >
               বাংলা
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <Label>Appearance</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setTheme("light")}
+              className={`rounded border px-3 py-2 text-sm ${
+                theme === "light" ? "border-crimson-600 bg-crimson-50 text-crimson-800" : "border-ink-200 text-ink-600"
+              }`}
+            >
+              Light
+            </button>
+            <button
+              type="button"
+              onClick={() => setTheme("dark")}
+              className={`rounded border px-3 py-2 text-sm ${
+                theme === "dark" ? "border-crimson-600 bg-crimson-50 text-crimson-800" : "border-ink-200 text-ink-600"
+              }`}
+            >
+              Dark
             </button>
           </div>
         </div>

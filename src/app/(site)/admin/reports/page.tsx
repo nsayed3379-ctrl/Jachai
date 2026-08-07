@@ -59,7 +59,7 @@ function ReportsContent() {
       {!loading && error && <ErrorBanner message={error} />}
       {!loading && !error && reports.length === 0 && <EmptyState title="No pending reports" />}
       {!loading && !error && reports.length > 0 && (
-        <div className="rounded-md border border-ink-100 bg-white shadow-card overflow-x-auto">
+        <div className="rounded-md border border-ink-100 bg-surface shadow-card overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-ink-100 text-left text-xs text-ink-400 uppercase tracking-wide">

@@ -89,7 +89,7 @@ export function Modal({
   return createPortal(
     <div
       className={cn(
-        "fixed inset-0 z-[60] flex items-center justify-center p-4 bg-ink-900/60 backdrop-blur-sm transition-opacity duration-200",
+        "fixed inset-0 z-[60] flex items-center justify-center p-4 bg-scrim/60 backdrop-blur-sm transition-opacity duration-200",
         visible ? "opacity-100" : "opacity-0"
       )}
       onClick={onClose}
@@ -101,7 +101,7 @@ export function Modal({
         aria-labelledby={labelledBy}
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          "w-full rounded-[28px] sm:rounded-[32px] bg-white shadow-2xl transition-all duration-200 ease-out",
+          "w-full rounded-[28px] sm:rounded-[32px] bg-surface shadow-2xl transition-all duration-200 ease-out",
           visible ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-2",
           panelClassName
         )}

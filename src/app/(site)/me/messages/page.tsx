@@ -39,7 +39,7 @@ function ThreadsContent() {
           description="Message a business owner from their profile page to start a thread."
         />
       ) : (
-        <div className="rounded-md border border-ink-100 bg-white shadow-card divide-y divide-ink-100">
+        <div className="rounded-md border border-ink-100 bg-surface shadow-card divide-y divide-ink-100">
           {threads.map((t) => {
             const cached = lookupBusiness(t.businessId);
             return (

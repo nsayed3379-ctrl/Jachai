@@ -9,14 +9,14 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
-import { authApi } from "./api";
+import { authApi, userApi } from "./api";
 import { decodeAccessToken, isTokenExpired } from "./jwt";
 import {
   clearStoredTokens,
   getStoredAccessToken,
   setStoredTokens,
 } from "./storage";
-import type { TokenPairDto, UserRole } from "./types";
+import type { TokenPairDto, UserProfile, UserRole } from "./types";
 
 interface AuthUser {
   id: string;
@@ -25,15 +25,19 @@ interface AuthUser {
 
 interface AuthContextValue {
   user: AuthUser | null;
+  profile: UserProfile | null;
   isLoading: boolean;
   login: (tokens: TokenPairDto) => void;
   logout: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
+  setProfile: (profile: UserProfile) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
@@ -48,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     setUser(null);
+    setProfile(null);
     setIsLoading(false);
   }, []);
 
@@ -56,10 +61,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     function onAuthInvalid() {
       setUser(null);
+      setProfile(null);
     }
     window.addEventListener("rp:auth-invalid", onAuthInvalid);
     return () => window.removeEventListener("rp:auth-invalid", onAuthInvalid);
   }, [hydrateFromStorage]);
+
+  const refreshProfile = useCallback(async () => {
+    if (!user) return;
+    try {
+      setProfile(await userApi.me());
+    } catch {
+      // best-effort — navbar just falls back to no avatar
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) refreshProfile();
+    else setProfile(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const login = useCallback((tokens: TokenPairDto) => {
     setStoredTokens(tokens.accessToken, tokens.refreshToken);
@@ -75,12 +96,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     clearStoredTokens();
     setUser(null);
+    setProfile(null);
     router.push("/");
   }, [router]);
 
   const value = useMemo(
-    () => ({ user, isLoading, login, logout }),
-    [user, isLoading, login, logout]
+    () => ({ user, profile, isLoading, login, logout, refreshProfile, setProfile }),
+    [user, profile, isLoading, login, logout, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

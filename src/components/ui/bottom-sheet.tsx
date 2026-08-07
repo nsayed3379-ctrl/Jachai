@@ -85,7 +85,7 @@ export function BottomSheet({
   return createPortal(
     <div
       className={cn(
-        "fixed inset-0 z-[60] flex items-end justify-center bg-ink-900/60 backdrop-blur-sm transition-opacity duration-250",
+        "fixed inset-0 z-[60] flex items-end justify-center bg-scrim/60 backdrop-blur-sm transition-opacity duration-250",
         visible ? "opacity-100" : "opacity-0"
       )}
       onClick={onClose}
@@ -100,10 +100,10 @@ export function BottomSheet({
           transform: `translateY(${visible ? dragOffset : 400}px)`,
           transition: dragging ? "none" : "transform 250ms ease-out",
         }}
-        className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-t-[28px] bg-white shadow-2xl"
+        className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-t-[28px] bg-surface shadow-2xl"
       >
         <div
-          className="sticky top-0 z-10 flex justify-center bg-white pt-3 pb-1 cursor-grab active:cursor-grabbing touch-none"
+          className="sticky top-0 z-10 flex justify-center bg-surface pt-3 pb-1 cursor-grab active:cursor-grabbing touch-none"
           onPointerDown={(e) => {
             (e.target as HTMLElement).setPointerCapture(e.pointerId);
             onDragStart(e.clientY);

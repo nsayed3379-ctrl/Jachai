@@ -69,7 +69,7 @@ function MyBusinessesContent() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {businesses.map((b) => (
-          <div key={b.id} className="rounded-md border border-ink-100 bg-white p-4 shadow-card">
+          <div key={b.id} className="rounded-md border border-ink-100 bg-surface p-4 shadow-card">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <div className="flex items-center gap-2">

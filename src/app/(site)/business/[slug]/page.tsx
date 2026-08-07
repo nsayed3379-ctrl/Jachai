@@ -9,6 +9,7 @@ import { PRICE_TIER_LABELS } from "@/lib/config";
 import { useAuth } from "@/lib/auth-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import type { BusinessPhoto, BusinessResponse, ReviewResponse } from "@/lib/types";
+import { distanceKm, formatDistance } from "@/lib/utils";
 import { StarDisplay } from "@/components/star-rating";
 import { VerifiedBadge } from "@/components/verified-badge";
 import { MapPreview } from "@/components/map-preview";
@@ -43,6 +44,25 @@ export default function BusinessDetailPage() {
   const [messageText, setMessageText] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
   const [claiming, setClaiming] = useState(false);
+
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationStatus, setLocationStatus] = useState<"idle" | "locating" | "denied">("idle");
+
+  const [coverPhotoFailed, setCoverPhotoFailed] = useState(false);
+  const [failedGalleryPhotoIds, setFailedGalleryPhotoIds] = useState<Set<string>>(new Set());
+
+  function showDistanceFromMe() {
+    if (!("geolocation" in navigator)) {
+      setLocationStatus("denied");
+      return;
+    }
+    setLocationStatus("locating");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => setLocationStatus("denied"),
+      { timeout: 8000 }
+    );
+  }
 
   const loadReviews = useCallback(
     (businessId: string, page: number) => {
@@ -130,10 +150,17 @@ export default function BusinessDetailPage() {
     <div>
       {/* Cover + gallery */}
       <div className="relative h-64 sm:h-80 w-full rounded-2xl overflow-hidden bg-ink-100">
-        {business.coverPhotoUrl ? (
+        {business.coverPhotoUrl && !coverPhotoFailed ? (
           <>
-            <Image src={business.coverPhotoUrl} alt={business.name} fill className="object-cover" priority />
-            <div className="absolute inset-0 bg-gradient-to-t from-ink-900/50 via-transparent to-transparent" />
+            <Image
+              src={business.coverPhotoUrl}
+              alt={business.name}
+              fill
+              className="object-cover"
+              priority
+              onError={() => setCoverPhotoFailed(true)}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-scrim/50 via-transparent to-transparent" />
           </>
         ) : (
           <div className="flex h-full items-center justify-center text-ink-300 font-display">
@@ -142,13 +169,25 @@ export default function BusinessDetailPage() {
         )}
       </div>
 
-      {gallery.length > 0 && (
+      {gallery.filter((p) => !failedGalleryPhotoIds.has(p.id)).length > 0 && (
         <div className="mt-2 grid grid-cols-4 sm:grid-cols-6 gap-2">
-          {gallery.slice(0, 6).map((photo) => (
-            <div key={photo.id} className="relative h-16 sm:h-20 rounded-lg overflow-hidden bg-ink-100">
-              <Image src={photo.url} alt="" fill className="object-cover" sizes="120px" />
-            </div>
-          ))}
+          {gallery
+            .filter((p) => !failedGalleryPhotoIds.has(p.id))
+            .slice(0, 6)
+            .map((photo) => (
+              <div key={photo.id} className="relative h-16 sm:h-20 rounded-lg overflow-hidden bg-ink-100">
+                <Image
+                  src={photo.url}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  sizes="120px"
+                  onError={() =>
+                    setFailedGalleryPhotoIds((prev) => new Set(prev).add(photo.id))
+                  }
+                />
+              </div>
+            ))}
         </div>
       )}
 
@@ -164,6 +203,26 @@ export default function BusinessDetailPage() {
               <p className="mt-1 text-sm text-ink-500">
                 {business.categoryName} · {business.areaName}, {business.cityName} ·{" "}
                 {PRICE_TIER_LABELS[business.priceTier]}
+                {userLocation && (
+                  <>
+                    {" "}
+                    · {formatDistance(distanceKm(userLocation, { lat: business.latitude, lng: business.longitude }))}
+                  </>
+                )}
+                {!userLocation && locationStatus !== "denied" && (
+                  <>
+                    {" "}
+                    ·{" "}
+                    <button
+                      type="button"
+                      onClick={showDistanceFromMe}
+                      disabled={locationStatus === "locating"}
+                      className="text-crimson-600 hover:underline disabled:opacity-60"
+                    >
+                      {locationStatus === "locating" ? "Locating…" : "Show distance from me"}
+                    </button>
+                  </>
+                )}
               </p>
               <div className="mt-2 flex items-center gap-2">
                 <StarDisplay rating={business.averageRating} />
@@ -271,7 +330,7 @@ export default function BusinessDetailPage() {
         <div className="space-y-5">
           <MapPreview latitude={business.latitude} longitude={business.longitude} name={business.name} />
 
-          <div className="rounded-xl border border-ink-100/70 bg-white p-4 shadow-card">
+          <div className="rounded-xl border border-ink-100/70 bg-surface p-4 shadow-card">
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-400 mb-2">Contact</p>
             <p className="text-sm text-ink-700">{business.contactNumber}</p>
             {business.operatingHours && (
@@ -285,7 +344,7 @@ export default function BusinessDetailPage() {
           </div>
 
           {user?.role === "CONSUMER" && (
-            <div className="rounded-xl border border-ink-100/70 bg-white p-4 shadow-card">
+            <div className="rounded-xl border border-ink-100/70 bg-surface p-4 shadow-card">
               <p className="text-xs font-semibold uppercase tracking-wide text-ink-400 mb-2">
                 Message the owner
               </p>

@@ -57,7 +57,7 @@ export function MessageThreadView({ threadId }: { threadId: string }) {
   if (error) return <ErrorBanner message={error} />;
 
   return (
-    <div className="flex flex-col h-[60vh] rounded-md border border-ink-100 bg-white shadow-card">
+    <div className="flex flex-col h-[60vh] rounded-md border border-ink-100 bg-surface shadow-card">
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.map((m) => {
           const isMine = m.senderUserId === user?.id;

@@ -83,7 +83,7 @@ function FiltersSheetContent({
         </div>
       </div>
 
-      <div className="mt-7 flex gap-3 sticky bottom-0 bg-white pt-3 -mx-5 px-5 border-t border-ink-100">
+      <div className="mt-7 flex gap-3 sticky bottom-0 bg-surface pt-3 -mx-5 px-5 border-t border-ink-100">
         <Button variant="outline" className="flex-1" onClick={reset}>
           Reset
         </Button>

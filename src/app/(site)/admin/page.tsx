@@ -32,15 +32,15 @@ function OverviewContent() {
       {!loading && error && <ErrorBanner message={error} />}
       {!loading && counts && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Link href="/admin/reports" className="rounded-md border border-ink-100 bg-white p-5 shadow-card hover:shadow-pop">
+          <Link href="/admin/reports" className="rounded-md border border-ink-100 bg-surface p-5 shadow-card hover:shadow-pop">
             <p className="text-3xl font-display font-bold text-ink-900">{counts.pendingReports}</p>
             <p className="text-sm text-ink-500 mt-1">Pending reports</p>
           </Link>
-          <Link href="/admin/nid-queue" className="rounded-md border border-ink-100 bg-white p-5 shadow-card hover:shadow-pop">
+          <Link href="/admin/nid-queue" className="rounded-md border border-ink-100 bg-surface p-5 shadow-card hover:shadow-pop">
             <p className="text-3xl font-display font-bold text-ink-900">{counts.pendingNidVerifications}</p>
             <p className="text-sm text-ink-500 mt-1">Pending NID verifications</p>
           </Link>
-          <Link href="/admin/flagged-reviews" className="rounded-md border border-ink-100 bg-white p-5 shadow-card hover:shadow-pop">
+          <Link href="/admin/flagged-reviews" className="rounded-md border border-ink-100 bg-surface p-5 shadow-card hover:shadow-pop">
             <p className="text-3xl font-display font-bold text-ink-900">{counts.flaggedReviews}</p>
             <p className="text-sm text-ink-500 mt-1">Flagged reviews</p>
           </Link>

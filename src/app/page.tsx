@@ -16,6 +16,8 @@ const HERO_IMAGE_URL =
 export default function HomePage() {
   const [params, setParams] = useState<BusinessSearchParams>({ sort: "newest", page: 0, size: PAGE_SIZE });
   const [locationStatus, setLocationStatus] = useState<"idle" | "locating" | "granted" | "denied">("idle");
+  const [browseLocation, setBrowseLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [browseLocationStatus, setBrowseLocationStatus] = useState<"idle" | "locating" | "denied">("idle");
   const [results, setResults] = useState<BusinessResponse[]>([]);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
@@ -70,6 +72,24 @@ export default function HomePage() {
     resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  function showDistances() {
+    if (!("geolocation" in navigator)) {
+      setBrowseLocationStatus("denied");
+      return;
+    }
+    setBrowseLocationStatus("locating");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setBrowseLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => setBrowseLocationStatus("denied"),
+      { timeout: 8000 }
+    );
+  }
+
+  const cardLocation =
+    params.lat !== undefined && params.lng !== undefined
+      ? { lat: params.lat, lng: params.lng }
+      : browseLocation;
+
   return (
     <>
       {/* Hero: true full-viewport section, not nested inside any max-width container.
@@ -79,9 +99,9 @@ export default function HomePage() {
         {/* BackgroundImage */}
         <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${HERO_IMAGE_URL})` }} />
         {/* Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-ink-900/60 via-ink-900/25 to-ink-900/5" />
+        <div className="absolute inset-0 bg-gradient-to-t from-scrim/60 via-scrim/25 to-scrim/5" />
         {/* Extra darkening behind the transparent navbar so its white text stays legible over any photo */}
-        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-ink-900/55 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-scrim/55 to-transparent" />
 
         {/* Container: only the content is width-constrained, not the section itself */}
         <div className="relative flex flex-col justify-start pt-20 md:pt-24 lg:pt-32 pb-8 md:pb-10 lg:pb-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -91,7 +111,7 @@ export default function HomePage() {
           {/* relative z-20: backdrop-blur creates its own stacking context, so
               without an explicit z-index here the dropdown popovers inside
               BusinessFilters would render underneath the HeroContent below it. */}
-          <div className="relative z-20 rounded-2xl md:rounded-[28px] lg:rounded-[32px] border border-white/60 bg-white/85 backdrop-blur-xl p-4 md:p-6 lg:p-8 shadow-lift">
+          <div className="relative z-20 rounded-2xl md:rounded-[28px] lg:rounded-[32px] border border-white/60 bg-surface/85 backdrop-blur-xl p-4 md:p-6 lg:p-8 shadow-lift">
             <BusinessFilters
               value={params}
               onChange={setParams}
@@ -133,7 +153,23 @@ export default function HomePage() {
 
         {!loading && !error && (
           <>
-            <p className="text-sm font-medium text-ink-500 mb-4">{totalElements} businesses found</p>
+            <p className="text-sm font-medium text-ink-500 mb-4">
+              {totalElements} businesses found
+              {!cardLocation && browseLocationStatus !== "denied" && (
+                <>
+                  {" "}
+                  ·{" "}
+                  <button
+                    type="button"
+                    onClick={showDistances}
+                    disabled={browseLocationStatus === "locating"}
+                    className="text-crimson-600 hover:underline disabled:opacity-60"
+                  >
+                    {browseLocationStatus === "locating" ? "Locating…" : "Show distance from me"}
+                  </button>
+                </>
+              )}
+            </p>
             {results.length === 0 ? (
               <EmptyState
                 title="No businesses match those filters"
@@ -142,7 +178,7 @@ export default function HomePage() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {results.map((b) => (
-                  <BusinessCard key={b.id} business={b} />
+                  <BusinessCard key={b.id} business={b} userLocation={cardLocation ?? undefined} />
                 ))}
               </div>
             )}

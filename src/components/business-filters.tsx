@@ -65,7 +65,7 @@ export function FilterDropdown<T extends string | number>({
           "h-10 inline-flex items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-colors whitespace-nowrap",
           active
             ? "border-crimson-300 bg-crimson-50 text-crimson-700"
-            : "border-ink-200 bg-white text-ink-700 hover:border-ink-300"
+            : "border-ink-200 bg-surface text-ink-700 hover:border-ink-300"
         )}
       >
         {hasValue ? `${label}: ${activeLabel}` : label}
@@ -81,7 +81,7 @@ export function FilterDropdown<T extends string | number>({
       </button>
 
       {open && (
-        <div className="absolute z-20 mt-2 min-w-[190px] rounded-xl border border-ink-100 bg-white p-1.5 shadow-pop">
+        <div className="absolute z-20 mt-2 min-w-[190px] rounded-xl border border-ink-100 bg-surface p-1.5 shadow-pop">
           {options.map((opt) => (
             <button
               key={opt.label}
@@ -123,7 +123,7 @@ export function FilterOptionPill<T extends string | number>({
         "h-9 px-3.5 rounded-full text-sm font-medium border transition-colors whitespace-nowrap",
         active
           ? "bg-crimson-600 border-crimson-600 text-white"
-          : "bg-white border-ink-200 text-ink-700 hover:border-crimson-300 hover:text-crimson-700"
+          : "bg-surface border-ink-200 text-ink-700 hover:border-crimson-300 hover:text-crimson-700"
       )}
     >
       {children}

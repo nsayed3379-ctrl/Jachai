@@ -43,10 +43,10 @@ export function MapPreview({
           </div>
         </div>
       )}
-      <div className="absolute inset-0 flex items-end justify-between bg-gradient-to-t from-ink-900/70 via-transparent to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute inset-0 flex items-end justify-between bg-gradient-to-t from-scrim/70 via-transparent to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
         <span className="text-white text-sm font-medium">Get directions →</span>
       </div>
-      <div className="absolute top-3 right-3 rounded-full bg-white/95 px-2.5 py-1 text-xs font-medium text-ink-700 shadow group-hover:hidden">
+      <div className="absolute top-3 right-3 rounded-full bg-surface/95 px-2.5 py-1 text-xs font-medium text-ink-700 shadow group-hover:hidden">
         Open in Google Maps
       </div>
     </a>

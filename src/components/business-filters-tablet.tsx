@@ -71,7 +71,7 @@ function FiltersPopover({ value, onChange }: Pick<FiltersProps, "value" | "onCha
       </Button>
 
       {open && (
-        <div className="absolute right-0 z-20 mt-2 w-[340px] rounded-2xl border border-ink-100 bg-white p-5 shadow-pop">
+        <div className="absolute right-0 z-20 mt-2 w-[340px] rounded-2xl border border-ink-100 bg-surface p-5 shadow-pop">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 mb-2.5">Price</p>
             <div className="flex flex-wrap gap-2">

@@ -52,9 +52,9 @@ export function ReportButton({
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/40 px-4" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/40 px-4" onClick={() => setOpen(false)}>
           <div
-            className="w-full max-w-sm rounded-md bg-white p-5 shadow-pop"
+            className="w-full max-w-sm rounded-md bg-surface p-5 shadow-pop"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="font-display font-semibold text-ink-900">
