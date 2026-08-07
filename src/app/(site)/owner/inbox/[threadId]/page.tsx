@@ -13,7 +13,9 @@ function ThreadContent() {
         ← Inbox
       </Link>
       <h1 className="font-display text-xl font-bold text-ink-900 mt-1 mb-4">Conversation</h1>
-      <MessageThreadView threadId={threadId} />
+      <div className="flex h-[70vh] flex-col rounded-2xl border border-ink-200/70 bg-surface shadow-card overflow-hidden">
+        <MessageThreadView threadId={threadId} />
+      </div>
     </div>
   );
 }

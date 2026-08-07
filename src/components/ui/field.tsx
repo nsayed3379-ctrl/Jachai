@@ -8,11 +8,7 @@ import {
 } from "react";
 
 const baseControl =
-<<<<<<< HEAD
-  "w-full rounded-lg border border-ink-200 bg-white px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-300 " +
-=======
   "w-full rounded-lg border border-ink-200 bg-surface px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-300 " +
->>>>>>> 1a6eb2632f4f603f8b31a258495a8f896d8f0a16
   "focus:outline-none focus:ring-2 focus:ring-crimson-500/30 focus:border-crimson-500 disabled:bg-ink-50 disabled:text-ink-300";
 
 export const Label = forwardRef<HTMLLabelElement, LabelHTMLAttributes<HTMLLabelElement>>(
