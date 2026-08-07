@@ -66,15 +66,15 @@ function ReviewsTab({ business }: { business: BusinessResponse }) {
   return (
     <div>
       <div className="grid grid-cols-3 gap-3 mb-5">
-        <div className="rounded-md border border-ink-100 bg-white p-3 text-center">
+        <div className="rounded-md border border-ink-100 bg-surface p-3 text-center">
           <p className="text-2xl font-display font-bold text-ink-900">{business.averageRating.toFixed(1)}</p>
           <p className="text-xs text-ink-400">Average rating</p>
         </div>
-        <div className="rounded-md border border-ink-100 bg-white p-3 text-center">
+        <div className="rounded-md border border-ink-100 bg-surface p-3 text-center">
           <p className="text-2xl font-display font-bold text-ink-900">{business.reviewCount}</p>
           <p className="text-xs text-ink-400">Total reviews</p>
         </div>
-        <div className="rounded-md border border-ink-100 bg-white p-3 text-center">
+        <div className="rounded-md border border-ink-100 bg-surface p-3 text-center">
           <p className="text-2xl font-display font-bold text-ink-900">{threads.length}</p>
           <p className="text-xs text-ink-400">Message threads</p>
         </div>
@@ -303,7 +303,7 @@ function GalleryTab({ businessId }: { businessId: string }) {
             <img src={p.url} alt="" className="h-full w-full object-cover" />
             <button
               onClick={() => remove(p.id)}
-              className="absolute inset-0 bg-ink-900/50 text-white text-xs opacity-0 group-hover:opacity-100 flex items-center justify-center"
+              className="absolute inset-0 bg-scrim/50 text-white text-xs opacity-0 group-hover:opacity-100 flex items-center justify-center"
             >
               Remove
             </button>

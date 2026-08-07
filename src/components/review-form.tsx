@@ -104,7 +104,7 @@ export function ReviewForm({
           {photoUrls.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
               {photoUrls.map((url, i) => (
-                <span key={i} className="text-xs bg-white border border-ink-200 rounded px-2 py-1 truncate max-w-[10rem]">
+                <span key={i} className="text-xs bg-surface border border-ink-200 rounded px-2 py-1 truncate max-w-[10rem]">
                   {url.split("/").pop()}
                 </span>
               ))}

@@ -65,7 +65,7 @@ function NidQueueContent() {
       {!loading && error && <ErrorBanner message={error} />}
       {!loading && !error && items.length === 0 && <EmptyState title="No pending NID submissions" />}
       {!loading && !error && items.length > 0 && (
-        <div className="rounded-md border border-ink-100 bg-white shadow-card divide-y divide-ink-100">
+        <div className="rounded-md border border-ink-100 bg-surface shadow-card divide-y divide-ink-100">
           {items.map((h) => (
             <div key={h.id} className="p-4 flex items-center justify-between gap-3 flex-wrap">
               <div>

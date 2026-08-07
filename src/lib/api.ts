@@ -439,11 +439,10 @@ export const galleryApi = {
 };
 
 /**
- * Best-effort direct-to-storage upload for the pre-signed URL flow (spec
- * §13). In local/dev deployments the backend's ObjectStorageClient stub
- * fabricates a URL under https://dev-bucket.local/... which will not accept
- * a real PUT — that's expected there; wire a real S3/R2 client server-side
- * for this to actually persist bytes.
+ * Direct-to-storage upload for the pre-signed URL flow (spec §13). In
+ * local/dev deployments the URL points at the backend's own local-disk
+ * StorageController; swap ObjectStorageClient for a real S3/R2 client
+ * server-side to point this at a real bucket in prod.
  */
 export async function uploadFileToPresignedUrl(uploadUrl: string, file: File): Promise<boolean> {
   try {

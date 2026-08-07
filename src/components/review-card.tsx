@@ -24,6 +24,7 @@ export function ReviewCard({
   const { show } = useToast();
   const [voting, setVoting] = useState<VoteType | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [failedPhotoIndexes, setFailedPhotoIndexes] = useState<Set<number>>(new Set());
 
   const isOwnReview = user?.id === review.userId;
 
@@ -74,11 +75,20 @@ export function ReviewCard({
 
       {review.photoUrls.length > 0 && (
         <div className="mt-3 flex gap-2 overflow-x-auto">
-          {review.photoUrls.map((url, i) => (
-            <div key={i} className="relative h-20 w-20 flex-shrink-0 rounded overflow-hidden bg-ink-100">
-              <Image src={url} alt="Review photo" fill className="object-cover" sizes="80px" />
-            </div>
-          ))}
+          {review.photoUrls.map((url, i) =>
+            failedPhotoIndexes.has(i) ? null : (
+              <div key={i} className="relative h-20 w-20 flex-shrink-0 rounded overflow-hidden bg-ink-100">
+                <Image
+                  src={url}
+                  alt="Review photo"
+                  fill
+                  className="object-cover"
+                  sizes="80px"
+                  onError={() => setFailedPhotoIndexes((prev) => new Set(prev).add(i))}
+                />
+              </div>
+            )
+          )}
         </div>
       )}
 
