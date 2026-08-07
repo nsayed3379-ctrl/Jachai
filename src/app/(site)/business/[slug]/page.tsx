@@ -150,12 +150,6 @@ export default function BusinessDetailPage() {
     <div>
       {/* Cover + gallery */}
       <div className="relative h-64 sm:h-80 w-full rounded-2xl overflow-hidden bg-ink-100">
-<<<<<<< HEAD
-        {business.coverPhotoUrl ? (
-          <>
-            <Image src={business.coverPhotoUrl} alt={business.name} fill className="object-cover" priority />
-            <div className="absolute inset-0 bg-gradient-to-t from-ink-900/50 via-transparent to-transparent" />
-=======
         {business.coverPhotoUrl && !coverPhotoFailed ? (
           <>
             <Image
@@ -167,7 +161,6 @@ export default function BusinessDetailPage() {
               onError={() => setCoverPhotoFailed(true)}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-scrim/50 via-transparent to-transparent" />
->>>>>>> 1a6eb2632f4f603f8b31a258495a8f896d8f0a16
           </>
         ) : (
           <div className="flex h-full items-center justify-center text-ink-300 font-display">
@@ -178,13 +171,6 @@ export default function BusinessDetailPage() {
 
       {gallery.filter((p) => !failedGalleryPhotoIds.has(p.id)).length > 0 && (
         <div className="mt-2 grid grid-cols-4 sm:grid-cols-6 gap-2">
-<<<<<<< HEAD
-          {gallery.slice(0, 6).map((photo) => (
-            <div key={photo.id} className="relative h-16 sm:h-20 rounded-lg overflow-hidden bg-ink-100">
-              <Image src={photo.url} alt="" fill className="object-cover" sizes="120px" />
-            </div>
-          ))}
-=======
           {gallery
             .filter((p) => !failedGalleryPhotoIds.has(p.id))
             .slice(0, 6)
@@ -202,7 +188,6 @@ export default function BusinessDetailPage() {
                 />
               </div>
             ))}
->>>>>>> 1a6eb2632f4f603f8b31a258495a8f896d8f0a16
         </div>
       )}
 
@@ -345,11 +330,7 @@ export default function BusinessDetailPage() {
         <div className="space-y-5">
           <MapPreview latitude={business.latitude} longitude={business.longitude} name={business.name} />
 
-<<<<<<< HEAD
-          <div className="rounded-xl border border-ink-100/70 bg-white p-4 shadow-card">
-=======
           <div className="rounded-xl border border-ink-100/70 bg-surface p-4 shadow-card">
->>>>>>> 1a6eb2632f4f603f8b31a258495a8f896d8f0a16
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-400 mb-2">Contact</p>
             <p className="text-sm text-ink-700">{business.contactNumber}</p>
             {business.operatingHours && (
@@ -363,11 +344,7 @@ export default function BusinessDetailPage() {
           </div>
 
           {user?.role === "CONSUMER" && (
-<<<<<<< HEAD
-            <div className="rounded-xl border border-ink-100/70 bg-white p-4 shadow-card">
-=======
             <div className="rounded-xl border border-ink-100/70 bg-surface p-4 shadow-card">
->>>>>>> 1a6eb2632f4f603f8b31a258495a8f896d8f0a16
               <p className="text-xs font-semibold uppercase tracking-wide text-ink-400 mb-2">
                 Message the owner
               </p>

@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -86,7 +84,6 @@ export function MessageThreadView({
     );
 
   return (
-<<<<<<< HEAD
     <div className="flex flex-1 flex-col min-h-0">
       {/* Header */}
       <div className="flex items-center gap-2.5 border-b border-ink-100 bg-gradient-to-r from-crimson-600 to-crimson-500 px-4 py-3">
@@ -134,18 +131,9 @@ export function MessageThreadView({
               new Date(next.createdAt).getTime() - new Date(m.createdAt).getTime() < GROUP_WINDOW_MS;
 
             return (
-=======
-    <div className="flex flex-col h-[60vh] rounded-md border border-ink-100 bg-surface shadow-card">
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {messages.map((m) => {
-          const isMine = m.senderUserId === user?.id;
-          return (
-            <div key={m.id} className={cn("flex", isMine ? "justify-end" : "justify-start")}>
->>>>>>> 1a6eb2632f4f603f8b31a258495a8f896d8f0a16
               <div
                 key={m.id}
                 className={cn(
-<<<<<<< HEAD
                   "group flex",
                   isMine ? "justify-end" : "justify-start",
                   groupedWithPrev ? "mt-0.5" : "mt-3"
@@ -156,7 +144,7 @@ export function MessageThreadView({
                     "max-w-[75%] px-3.5 py-2 text-sm leading-relaxed shadow-sm transition-colors",
                     isMine
                       ? "bg-gradient-to-br from-crimson-600 to-crimson-700 text-white"
-                      : "bg-white text-ink-800 border border-ink-100 group-hover:bg-ink-50",
+                      : "bg-surface text-ink-800 border border-ink-100 group-hover:bg-ink-50",
                     isMine
                       ? cn(
                           "rounded-2xl",
@@ -182,16 +170,6 @@ export function MessageThreadView({
                     </p>
                   )}
                 </div>
-=======
-                  "max-w-[75%] rounded-lg px-3 py-2 text-sm",
-                  isMine ? "bg-crimson-600 text-white" : "bg-ink-100 text-ink-800"
-                )}
-              >
-                <p className="whitespace-pre-wrap">{m.content}</p>
-                <p className={cn("mt-1 text-[10px]", isMine ? "text-crimson-100" : "text-ink-400")}>
-                  {formatDateTime(m.createdAt)}
-                </p>
->>>>>>> 1a6eb2632f4f603f8b31a258495a8f896d8f0a16
               </div>
             );
           })
@@ -200,7 +178,7 @@ export function MessageThreadView({
       </div>
 
       {/* Composer */}
-      <div className="border-t border-ink-100 bg-white p-3">
+      <div className="border-t border-ink-100 bg-surface p-3">
         <div className="flex items-end gap-2 rounded-2xl border border-ink-200 bg-ink-50/50 px-3 py-2 focus-within:border-crimson-400 focus-within:ring-2 focus-within:ring-crimson-100 transition-shadow">
           <Textarea
             className="flex-1 min-h-0 resize-none border-0 bg-transparent p-0 shadow-none focus:ring-0 focus-visible:outline-none"
