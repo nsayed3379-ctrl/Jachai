@@ -39,7 +39,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             key={t.id}
             role="status"
             className={cn(
-              "rounded-md border px-4 py-3 text-sm shadow-pop bg-white animate-[fadeIn_0.15s_ease-out]",
+              "rounded-md border px-4 py-3 text-sm shadow-pop bg-surface animate-[fadeIn_0.15s_ease-out]",
               t.kind === "success" && "border-brand-300 text-brand-800",
               t.kind === "error" && "border-rose-500/40 text-rose-600",
               t.kind === "info" && "border-ink-200 text-ink-700"

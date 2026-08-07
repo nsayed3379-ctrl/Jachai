@@ -1,23 +1,43 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { PRICE_TIER_LABELS } from "@/lib/config";
 import type { BusinessResponse } from "@/lib/types";
+import { distanceKm, formatDistance } from "@/lib/utils";
 import { Card } from "./ui/misc";
 import { StarDisplay } from "./star-rating";
 import { VerifiedBadge } from "./verified-badge";
 
-export function BusinessCard({ business }: { business: BusinessResponse }) {
+export function BusinessCard({
+  business,
+  userLocation,
+}: {
+  business: BusinessResponse;
+  userLocation?: { lat: number; lng: number };
+}) {
+  const [photoFailed, setPhotoFailed] = useState(false);
+  const distance = userLocation
+    ? distanceKm(userLocation, { lat: business.latitude, lng: business.longitude })
+    : null;
+
   return (
     <Link href={`/business/${business.slug}`} className="group block h-full">
       <Card className="h-full overflow-hidden transition-all duration-200 group-hover:shadow-lift group-hover:-translate-y-1">
         <div className="relative h-44 w-full bg-ink-100">
+<<<<<<< HEAD
           {business.coverPhotoUrl ? (
+=======
+          {business.coverPhotoUrl && !photoFailed ? (
+>>>>>>> 1a6eb2632f4f603f8b31a258495a8f896d8f0a16
             <Image
               src={business.coverPhotoUrl}
               alt={business.name}
               fill
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 320px"
+              onError={() => setPhotoFailed(true)}
             />
           ) : (
             <div className="flex h-full items-center justify-center text-ink-300 font-display text-sm">
@@ -27,7 +47,11 @@ export function BusinessCard({ business }: { business: BusinessResponse }) {
           {business.verified && (
             <VerifiedBadge compact className="absolute top-2 right-2 shadow" />
           )}
+<<<<<<< HEAD
           <span className="absolute bottom-2 left-2 inline-flex items-center rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-ink-700 shadow">
+=======
+          <span className="absolute bottom-2 left-2 inline-flex items-center rounded-full bg-surface/95 px-2.5 py-1 text-[11px] font-semibold text-ink-700 shadow">
+>>>>>>> 1a6eb2632f4f603f8b31a258495a8f896d8f0a16
             {business.categoryName}
           </span>
         </div>
@@ -44,6 +68,10 @@ export function BusinessCard({ business }: { business: BusinessResponse }) {
           </div>
           <p className="mt-1.5 text-xs text-ink-400">
             {PRICE_TIER_LABELS[business.priceTier]} · {business.areaName}, {business.cityName}
+<<<<<<< HEAD
+=======
+            {distance !== null && <> · {formatDistance(distance)}</>}
+>>>>>>> 1a6eb2632f4f603f8b31a258495a8f896d8f0a16
           </p>
         </div>
       </Card>

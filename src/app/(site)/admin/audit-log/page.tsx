@@ -67,7 +67,7 @@ function AuditLogContent() {
       {loading && <PageSpinner />}
       {!loading && logs !== null && logs.length === 0 && <EmptyState title="No audit entries for that entity" />}
       {!loading && logs !== null && logs.length > 0 && (
-        <div className="rounded-md border border-ink-100 bg-white shadow-card divide-y divide-ink-100">
+        <div className="rounded-md border border-ink-100 bg-surface shadow-card divide-y divide-ink-100">
           {logs.map((l) => (
             <div key={l.id} className="p-4 flex items-start justify-between gap-3">
               <div>

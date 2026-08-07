@@ -3,8 +3,52 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Neutral "ink" scale + page/surface tokens, as "R G B" triples for
+       Tailwind's rgb(var(--x) / <alpha-value>) so opacity modifiers keep
+       working. html.dark below redefines these — component classes never
+       need a dark: variant to follow along. */
+    --ink-50: 244 246 245;
+    --ink-100: 228 233 230;
+    --ink-200: 199 208 202;
+    --ink-300: 159 174 165;
+    --ink-400: 110 129 119;
+    --ink-500: 76 93 83;
+    --ink-600: 55 72 65;
+    --ink-700: 41 54 48;
+    --ink-800: 29 38 33;
+    --ink-900: 22 30 26;
+
+    --sand-50: 255 255 255;
+    --sand-100: 250 247 240;
+    --sand-200: 242 236 221;
+    --sand-300: 231 220 194;
+
+    --surface: 255 255 255;
+  }
+
+  html.dark {
+    --ink-50: 33 41 37;
+    --ink-100: 42 52 47;
+    --ink-200: 58 70 64;
+    --ink-300: 78 92 85;
+    --ink-400: 100 115 108;
+    --ink-500: 128 143 135;
+    --ink-600: 158 170 163;
+    --ink-700: 188 197 192;
+    --ink-800: 214 220 216;
+    --ink-900: 236 239 237;
+
+    --sand-50: 18 22 20;
+    --sand-100: 27 33 30;
+    --sand-200: 36 43 39;
+    --sand-300: 48 56 51;
+
+    --surface: 27 33 30;
+  }
+
   body {
-    @apply bg-sand-50 text-ink-900 font-body;
+    @apply bg-sand-50 text-ink-900 font-body transition-colors duration-200;
   }
   h1, h2, h3, h4 {
     @apply font-display;

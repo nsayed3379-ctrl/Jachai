@@ -1,22 +1,29 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
       colors: {
+        // Driven by CSS variables (see globals.css) so the whole neutral
+        // scale inverts under html.dark with zero per-component changes.
         ink: {
-          DEFAULT: "#161E1A",
-          50: "#F4F6F5",
-          100: "#E4E9E6",
-          200: "#C7D0CA",
-          300: "#9FAEA5",
-          400: "#6E8177",
-          500: "#4C5D53",
-          600: "#374841",
-          700: "#293630",
-          800: "#1D2621",
-          900: "#161E1A",
+          DEFAULT: "rgb(var(--ink-900) / <alpha-value>)",
+          50: "rgb(var(--ink-50) / <alpha-value>)",
+          100: "rgb(var(--ink-100) / <alpha-value>)",
+          200: "rgb(var(--ink-200) / <alpha-value>)",
+          300: "rgb(var(--ink-300) / <alpha-value>)",
+          400: "rgb(var(--ink-400) / <alpha-value>)",
+          500: "rgb(var(--ink-500) / <alpha-value>)",
+          600: "rgb(var(--ink-600) / <alpha-value>)",
+          700: "rgb(var(--ink-700) / <alpha-value>)",
+          800: "rgb(var(--ink-800) / <alpha-value>)",
+          900: "rgb(var(--ink-900) / <alpha-value>)",
+        },
+        // Opaque card/panel surfaces — white in light mode, dark ink in dark mode.
+        surface: {
+          DEFAULT: "rgb(var(--surface) / <alpha-value>)",
         },
         brand: {
           50: "#EAF5F0",
@@ -55,16 +62,20 @@ const config: Config = {
           900: "#3A2A0F",
         },
         sand: {
-          DEFAULT: "#FAF7F0",
-          50: "#FFFFFF",
-          100: "#FAF7F0",
-          200: "#F2ECDD",
-          300: "#E7DCC2",
+          DEFAULT: "rgb(var(--sand-100) / <alpha-value>)",
+          50: "rgb(var(--sand-50) / <alpha-value>)",
+          100: "rgb(var(--sand-100) / <alpha-value>)",
+          200: "rgb(var(--sand-200) / <alpha-value>)",
+          300: "rgb(var(--sand-300) / <alpha-value>)",
         },
         rose: {
           500: "#B3432C",
           600: "#963727",
         },
+        // Fixed (non-theme-swapping) dark scrim for photo-darkening gradients
+        // and modal/sheet backdrops — these dim an image or the page behind
+        // an overlay and must stay dark in both light and dark mode.
+        scrim: "#161E1A",
       },
       fontFamily: {
         display: ["var(--font-sora)", "system-ui", "sans-serif"],

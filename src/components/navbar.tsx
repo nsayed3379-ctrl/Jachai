@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthModal } from "@/lib/auth-modal-context";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "./theme-toggle";
 
 function Logo({ light }: { light: boolean }) {
   return (
@@ -34,8 +35,33 @@ function Logo({ light }: { light: boolean }) {
   );
 }
 
+function Avatar({ photoUrl, size = 28 }: { photoUrl: string | null | undefined; size?: number }) {
+  if (photoUrl) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return (
+      <img
+        src={photoUrl}
+        alt=""
+        width={size}
+        height={size}
+        className="rounded-full object-cover border border-black/10"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} className="rounded-full bg-ink-200 text-ink-500 p-1" fill="currentColor">
+      <path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4.14 0-7.5 2.46-7.5 5.5v.5a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-.5c0-3.04-3.36-5.5-7.5-5.5Z" />
+    </svg>
+  );
+}
+
 export function Navbar() {
+<<<<<<< HEAD
   const { user, logout } = useAuth();
+=======
+  const { user, profile, logout } = useAuth();
+>>>>>>> 1a6eb2632f4f603f8b31a258495a8f896d8f0a16
   const { openLogin, openSignup } = useAuthModal();
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
@@ -67,7 +93,11 @@ export function Navbar() {
     <header
       className={cn(
         "fixed top-0 left-0 w-full z-50 transition-colors duration-300",
+<<<<<<< HEAD
         transparent ? "bg-transparent border-b border-transparent" : "border-b border-ink-100 bg-white/90 backdrop-blur shadow-sm"
+=======
+        transparent ? "bg-transparent border-b border-transparent" : "border-b border-ink-100 bg-surface/90 backdrop-blur shadow-sm"
+>>>>>>> 1a6eb2632f4f603f8b31a258495a8f896d8f0a16
       )}
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -105,9 +135,19 @@ export function Navbar() {
         </nav>
 
         <div className="hidden md:flex items-center gap-2">
+          <ThemeToggle
+            className={
+              transparent ? "text-white hover:bg-white/15" : "text-ink-600 hover:bg-ink-100"
+            }
+          />
           {user ? (
             <>
+<<<<<<< HEAD
               <Link href="/account" className={accountLinkClass}>
+=======
+              <Link href="/account" className={cn(accountLinkClass, "flex items-center gap-2")}>
+                <Avatar photoUrl={profile?.profilePhotoUrl} />
+>>>>>>> 1a6eb2632f4f603f8b31a258495a8f896d8f0a16
                 Account
               </Link>
               <button onClick={() => logout()} className={accountLinkClass}>
@@ -142,7 +182,15 @@ export function Navbar() {
       </div>
 
       {menuOpen && (
+<<<<<<< HEAD
         <div className="md:hidden border-t border-ink-100 bg-white px-4 py-3 flex flex-col gap-1 text-sm">
+=======
+        <div className="md:hidden border-t border-ink-100 bg-surface px-4 py-3 flex flex-col gap-1 text-sm">
+          <div className="flex items-center justify-between px-3 py-2">
+            <span className="text-ink-500">Theme</span>
+            <ThemeToggle className="text-ink-600 hover:bg-ink-100" />
+          </div>
+>>>>>>> 1a6eb2632f4f603f8b31a258495a8f896d8f0a16
           {user?.role === "CONSUMER" && (
             <>
               <Link href="/me/reviews" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
@@ -173,7 +221,12 @@ export function Navbar() {
           )}
           {user ? (
             <>
-              <Link href="/account" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
+              <Link
+                href="/account"
+                className="px-3 py-2 rounded hover:bg-ink-100 flex items-center gap-2"
+                onClick={() => setMenuOpen(false)}
+              >
+                <Avatar photoUrl={profile?.profilePhotoUrl} size={24} />
                 Account
               </Link>
               <button onClick={() => logout()} className="text-left px-3 py-2 rounded hover:bg-ink-100 text-rose-600">

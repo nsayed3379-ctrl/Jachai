@@ -172,7 +172,7 @@ function BookmarksContent() {
           />
         )}
         {!loading && !error && bookmarks.length > 0 && (
-          <div className="rounded-md border border-ink-100 bg-white px-4 shadow-card">
+          <div className="rounded-md border border-ink-100 bg-surface px-4 shadow-card">
             {bookmarks.map((b) => (
               <BookmarkRow key={b.id} bookmark={b} onRemoved={() => loadBookmarks(activeCollection)} />
             ))}

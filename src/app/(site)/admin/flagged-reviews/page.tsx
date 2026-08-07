@@ -117,7 +117,7 @@ function FlaggedReviewsContent() {
       {!loading && error && <ErrorBanner message={error} />}
       {!loading && !error && reviews.length === 0 && <EmptyState title="No flagged reviews" />}
       {!loading && !error && reviews.length > 0 && (
-        <div className="rounded-md border border-ink-100 bg-white shadow-card divide-y divide-ink-100">
+        <div className="rounded-md border border-ink-100 bg-surface shadow-card divide-y divide-ink-100">
           {reviews.map((r) => (
             <div key={r.id}>
               <div className="p-4">
