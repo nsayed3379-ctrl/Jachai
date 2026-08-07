@@ -66,11 +66,11 @@ export function MessageThreadView({ threadId }: { threadId: string }) {
               <div
                 className={cn(
                   "max-w-[75%] rounded-lg px-3 py-2 text-sm",
-                  isMine ? "bg-brand-700 text-white" : "bg-ink-100 text-ink-800"
+                  isMine ? "bg-crimson-600 text-white" : "bg-ink-100 text-ink-800"
                 )}
               >
                 <p className="whitespace-pre-wrap">{m.content}</p>
-                <p className={cn("mt-1 text-[10px]", isMine ? "text-brand-100" : "text-ink-400")}>
+                <p className={cn("mt-1 text-[10px]", isMine ? "text-crimson-100" : "text-ink-400")}>
                   {formatDateTime(m.createdAt)}
                 </p>
               </div>

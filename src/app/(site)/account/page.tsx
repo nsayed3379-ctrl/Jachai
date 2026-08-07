@@ -117,7 +117,7 @@ function AccountContent() {
               type="button"
               onClick={() => setPreferredLanguage("en")}
               className={`rounded border px-3 py-2 text-sm ${
-                preferredLanguage === "en" ? "border-brand-600 bg-brand-50 text-brand-800" : "border-ink-200 text-ink-600"
+                preferredLanguage === "en" ? "border-crimson-600 bg-crimson-50 text-crimson-800" : "border-ink-200 text-ink-600"
               }`}
             >
               English
@@ -126,7 +126,7 @@ function AccountContent() {
               type="button"
               onClick={() => setPreferredLanguage("bn")}
               className={`rounded border px-3 py-2 text-sm ${
-                preferredLanguage === "bn" ? "border-brand-600 bg-brand-50 text-brand-800" : "border-ink-200 text-ink-600"
+                preferredLanguage === "bn" ? "border-crimson-600 bg-crimson-50 text-crimson-800" : "border-ink-200 text-ink-600"
               }`}
             >
               বাংলা

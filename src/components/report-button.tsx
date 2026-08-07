@@ -61,7 +61,7 @@ export function ReportButton({
               Report this {targetType === "REVIEW" ? "review" : "listing"}
             </h3>
             {done ? (
-              <p className="mt-3 text-sm text-brand-700">Thanks — our moderation team will take a look.</p>
+              <p className="mt-3 text-sm text-crimson-700">Thanks — our moderation team will take a look.</p>
             ) : (
               <>
                 <p className="mt-1 text-sm text-ink-500">Pick the reason that fits best.</p>

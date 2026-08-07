@@ -10,7 +10,7 @@
     @apply font-display;
   }
   ::selection {
-    @apply bg-brand-200;
+    @apply bg-crimson-200;
   }
 }
 
