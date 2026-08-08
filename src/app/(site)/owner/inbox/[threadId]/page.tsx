@@ -1,29 +1,38 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link";
-import { RoleGate } from "@/components/role-gate";
+import { messageApi } from "@/lib/api";
+import { lookupBusiness } from "@/lib/business-cache";
 import { MessageThreadView } from "@/components/message-thread-view";
+import { PageSpinner } from "@/components/ui/misc";
 
-function ThreadContent() {
+export default function OwnerMessageThreadPage() {
   const { threadId } = useParams<{ threadId: string }>();
-  return (
-    <div className="max-w-2xl">
-      <Link href="/owner/inbox" className="text-xs text-ink-400 hover:underline">
-        ← Inbox
-      </Link>
-      <h1 className="font-display text-xl font-bold text-ink-900 mt-1 mb-4">Conversation</h1>
-      <div className="flex h-[70vh] flex-col rounded-2xl border border-ink-200/70 bg-surface shadow-card overflow-hidden">
-        <MessageThreadView threadId={threadId} />
-      </div>
-    </div>
-  );
-}
+  const [title, setTitle] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-export default function OwnerInboxThreadPage() {
-  return (
-    <RoleGate allow={["BUSINESS_OWNER"]}>
-      <ThreadContent />
-    </RoleGate>
-  );
+  useEffect(() => {
+    setLoading(true);
+    messageApi
+      .businessInbox()
+      .then((threads) => {
+        const t = threads.find((th) => th.id === threadId);
+        if (t) {
+          const cached = lookupBusiness(t.businessId);
+          setTitle(cached?.name ?? `Business ${t.businessId.slice(0, 8)}…`);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [threadId]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-1 items-center justify-center">
+        <PageSpinner />
+      </div>
+    );
+  }
+
+  return <MessageThreadView threadId={threadId} title={title ?? "Conversation"} />;
 }
