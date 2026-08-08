@@ -35,6 +35,31 @@ function Logo({ light }: { light: boolean }) {
   );
 }
 
+function AccountMenuLink({
+  href,
+  active,
+  onClick,
+  children,
+}: {
+  href: string;
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={cn(
+        "block rounded-lg px-3 py-2.5 text-sm transition-colors duration-150",
+        active ? "bg-crimson-50 text-crimson-700 font-medium" : "text-ink-700 hover:bg-ink-50 hover:text-crimson-700"
+      )}
+    >
+      {children}
+    </Link>
+  );
+}
+
 function Avatar({ photoUrl, size = 28 }: { photoUrl: string | null | undefined; size?: number }) {
   if (photoUrl) {
     // eslint-disable-next-line @next/next/no-img-element
@@ -60,6 +85,7 @@ export function Navbar() {
   const { user, profile, logout } = useAuth();
   const { openLogin, openSignup } = useAuthModal();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const pathname = usePathname();
   const isHero = pathname === "/";
   const [scrolled, setScrolled] = useState(!isHero);
@@ -96,19 +122,6 @@ export function Navbar() {
         <Logo light={transparent} />
 
         <nav className="hidden md:flex items-center gap-1 text-sm font-medium">
-          {user?.role === "CONSUMER" && (
-            <>
-              <Link href="/me/reviews" className={linkClass}>
-                My reviews
-              </Link>
-              <Link href="/me/bookmarks" className={linkClass}>
-                Bookmarks
-              </Link>
-              <Link href="/me/messages" className={linkClass}>
-                Messages
-              </Link>
-            </>
-          )}
           {user?.role === "BUSINESS_OWNER" && (
             <>
               <Link href="/owner" className={linkClass}>
@@ -134,10 +147,67 @@ export function Navbar() {
           />
           {user ? (
             <>
-              <Link href="/account" className={cn(accountLinkClass, "flex items-center gap-2")}>
-                <Avatar photoUrl={profile?.profilePhotoUrl} />
-                Account
-              </Link>
+              <div
+                className="relative"
+                onMouseEnter={() => setAccountMenuOpen(true)}
+                onMouseLeave={() => setAccountMenuOpen(false)}
+              >
+                <Link href="/account" className={cn(accountLinkClass, "flex items-center gap-2")}>
+                  <Avatar photoUrl={profile?.profilePhotoUrl} />
+                  Account
+                  <svg
+                    viewBox="0 0 20 20"
+                    className={cn("h-3.5 w-3.5 transition-transform duration-150", accountMenuOpen && "rotate-180")}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M5 7.5l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </Link>
+
+                {/* pt-2 keeps this touching the trigger above (no dead zone) while still
+                    giving the visible panel some breathing room below it. */}
+                {accountMenuOpen && (
+                  <div className="absolute right-0 top-full w-56 pt-2 z-50">
+                    <div className="rounded-xl border border-ink-100 bg-surface shadow-pop p-1.5">
+                      {user.role === "CONSUMER" && (
+                        <>
+                          <AccountMenuLink
+                            href="/me/reviews"
+                            active={pathname === "/me/reviews"}
+                            onClick={() => setAccountMenuOpen(false)}
+                          >
+                            My Reviews
+                          </AccountMenuLink>
+                          <AccountMenuLink
+                            href="/me/bookmarks"
+                            active={pathname === "/me/bookmarks"}
+                            onClick={() => setAccountMenuOpen(false)}
+                          >
+                            Bookmarks
+                          </AccountMenuLink>
+                          <AccountMenuLink
+                            href="/me/messages"
+                            active={pathname.startsWith("/me/messages")}
+                            onClick={() => setAccountMenuOpen(false)}
+                          >
+                            Messages
+                          </AccountMenuLink>
+                          <div className="my-1 h-px bg-ink-100" />
+                        </>
+                      )}
+                      <AccountMenuLink
+                        href="/account"
+                        active={pathname === "/account"}
+                        onClick={() => setAccountMenuOpen(false)}
+                      >
+                        Account Settings
+                      </AccountMenuLink>
+                    </div>
+                  </div>
+                )}
+              </div>
               <button onClick={() => logout()} className={accountLinkClass}>
                 Log out
               </button>
