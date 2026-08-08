@@ -37,6 +37,36 @@ const emptyForm: CreateBusinessRequest = {
   attributeIds: [],
 };
 
+function SectionHeader({
+  step,
+  title,
+  description,
+}: {
+  step: number;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 mb-4">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-crimson-600 to-crimson-500 text-xs font-semibold text-white shadow-sm">
+        {step}
+      </div>
+      <div>
+        <h2 className="text-sm font-semibold text-ink-900">{title}</h2>
+        <p className="text-xs text-ink-400 mt-0.5">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+function SectionCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-ink-200/70 bg-white shadow-sm p-5 md:p-6 h-full">
+      {children}
+    </div>
+  );
+}
+
 export function BusinessForm({ existing }: Props) {
   const router = useRouter();
   const { show } = useToast();
@@ -65,8 +95,6 @@ export function BusinessForm({ existing }: Props) {
 
   useEffect(() => {
     if (existing) {
-      // We only have names from BusinessResponse, not ids — resolve ids
-      // once reference data has loaded.
       setForm((prev) => ({
         ...prev,
         name: existing.name,
@@ -97,13 +125,19 @@ export function BusinessForm({ existing }: Props) {
       setAreas([]);
       return;
     }
-    referenceApi.areas(form.cityId).then((list) => {
-      setAreas(list);
-      if (existing) {
-        const area = list.find((a) => a.name === existing.areaName);
-        if (area) setForm((prev) => ({ ...prev, areaId: area.id }));
-      }
-    });
+    referenceApi
+      .areas(form.cityId)
+      .then((list) => {
+        setAreas(list);
+        if (existing) {
+          const area = list.find((a) => a.name === existing.areaName);
+          if (area) setForm((prev) => ({ ...prev, areaId: area.id }));
+        }
+      })
+      .catch((err) => {
+        setAreas([]);
+        show(errorMessage(err), "error");
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.cityId]);
 
@@ -136,7 +170,7 @@ export function BusinessForm({ existing }: Props) {
   }
 
   async function handleCoverUpload(file: File | undefined) {
-    if (!file || !existing) return; // cover upload needs an existing businessId to scope the upload
+    if (!file || !existing) return;
     setUploadingCover(true);
     try {
       const presigned = await galleryApi.requestUploadUrl(existing.id, file.name);
@@ -176,175 +210,278 @@ export function BusinessForm({ existing }: Props) {
 
   if (loadingRef) {
     return (
-      <div className="py-10 flex justify-center">
+      <div className="py-16 flex justify-center">
         <Spinner />
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl space-y-5">
-      {error && <ErrorBanner message={error} />}
-
-      <div>
-        <Label htmlFor="name">Business name</Label>
-        <Input id="name" value={form.name} onChange={(e) => set("name", e.target.value)} />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label>Category</Label>
-          <Select value={form.categoryId} onChange={(e) => set("categoryId", e.target.value)}>
-            <option value="">Select category</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
+    <div className="max-w-5xl mx-auto px-4">
+      {error && (
+        <div className="mb-5">
+          <ErrorBanner message={error} />
         </div>
-        <div>
-          <Label>Price tier</Label>
-          <Select value={form.priceTier} onChange={(e) => set("priceTier", e.target.value as PriceTier)}>
-            {Object.entries(PRICE_TIER_LABELS).map(([v, label]) => (
-              <option key={v} value={v}>
-                {label}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div>
-          <Label>City</Label>
-          <Select value={form.cityId} onChange={(e) => set("cityId", e.target.value)}>
-            <option value="">Select city</option>
-            {cities.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div>
-          <Label>Area</Label>
-          <Select value={form.areaId} onChange={(e) => set("areaId", e.target.value)} disabled={!form.cityId}>
-            <option value="">Select area</option>
-            {areas.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </Select>
-        </div>
-      </div>
+      )}
 
-      <div>
-        <Label htmlFor="contact">Contact number</Label>
-        <Input
-          id="contact"
-          placeholder="01712345678"
-          value={form.contactNumber}
-          onChange={(e) => set("contactNumber", e.target.value)}
-        />
-      </div>
+      <div className="space-y-5">
+        {/* Row 1 — Basic info (full width) */}
+        <SectionCard>
+          <SectionHeader
+            step={1}
+            title="Basic information"
+            description="Tell customers what this business is called and does."
+          />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-1">
+              <Label htmlFor="name">Business name</Label>
+              <Input
+                id="name"
+                placeholder="e.g. Dhanmondi Hair Salon"
+                value={form.name}
+                onChange={(e) => set("name", e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Category</Label>
+              <Select value={form.categoryId} onChange={(e) => set("categoryId", e.target.value)}>
+                <option value="">Select category</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Label>Price tier</Label>
+              <Select value={form.priceTier} onChange={(e) => set("priceTier", e.target.value as PriceTier)}>
+                {Object.entries(PRICE_TIER_LABELS).map(([v, label]) => (
+                  <option key={v} value={v}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
+        </SectionCard>
 
-      <div>
-        <Label htmlFor="hours">Operating hours</Label>
-        <Textarea
-          id="hours"
-          placeholder={"Sat–Thu: 10am – 9pm\nFriday: 3pm – 9pm"}
-          value={form.operatingHours ?? ""}
-          onChange={(e) => set("operatingHours", e.target.value)}
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="desc">Description</Label>
-        <Textarea
-          id="desc"
-          placeholder="What makes this business worth visiting?"
-          value={form.description ?? ""}
-          onChange={(e) => set("description", e.target.value)}
-        />
-      </div>
-
-      <div>
-        <Label>Cover photo</Label>
-        {existing ? (
-          <>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={(e) => handleCoverUpload(e.target.files?.[0])}
-              className="text-xs text-ink-500"
+        {/* Row 2 — Location (left) + Contact & details (right) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+          <SectionCard>
+            <SectionHeader
+              step={2}
+              title="Location"
+              description="Where customers can find you, plus a map pin for search & directions."
             />
-            {uploadingCover && <span className="ml-2 text-xs text-ink-400">Uploading…</span>}
-          </>
-        ) : (
-          <FieldHint>Save the listing first, then upload a cover photo from the edit screen.</FieldHint>
-        )}
-        {form.coverPhotoUrl && (
-          <p className="mt-1 text-xs text-ink-400 truncate">{form.coverPhotoUrl}</p>
-        )}
-      </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>City</Label>
+                  <Select value={form.cityId} onChange={(e) => set("cityId", e.target.value)}>
+                    <option value="">Select city</option>
+                    {cities.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div>
+                  <Label>Area</Label>
+                  <Select
+                    value={form.areaId}
+                    onChange={(e) => set("areaId", e.target.value)}
+                    disabled={!form.cityId}
+                  >
+                    <option value="">Select area</option>
+                    {areas.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
 
-      <div>
-        <Label>Attributes</Label>
-        <div className="flex flex-wrap gap-2">
-          {attributes.map((a) => (
-            <button
-              key={a.id}
-              type="button"
-              onClick={() => toggleAttribute(a.id)}
-              className={`text-xs rounded-full border px-3 py-1 ${
-                form.attributeIds.includes(a.id)
-                  ? "border-crimson-600 bg-crimson-50 text-crimson-800"
-                  : "border-ink-200 text-ink-600"
-              }`}
-            >
-              {a.name}
-            </button>
-          ))}
-        </div>
-      </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="lat">Latitude</Label>
+                  <Input
+                    id="lat"
+                    type="number"
+                    step="0.000001"
+                    value={form.latitude}
+                    onChange={(e) => set("latitude", Number(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lng">Longitude</Label>
+                  <Input
+                    id="lng"
+                    type="number"
+                    step="0.000001"
+                    value={form.longitude}
+                    onChange={(e) => set("longitude", Number(e.target.value))}
+                  />
+                </div>
+              </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="lat">Latitude</Label>
-          <Input
-            id="lat"
-            type="number"
-            step="0.000001"
-            value={form.latitude}
-            onChange={(e) => set("latitude", Number(e.target.value))}
-          />
-        </div>
-        <div>
-          <Label htmlFor="lng">Longitude</Label>
-          <Input
-            id="lng"
-            type="number"
-            step="0.000001"
-            value={form.longitude}
-            onChange={(e) => set("longitude", Number(e.target.value))}
-          />
-        </div>
-      </div>
-      <Button type="button" variant="outline" size="sm" onClick={useMyLocationForPin}>
-        📍 Use my current location as the pin
-      </Button>
-      <FieldHint>
-        Owner-side location entry is precise lat/lng (spec §17a) — an interactive drag-to-pin map
-        can be dropped in here later; for now, enter coordinates directly or use your device's location.
-      </FieldHint>
+              <button
+                type="button"
+                onClick={useMyLocationForPin}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-crimson-600 hover:text-crimson-700 transition-colors"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 2v2m0 16v2M4 12H2m20 0h-2m-3-7l-1.5 1.5M6.5 17.5L5 19m14 0l-1.5-1.5M6.5 6.5L5 5"
+                  />
+                  <circle cx="12" cy="12" r="4" strokeWidth={2} />
+                </svg>
+                Use my current location as the pin
+              </button>
+              <FieldHint>
+                Owner-side location entry is precise lat/lng — an interactive drag-to-pin map can
+                be dropped in here later; for now, enter coordinates directly or use your
+                device&apos;s location.
+              </FieldHint>
+            </div>
+          </SectionCard>
 
-      <div className="flex justify-end gap-2 pt-2">
-        <Button variant="ghost" onClick={() => router.back()}>
-          Cancel
-        </Button>
-        <Button onClick={submit} loading={submitting}>
-          {existing ? "Save changes" : "Create listing"}
-        </Button>
+          <SectionCard>
+            <SectionHeader
+              step={3}
+              title="Contact & details"
+              description="How to reach you and what to expect when customers visit."
+            />
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="contact">Contact number</Label>
+                <Input
+                  id="contact"
+                  placeholder="01712345678"
+                  value={form.contactNumber}
+                  onChange={(e) => set("contactNumber", e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="hours">Operating hours</Label>
+                <Textarea
+                  id="hours"
+                  placeholder={"Sat–Thu: 10am – 9pm\nFriday: 3pm – 9pm"}
+                  value={form.operatingHours ?? ""}
+                  onChange={(e) => set("operatingHours", e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="desc">Description</Label>
+                <Textarea
+                  id="desc"
+                  placeholder="What makes this business worth visiting?"
+                  value={form.description ?? ""}
+                  onChange={(e) => set("description", e.target.value)}
+                />
+              </div>
+            </div>
+          </SectionCard>
+        </div>
+
+        {/* Row 3 — Attributes (left) + Cover photo (right) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+          {attributes.length > 0 && (
+            <SectionCard>
+              <SectionHeader
+                step={4}
+                title="Attributes"
+                description="Highlight amenities and features customers care about."
+              />
+              <div className="flex flex-wrap gap-2">
+                {attributes.map((a) => {
+                  const selected = form.attributeIds.includes(a.id);
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => toggleAttribute(a.id)}
+                      className={`inline-flex items-center gap-1.5 text-xs font-medium rounded-full border px-3.5 py-1.5 transition-colors ${
+                        selected
+                          ? "border-crimson-600 bg-crimson-50 text-crimson-800"
+                          : "border-ink-200 text-ink-600 hover:border-ink-300 hover:bg-ink-50"
+                      }`}
+                    >
+                      {selected && (
+                        <svg
+                          className="h-3 w-3"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={3}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                      {a.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </SectionCard>
+          )}
+
+          <SectionCard>
+            <SectionHeader
+              step={5}
+              title="Cover photo"
+              description="The first image customers see on your listing."
+            />
+            {existing ? (
+              <div className="flex items-center gap-3">
+                <label className="inline-flex items-center gap-2 rounded-lg border border-dashed border-ink-300 px-4 py-2.5 text-xs font-medium text-ink-600 hover:border-crimson-400 hover:text-crimson-700 cursor-pointer transition-colors">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
+                    />
+                  </svg>
+                  {uploadingCover ? "Uploading…" : "Choose image"}
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={(e) => handleCoverUpload(e.target.files?.[0])}
+                    className="hidden"
+                    disabled={uploadingCover}
+                  />
+                </label>
+                {uploadingCover && <Spinner />}
+              </div>
+            ) : (
+              <FieldHint>Save the listing first, then upload a cover photo from the edit screen.</FieldHint>
+            )}
+            {form.coverPhotoUrl && (
+              <p className="mt-2 text-xs text-ink-400 truncate">{form.coverPhotoUrl}</p>
+            )}
+          </SectionCard>
+        </div>
+
+        {/* Actions */}
+        <div className="flex justify-end gap-2 pt-1 pb-4">
+          <Button variant="ghost" onClick={() => router.back()}>
+            Cancel
+          </Button>
+          <Button
+            onClick={submit}
+            loading={submitting}
+            className="bg-gradient-to-r from-crimson-600 to-crimson-500 hover:from-crimson-700 hover:to-crimson-600"
+          >
+            {existing ? "Save changes" : "Create listing"}
+          </Button>
+        </div>
       </div>
     </div>
   );
