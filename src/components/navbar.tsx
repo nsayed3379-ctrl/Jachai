@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthModal } from "@/lib/auth-modal-context";
+import { useLanguage } from "@/lib/language-context";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -84,6 +85,7 @@ function Avatar({ photoUrl, size = 28 }: { photoUrl: string | null | undefined; 
 export function Navbar() {
   const { user, profile, logout } = useAuth();
   const { openLogin, openSignup } = useAuthModal();
+  const { t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const pathname = usePathname();
@@ -125,16 +127,16 @@ export function Navbar() {
           {user?.role === "BUSINESS_OWNER" && (
             <>
               <Link href="/owner" className={linkClass}>
-                My businesses
+                {t("nav.my_businesses")}
               </Link>
               <Link href="/owner/inbox" className={linkClass}>
-                Inbox
+                {t("nav.inbox")}
               </Link>
             </>
           )}
           {user?.role === "ADMIN" && (
             <Link href="/admin" className={linkClass}>
-              Admin
+              {t("nav.admin")}
             </Link>
           )}
         </nav>
@@ -154,7 +156,7 @@ export function Navbar() {
               >
                 <Link href="/account" className={cn(accountLinkClass, "flex items-center gap-2")}>
                   <Avatar photoUrl={profile?.profilePhotoUrl} />
-                  Account
+                  {t("nav.account")}
                   <svg
                     viewBox="0 0 20 20"
                     className={cn("h-3.5 w-3.5 transition-transform duration-150", accountMenuOpen && "rotate-180")}
@@ -178,21 +180,21 @@ export function Navbar() {
                             active={pathname === "/me/reviews"}
                             onClick={() => setAccountMenuOpen(false)}
                           >
-                            My Reviews
+                            {t("nav.my_reviews")}
                           </AccountMenuLink>
                           <AccountMenuLink
                             href="/me/bookmarks"
                             active={pathname === "/me/bookmarks"}
                             onClick={() => setAccountMenuOpen(false)}
                           >
-                            Bookmarks
+                            {t("nav.bookmarks")}
                           </AccountMenuLink>
                           <AccountMenuLink
                             href="/me/messages"
                             active={pathname.startsWith("/me/messages")}
                             onClick={() => setAccountMenuOpen(false)}
                           >
-                            Messages
+                            {t("nav.messages")}
                           </AccountMenuLink>
                           <div className="my-1 h-px bg-ink-100" />
                         </>
@@ -202,27 +204,27 @@ export function Navbar() {
                         active={pathname === "/account"}
                         onClick={() => setAccountMenuOpen(false)}
                       >
-                        Account Settings
+                        {t("nav.account_settings")}
                       </AccountMenuLink>
                     </div>
                   </div>
                 )}
               </div>
               <button onClick={() => logout()} className={accountLinkClass}>
-                Log out
+                {t("nav.log_out")}
               </button>
             </>
           ) : (
             <>
               <button type="button" onClick={openLogin} className={accountLinkClass}>
-                Log in
+                {t("nav.log_in")}
               </button>
               <button
                 type="button"
                 onClick={openSignup}
                 className="px-5 py-2 rounded-full bg-crimson-600 text-white text-sm font-semibold shadow-sm hover:bg-crimson-700"
               >
-                Sign up
+                {t("nav.sign_up")}
               </button>
             </>
           )}
@@ -242,35 +244,35 @@ export function Navbar() {
       {menuOpen && (
         <div className="md:hidden border-t border-ink-100 bg-surface px-4 py-3 flex flex-col gap-1 text-sm">
           <div className="flex items-center justify-between px-3 py-2">
-            <span className="text-ink-500">Theme</span>
+            <span className="text-ink-500">{t("nav.theme")}</span>
             <ThemeToggle className="text-ink-600 hover:bg-ink-100" />
           </div>
           {user?.role === "CONSUMER" && (
             <>
               <Link href="/me/reviews" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
-                My reviews
+                {t("nav.my_reviews")}
               </Link>
               <Link href="/me/bookmarks" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
-                Bookmarks
+                {t("nav.bookmarks")}
               </Link>
               <Link href="/me/messages" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
-                Messages
+                {t("nav.messages")}
               </Link>
             </>
           )}
           {user?.role === "BUSINESS_OWNER" && (
             <>
               <Link href="/owner" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
-                My businesses
+                {t("nav.my_businesses")}
               </Link>
               <Link href="/owner/inbox" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
-                Inbox
+                {t("nav.inbox")}
               </Link>
             </>
           )}
           {user?.role === "ADMIN" && (
             <Link href="/admin" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
-              Admin
+              {t("nav.admin")}
             </Link>
           )}
           {user ? (
@@ -281,10 +283,10 @@ export function Navbar() {
                 onClick={() => setMenuOpen(false)}
               >
                 <Avatar photoUrl={profile?.profilePhotoUrl} size={24} />
-                Account
+                {t("nav.account")}
               </Link>
               <button onClick={() => logout()} className="text-left px-3 py-2 rounded hover:bg-ink-100 text-rose-600">
-                Log out
+                {t("nav.log_out")}
               </button>
             </>
           ) : (
@@ -297,7 +299,7 @@ export function Navbar() {
                   openLogin();
                 }}
               >
-                Log in
+                {t("nav.log_in")}
               </button>
               <button
                 type="button"
@@ -307,7 +309,7 @@ export function Navbar() {
                   openSignup();
                 }}
               >
-                Sign up
+                {t("nav.sign_up")}
               </button>
             </>
           )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuthModal } from "@/lib/auth-modal-context";
+import { useLanguage } from "@/lib/language-context";
 import { Modal } from "@/components/ui/modal";
 import { LoginForm } from "./login-form";
 import { SignupForm } from "./signup-form";
@@ -8,20 +9,21 @@ import { ForgotPasswordForm } from "./forgot-password-form";
 
 const COPY = {
   login: {
-    heading: "Welcome back",
-    description: "Continue to your account.",
+    headingKey: "modal.login.heading",
+    descriptionKey: "modal.login.description",
   },
   signup: {
-    heading: "Create your account",
-    description: "Join the trusted local business community.",
+    headingKey: "modal.signup.heading",
+    descriptionKey: "modal.signup.description",
   },
   "forgot-password": {
-    heading: "Reset your password",
-    description: "We'll text you a one-time code to confirm it's you.",
+    headingKey: "modal.forgot_password.heading",
+    descriptionKey: "modal.forgot_password.description",
   },
 } as const;
 
 function IllustrationPanel() {
+  const { t } = useLanguage();
   return (
     <div className="relative hidden md:flex flex-col justify-between overflow-hidden rounded-l-[28px] sm:rounded-l-[32px] bg-gradient-to-br from-ink-900 via-crimson-800 to-crimson-600 p-10">
       <div
@@ -46,10 +48,10 @@ function IllustrationPanel() {
       </svg>
       <div className="relative">
         <p className="font-display text-2xl font-extrabold text-white leading-snug">
-          Find a business you can actually trust
+          {t("modal.illustration.title")}
         </p>
         <p className="mt-3 text-sm text-crimson-50/85 leading-relaxed">
-          NID-verified local businesses, real reviews, and a platform built for Bangladesh.
+          {t("modal.illustration.subtitle")}
         </p>
       </div>
     </div>
@@ -58,6 +60,7 @@ function IllustrationPanel() {
 
 export function AuthModal() {
   const { mode, switchTo, close } = useAuthModal();
+  const { t } = useLanguage();
 
   return (
     <Modal open={mode !== null} onClose={close} labelledBy="auth-modal-heading" panelClassName="max-w-4xl">
@@ -79,9 +82,9 @@ export function AuthModal() {
           {mode && (
             <>
               <h2 id="auth-modal-heading" className="font-display text-2xl sm:text-3xl font-extrabold text-ink-900">
-                {COPY[mode].heading}
+                {t(COPY[mode].headingKey)}
               </h2>
-              <p className="mt-2 text-sm text-ink-500">{COPY[mode].description}</p>
+              <p className="mt-2 text-sm text-ink-500">{t(COPY[mode].descriptionKey)}</p>
 
               <div className="mt-7">
                 {mode === "login" && (

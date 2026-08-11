@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ApiClientError, authApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { useLanguage } from "@/lib/language-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import { isValidBdPhone, isValidPassword, normalizeBdPhone } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ export function ForgotPasswordForm({
 }) {
   const { login } = useAuth();
   const { show } = useToast();
+  const { t } = useLanguage();
 
   const [step, setStep] = useState<"phone" | "reset">("phone");
   const [phone, setPhone] = useState("");
@@ -46,7 +48,7 @@ export function ForgotPasswordForm({
   async function requestOtp() {
     setError(null);
     if (!isValidBdPhone(phone)) {
-      setError("Enter a valid Bangladeshi mobile number (e.g. 01712345678).");
+      setError(t("auth.error.invalid_phone"));
       return;
     }
     setSending(true);
@@ -54,10 +56,10 @@ export function ForgotPasswordForm({
       await authApi.requestOtp(normalizeBdPhone(phone));
       setStep("reset");
       startCooldown();
-      show("OTP sent — it expires in 5 minutes.", "success");
+      show(t("auth.toast.otp_sent"), "success");
     } catch (err) {
       if (err instanceof ApiClientError && err.status === 429) {
-        setError("Too many OTP requests — please wait before trying again.");
+        setError(t("auth.error.too_many_otp"));
       } else {
         setError(errorMessage(err));
       }
@@ -69,22 +71,22 @@ export function ForgotPasswordForm({
   async function resetPassword() {
     setError(null);
     if (code.trim().length < 4) {
-      setError("Enter the code you received.");
+      setError(t("auth.error.enter_code"));
       return;
     }
     if (!isValidPassword(newPassword)) {
-      setError("Password must be at least 8 characters.");
+      setError(t("auth.error.password_min"));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError(t("auth.error.passwords_mismatch"));
       return;
     }
     setResetting(true);
     try {
       const tokens = await authApi.resetPassword(normalizeBdPhone(phone), code.trim(), newPassword);
       login(tokens);
-      show("Password reset", "success");
+      show(t("auth.toast.password_reset"), "success");
       onSuccess();
     } catch (err) {
       setError(errorMessage(err));
@@ -96,10 +98,10 @@ export function ForgotPasswordForm({
   if (step === "reset") {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-ink-500">Sent to {normalizeBdPhone(phone)}</p>
+        <p className="text-sm text-ink-500">{t("auth.sent_to", { phone: normalizeBdPhone(phone) })}</p>
 
         <div>
-          <Label htmlFor="reset-code">6-digit code</Label>
+          <Label htmlFor="reset-code">{t("auth.otp_code_label")}</Label>
           <Input
             id="reset-code"
             inputMode="numeric"
@@ -111,7 +113,7 @@ export function ForgotPasswordForm({
         </div>
 
         <div>
-          <Label htmlFor="reset-new-password">New password</Label>
+          <Label htmlFor="reset-new-password">{t("auth.new_password")}</Label>
           <Input
             id="reset-new-password"
             type="password"
@@ -119,11 +121,11 @@ export function ForgotPasswordForm({
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
           />
-          <FieldHint>At least 8 characters.</FieldHint>
+          <FieldHint>{t("auth.hint.min_8_chars")}</FieldHint>
         </div>
 
         <div>
-          <Label htmlFor="reset-confirm-password">Confirm new password</Label>
+          <Label htmlFor="reset-confirm-password">{t("auth.confirm_new_password")}</Label>
           <Input
             id="reset-confirm-password"
             type="password"
@@ -137,12 +139,12 @@ export function ForgotPasswordForm({
         <FieldError>{error}</FieldError>
 
         <Button className="w-full" size="lg" onClick={resetPassword} loading={resetting}>
-          Reset password
+          {t("auth.reset_password_button")}
         </Button>
 
         <div className="flex justify-between text-sm text-ink-500">
           <button type="button" onClick={() => setStep("phone")} className="hover:underline">
-            ← Change number
+            {t("auth.change_number")}
           </button>
           <button
             type="button"
@@ -150,7 +152,7 @@ export function ForgotPasswordForm({
             disabled={cooldown > 0 || sending}
             className="hover:underline disabled:opacity-50"
           >
-            {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}
+            {cooldown > 0 ? t("auth.resend_in", { n: cooldown }) : t("auth.resend_code")}
           </button>
         </div>
       </div>
@@ -160,7 +162,7 @@ export function ForgotPasswordForm({
   return (
     <div className="space-y-4">
       <div>
-        <Label htmlFor="forgot-phone">Mobile number</Label>
+        <Label htmlFor="forgot-phone">{t("auth.mobile_number")}</Label>
         <Input
           id="forgot-phone"
           inputMode="tel"
@@ -174,13 +176,13 @@ export function ForgotPasswordForm({
       <FieldError>{error}</FieldError>
 
       <Button className="w-full" size="lg" onClick={requestOtp} loading={sending}>
-        Send code
+        {t("auth.send_code")}
       </Button>
 
       <p className="text-center text-sm text-ink-500">
-        Remembered your password?{" "}
+        {t("auth.remembered_password")}{" "}
         <button type="button" onClick={onSwitchToLogin} className="text-crimson-700 hover:underline font-medium">
-          Log in
+          {t("nav.log_in")}
         </button>
       </p>
     </div>

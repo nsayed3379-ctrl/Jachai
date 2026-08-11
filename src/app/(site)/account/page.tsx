@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { userApi, uploadFileToPresignedUrl } from "@/lib/api";
 import { RoleGate } from "@/components/role-gate";
 import { useAuth } from "@/lib/auth-context";
+import { useLanguage } from "@/lib/language-context";
 import { useTheme } from "@/lib/theme-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import type { PreferredLanguage } from "@/lib/types";
@@ -15,6 +16,7 @@ function AccountContent() {
   const { show } = useToast();
   const { setProfile: setAuthProfile } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { t } = useLanguage();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
@@ -61,7 +63,7 @@ function AccountContent() {
     try {
       const updated = await userApi.update(name.trim() || null, preferredLanguage, profilePhotoUrl);
       setAuthProfile(updated);
-      show("Profile updated", "success");
+      show(t("account.toast.updated"), "success");
     } catch (err) {
       show(errorMessage(err), "error");
     } finally {
@@ -74,26 +76,26 @@ function AccountContent() {
 
   return (
     <div className="max-w-sm mx-auto">
-      <h1 className="font-display text-2xl font-bold text-ink-900 text-center">Account settings</h1>
+      <h1 className="font-display text-2xl font-bold text-ink-900 text-center">{t("account.title")}</h1>
 
       <div className="mt-6 space-y-4">
         <div>
-          <Label htmlFor="phone">Mobile number</Label>
+          <Label htmlFor="phone">{t("account.mobile_number")}</Label>
           <Input id="phone" value={phoneNumber} disabled />
         </div>
 
         <div>
-          <Label htmlFor="name">Name</Label>
+          <Label htmlFor="name">{t("account.name")}</Label>
           <Input
             id="name"
-            placeholder="Your name"
+            placeholder={t("account.name_placeholder")}
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
         </div>
 
         <div>
-          <Label>Profile picture</Label>
+          <Label>{t("account.profile_picture")}</Label>
           <div className="flex items-center gap-3">
             {profilePhotoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -113,11 +115,11 @@ function AccountContent() {
               className="text-xs text-ink-500"
             />
           </div>
-          {uploadingPhoto && <span className="text-xs text-ink-400">Uploading…</span>}
+          {uploadingPhoto && <span className="text-xs text-ink-400">{t("account.uploading")}</span>}
         </div>
 
         <div>
-          <Label>Language</Label>
+          <Label>{t("account.language")}</Label>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -126,7 +128,7 @@ function AccountContent() {
                 preferredLanguage === "en" ? "border-crimson-600 bg-crimson-50 text-crimson-800" : "border-ink-200 text-ink-600"
               }`}
             >
-              English
+              {t("account.language.en")}
             </button>
             <button
               type="button"
@@ -135,13 +137,13 @@ function AccountContent() {
                 preferredLanguage === "bn" ? "border-crimson-600 bg-crimson-50 text-crimson-800" : "border-ink-200 text-ink-600"
               }`}
             >
-              বাংলা
+              {t("account.language.bn")}
             </button>
           </div>
         </div>
 
         <div>
-          <Label>Appearance</Label>
+          <Label>{t("account.appearance")}</Label>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -150,7 +152,7 @@ function AccountContent() {
                 theme === "light" ? "border-crimson-600 bg-crimson-50 text-crimson-800" : "border-ink-200 text-ink-600"
               }`}
             >
-              Light
+              {t("account.theme.light")}
             </button>
             <button
               type="button"
@@ -159,13 +161,13 @@ function AccountContent() {
                 theme === "dark" ? "border-crimson-600 bg-crimson-50 text-crimson-800" : "border-ink-200 text-ink-600"
               }`}
             >
-              Dark
+              {t("account.theme.dark")}
             </button>
           </div>
         </div>
 
         <Button className="w-full" onClick={save} loading={saving || uploadingPhoto}>
-          Save
+          {t("account.save")}
         </Button>
       </div>
     </div>

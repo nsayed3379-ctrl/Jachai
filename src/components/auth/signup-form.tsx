@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ApiClientError, authApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { useLanguage } from "@/lib/language-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import { isValidBdPhone, isValidPassword, normalizeBdPhone } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
@@ -20,6 +21,7 @@ export function SignupForm({
 }) {
   const { login } = useAuth();
   const { show } = useToast();
+  const { t } = useLanguage();
 
   const [step, setStep] = useState<"details" | "otp">("details");
   const [phone, setPhone] = useState("");
@@ -48,15 +50,15 @@ export function SignupForm({
   async function requestOtp() {
     setError(null);
     if (!isValidBdPhone(phone)) {
-      setError("Enter a valid Bangladeshi mobile number (e.g. 01712345678).");
+      setError(t("auth.error.invalid_phone"));
       return;
     }
     if (!isValidPassword(password)) {
-      setError("Password must be at least 8 characters.");
+      setError(t("auth.error.password_min"));
       return;
     }
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError(t("auth.error.passwords_mismatch"));
       return;
     }
     setSending(true);
@@ -64,10 +66,10 @@ export function SignupForm({
       await authApi.requestOtp(normalizeBdPhone(phone));
       setStep("otp");
       startCooldown();
-      show("OTP sent — it expires in 5 minutes.", "success");
+      show(t("auth.toast.otp_sent"), "success");
     } catch (err) {
       if (err instanceof ApiClientError && err.status === 429) {
-        setError("Too many OTP requests — please wait before trying again.");
+        setError(t("auth.error.too_many_otp"));
       } else {
         setError(errorMessage(err));
       }
@@ -79,14 +81,14 @@ export function SignupForm({
   async function verifyAndRegister() {
     setError(null);
     if (code.trim().length < 4) {
-      setError("Enter the code you received.");
+      setError(t("auth.error.enter_code"));
       return;
     }
     setVerifying(true);
     try {
       const tokens = await authApi.register(normalizeBdPhone(phone), code.trim(), password, role);
       login(tokens);
-      show("Account created", "success");
+      show(t("auth.toast.account_created"), "success");
       onSuccess();
     } catch (err) {
       setError(errorMessage(err));
@@ -98,10 +100,10 @@ export function SignupForm({
   if (step === "otp") {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-ink-500">Sent to {normalizeBdPhone(phone)}</p>
+        <p className="text-sm text-ink-500">{t("auth.sent_to", { phone: normalizeBdPhone(phone) })}</p>
 
         <div>
-          <Label htmlFor="signup-code">6-digit code</Label>
+          <Label htmlFor="signup-code">{t("auth.otp_code_label")}</Label>
           <Input
             id="signup-code"
             inputMode="numeric"
@@ -115,12 +117,12 @@ export function SignupForm({
         </div>
 
         <Button className="w-full" size="lg" onClick={verifyAndRegister} loading={verifying}>
-          Verify &amp; create account
+          {t("auth.verify_create_account")}
         </Button>
 
         <div className="flex justify-between text-sm text-ink-500">
           <button type="button" onClick={() => setStep("details")} className="hover:underline">
-            ← Back
+            {t("auth.back")}
           </button>
           <button
             type="button"
@@ -128,7 +130,7 @@ export function SignupForm({
             disabled={cooldown > 0 || sending}
             className="hover:underline disabled:opacity-50"
           >
-            {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}
+            {cooldown > 0 ? t("auth.resend_in", { n: cooldown }) : t("auth.resend_code")}
           </button>
         </div>
       </div>
@@ -138,7 +140,7 @@ export function SignupForm({
   return (
     <div className="space-y-4">
       <div>
-        <Label htmlFor="signup-phone">Mobile number</Label>
+        <Label htmlFor="signup-phone">{t("auth.mobile_number")}</Label>
         <Input
           id="signup-phone"
           inputMode="tel"
@@ -149,7 +151,7 @@ export function SignupForm({
       </div>
 
       <div>
-        <Label htmlFor="signup-password">Password</Label>
+        <Label htmlFor="signup-password">{t("auth.password")}</Label>
         <Input
           id="signup-password"
           type="password"
@@ -157,11 +159,11 @@ export function SignupForm({
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-        <FieldHint>At least 8 characters.</FieldHint>
+        <FieldHint>{t("auth.hint.min_8_chars")}</FieldHint>
       </div>
 
       <div>
-        <Label htmlFor="signup-confirm-password">Confirm password</Label>
+        <Label htmlFor="signup-confirm-password">{t("auth.confirm_password")}</Label>
         <Input
           id="signup-confirm-password"
           type="password"
@@ -173,7 +175,7 @@ export function SignupForm({
       </div>
 
       <div>
-        <Label>Account type</Label>
+        <Label>{t("auth.account_type")}</Label>
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -182,7 +184,7 @@ export function SignupForm({
               role === "CONSUMER" ? "border-crimson-600 bg-crimson-50 text-crimson-800" : "border-ink-200 text-ink-600 hover:border-ink-300"
             }`}
           >
-            Customer
+            {t("auth.customer")}
           </button>
           <button
             type="button"
@@ -191,22 +193,22 @@ export function SignupForm({
               role === "BUSINESS_OWNER" ? "border-crimson-600 bg-crimson-50 text-crimson-800" : "border-ink-200 text-ink-600 hover:border-ink-300"
             }`}
           >
-            Business Owner
+            {t("auth.business_owner")}
           </button>
         </div>
-        <FieldHint>One phone number can hold only one account type.</FieldHint>
+        <FieldHint>{t("auth.hint.one_account_type")}</FieldHint>
       </div>
 
       <FieldError>{error}</FieldError>
 
       <Button className="w-full" size="lg" onClick={requestOtp} loading={sending}>
-        Create account
+        {t("button.create_account")}
       </Button>
 
       <p className="text-center text-sm text-ink-500">
-        Already have an account?{" "}
+        {t("auth.have_account")}{" "}
         <button type="button" onClick={onSwitchToLogin} className="text-crimson-700 hover:underline font-medium">
-          Log in
+          {t("nav.log_in")}
         </button>
       </p>
     </div>

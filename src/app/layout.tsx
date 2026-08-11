@@ -3,6 +3,7 @@ import { Sora, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { AuthModalProvider } from "@/lib/auth-modal-context";
+import { LanguageProvider } from "@/lib/language-context";
 import { ThemeProvider } from "@/lib/theme-context";
 import { ToastProvider } from "@/lib/toast-context";
 import { Navbar } from "@/components/navbar";
@@ -41,17 +42,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <ToastProvider>
             <AuthProvider>
-              <AuthModalProvider>
-                <Navbar />
-                {children}
-                <footer className="border-t border-ink-100 py-8 mt-12">
-                  <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-xs text-ink-400 flex flex-wrap justify-between gap-2">
-                    <span>© {new Date().getFullYear()} Jachai. Dhaka-first, verification-centric.</span>
-                    <span>Built for Bangladesh's local businesses.</span>
-                  </div>
-                </footer>
-                <AuthModal />
-              </AuthModalProvider>
+              <LanguageProvider>
+                <AuthModalProvider>
+                  <Navbar />
+                  {children}
+                  <footer className="border-t border-ink-100 py-8 mt-12">
+                    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-xs text-ink-400 flex flex-wrap justify-between gap-2">
+                      <span>© {new Date().getFullYear()} Jachai. Dhaka-first, verification-centric.</span>
+                      <span>Built for Bangladesh's local businesses.</span>
+                    </div>
+                  </footer>
+                  <AuthModal />
+                </AuthModalProvider>
+              </LanguageProvider>
             </AuthProvider>
           </ToastProvider>
         </ThemeProvider>
