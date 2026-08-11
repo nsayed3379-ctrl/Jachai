@@ -7,7 +7,6 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthModal } from "@/lib/auth-modal-context";
 import { useLanguage } from "@/lib/language-context";
 import { cn } from "@/lib/utils";
-import { NotificationBell } from "./notification-bell";
 import { ThemeToggle } from "./theme-toggle";
 
 function Logo({ light }: { light: boolean }) {
@@ -125,16 +124,6 @@ export function Navbar() {
         <Logo light={transparent} />
 
         <nav className="hidden md:flex items-center gap-1 text-sm font-medium">
-          {user?.role === "BUSINESS_OWNER" && (
-            <>
-              <Link href="/owner" className={linkClass}>
-                {t("nav.my_businesses")}
-              </Link>
-              <Link href="/owner/inbox" className={linkClass}>
-                {t("nav.inbox")}
-              </Link>
-            </>
-          )}
           {user?.role === "ADMIN" && (
             <Link href="/admin" className={linkClass}>
               {t("nav.admin")}
@@ -143,11 +132,6 @@ export function Navbar() {
         </nav>
 
         <div className="hidden md:flex items-center gap-2">
-          {user && (
-            <NotificationBell
-              className={transparent ? "text-white hover:bg-white/15" : "text-ink-600 hover:bg-ink-100"}
-            />
-          )}
           <ThemeToggle
             className={
               transparent ? "text-white hover:bg-white/15" : "text-ink-600 hover:bg-ink-100"
@@ -205,6 +189,25 @@ export function Navbar() {
                           <div className="my-1 h-px bg-ink-100" />
                         </>
                       )}
+                      {user.role === "BUSINESS_OWNER" && (
+                        <>
+                          <AccountMenuLink
+                            href="/owner"
+                            active={pathname === "/owner"}
+                            onClick={() => setAccountMenuOpen(false)}
+                          >
+                            {t("nav.my_businesses")}
+                          </AccountMenuLink>
+                          <AccountMenuLink
+                            href="/owner/inbox"
+                            active={pathname === "/owner/inbox"}
+                            onClick={() => setAccountMenuOpen(false)}
+                          >
+                            {t("nav.inbox")}
+                          </AccountMenuLink>
+                          <div className="my-1 h-px bg-ink-100" />
+                        </>
+                      )}
                       <AccountMenuLink
                         href="/account"
                         active={pathname === "/account"}
@@ -253,12 +256,6 @@ export function Navbar() {
             <span className="text-ink-500">{t("nav.theme")}</span>
             <ThemeToggle className="text-ink-600 hover:bg-ink-100" />
           </div>
-          {user && (
-            <div className="flex items-center justify-between px-3 py-2">
-              <span className="text-ink-500">Notifications</span>
-              <NotificationBell className="text-ink-600 hover:bg-ink-100" />
-            </div>
-          )}
           {user?.role === "CONSUMER" && (
             <>
               <Link href="/me/reviews" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
