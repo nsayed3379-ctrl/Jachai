@@ -162,7 +162,7 @@ export function Navbar() {
               >
                 <Link href="/account" className={cn(accountLinkClass, "flex items-center gap-2")}>
                   <Avatar photoUrl={profile?.profilePhotoUrl} />
-                  {t("nav.account")}
+                  {profile?.name || t("nav.account")}
                   <svg
                     viewBox="0 0 20 20"
                     className={cn("h-3.5 w-3.5 transition-transform duration-150", accountMenuOpen && "rotate-180")}
@@ -295,7 +295,7 @@ export function Navbar() {
                 onClick={() => setMenuOpen(false)}
               >
                 <Avatar photoUrl={profile?.profilePhotoUrl} size={24} />
-                {t("nav.account")}
+                {profile?.name || t("nav.account")}
               </Link>
               <button onClick={() => logout()} className="text-left px-3 py-2 rounded hover:bg-ink-100 text-rose-600">
                 {t("nav.log_out")}

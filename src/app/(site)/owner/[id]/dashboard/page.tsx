@@ -94,7 +94,7 @@ function ReviewsTab({ business }: { business: BusinessResponse }) {
               )}
             </div>
             <p className="text-xs text-ink-400 mt-0.5">
-              reviewer {truncateId(r.userId)} · {timeAgo(r.createdAt)}
+              {r.userName || `reviewer ${truncateId(r.userId)}`} · {timeAgo(r.createdAt)}
             </p>
             {r.content && <p className="mt-1.5 text-sm text-ink-700">{r.content}</p>}
             <div className="mt-2">

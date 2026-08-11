@@ -124,6 +124,7 @@ export interface ReviewResponse {
   id: string;
   businessId: string;
   userId: string;
+  userName: string | null;
   rating: number;
   content: string | null;
   visibilityStatus: VisibilityStatus;
@@ -135,13 +136,14 @@ export interface ReviewResponse {
   createdAt: string;
 }
 
-// Raw entity shape returned by the admin moderation "flagged reviews" endpoint
-// (com.bdreview.platform.review.Review) — thinner than ReviewResponse, no
-// photo URLs resolved.
+// Shape returned by the admin moderation "flagged reviews" endpoint
+// (com.bdreview.platform.moderation.FlaggedReviewResponse) — thinner than
+// ReviewResponse, no photo URLs resolved.
 export interface Review {
   id: string;
   businessId: string;
   userId: string;
+  userName: string | null;
   rating: number;
   content: string | null;
   visibilityStatus: VisibilityStatus;
@@ -149,9 +151,7 @@ export interface Review {
   usefulCount: number;
   funnyCount: number;
   coolCount: number;
-  deletedAt: string | null;
   createdAt: string;
-  updatedAt: string;
 }
 
 export interface SubmitReviewRequest {
@@ -205,6 +205,7 @@ export interface BusinessClaim {
   id: string;
   businessId: string;
   claimantUserId: string;
+  claimantName: string | null;
   verificationMethod: VerificationMethod;
   status: ClaimStatus;
   createdAt: string;
@@ -242,6 +243,7 @@ export type ReportPriority = "HIGH" | "NORMAL";
 export interface Report {
   id: string;
   reporterUserId: string;
+  reporterName: string | null;
   targetType: ReportTargetType;
   targetId: string;
   reason: ReportReason;
@@ -335,6 +337,7 @@ export interface FakeReviewSignal {
 export interface MessageThread {
   id: string;
   consumerUserId: string;
+  consumerName: string | null;
   businessId: string;
   createdAt: string;
 }
@@ -343,6 +346,7 @@ export interface Message {
   id: string;
   threadId: string;
   senderUserId: string;
+  senderName: string | null;
   content: string;
   readAt: string | null;
   createdAt: string;

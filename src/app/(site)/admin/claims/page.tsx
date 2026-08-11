@@ -64,7 +64,7 @@ function ClaimsContent() {
               <div>
                 <p className="text-sm font-medium text-ink-800">Business {truncateId(c.businessId, 10)}…</p>
                 <p className="text-xs text-ink-400">
-                  Claimant {truncateId(c.claimantUserId, 10)}… · via {c.verificationMethod} ·{" "}
+                  {c.claimantName || `Claimant ${truncateId(c.claimantUserId, 10)}…`} · via {c.verificationMethod} ·{" "}
                   {formatDateTime(c.createdAt)}
                 </p>
               </div>

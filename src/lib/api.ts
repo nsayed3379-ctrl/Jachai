@@ -160,10 +160,10 @@ export const authApi = {
   requestOtp: (phoneNumber: string) =>
     request<void>("/api/v1/otp/request", { method: "POST", body: { phoneNumber }, auth: false }),
 
-  register: (phoneNumber: string, code: string, password: string, role: UserRole) =>
+  register: (phoneNumber: string, code: string, password: string, role: UserRole, name: string) =>
     request<TokenPairDto>("/api/v1/auth/register", {
       method: "POST",
-      body: { phoneNumber, code, password, role },
+      body: { phoneNumber, code, password, role, name },
       auth: false,
     }),
 

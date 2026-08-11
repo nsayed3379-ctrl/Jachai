@@ -65,7 +65,7 @@ export function ReviewCard({
             )}
           </div>
           <p className="mt-1 text-xs text-ink-400">
-            reviewer {truncateId(review.userId)} · {timeAgo(review.createdAt)}
+            {review.userName || `reviewer ${truncateId(review.userId)}`} · {timeAgo(review.createdAt)}
           </p>
         </div>
         <ReportButton targetType="REVIEW" targetId={review.id} />

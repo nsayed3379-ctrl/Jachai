@@ -86,6 +86,7 @@ const dictionary: Record<PreferredLanguage, Record<string, string>> = {
     "auth.error.passwords_mismatch": "Passwords do not match.",
     "auth.error.enter_code": "Enter the code you received.",
     "auth.error.too_many_otp": "Too many OTP requests — please wait before trying again.",
+    "auth.error.enter_name": "Enter your name.",
 
     // Toasts
     "auth.toast.logged_in": "Logged in",
@@ -174,6 +175,7 @@ const dictionary: Record<PreferredLanguage, Record<string, string>> = {
     "auth.error.password_min": "পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে।",
     "auth.error.passwords_mismatch": "পাসওয়ার্ড মিলছে না।",
     "auth.error.enter_code": "প্রাপ্ত কোডটি দিন।",
+    "auth.error.enter_name": "আপনার নাম লিখুন।",
     "auth.error.too_many_otp": "অনেকবার ওটিপি চাওয়া হয়েছে — একটু পর আবার চেষ্টা করুন।",
 
     // Toasts

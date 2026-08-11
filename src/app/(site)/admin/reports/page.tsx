@@ -91,7 +91,7 @@ function ReportsContent() {
                     {r.targetType}: {truncateId(r.targetId, 10)}…
                   </td>
                   <td className="px-4 py-2.5">{REPORT_REASON_LABELS[r.reason]}</td>
-                  <td className="px-4 py-2.5 font-mono text-xs">{truncateId(r.reporterUserId, 10)}…</td>
+                  <td className="px-4 py-2.5 text-xs">{r.reporterName || `${truncateId(r.reporterUserId, 10)}…`}</td>
                   <td className="px-4 py-2.5 text-xs">
                     <div className="text-ink-400">{formatDateTime(r.createdAt)}</div>
                     <div className={cn(r.isOverdue ? "text-rose-600 font-semibold" : "text-ink-400")}>

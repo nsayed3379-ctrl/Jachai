@@ -76,7 +76,8 @@ function ThreadsSidebar() {
           <div className="divide-y divide-ink-100">
             {threads.map((t) => {
               const cached = lookupBusiness(t.businessId);
-              const name = cached?.name ?? `Business ${t.businessId.slice(0, 8)}…`;
+              const businessName = cached?.name ?? `Business ${t.businessId.slice(0, 8)}…`;
+              const name = t.consumerName || `Customer ${t.consumerUserId.slice(0, 8)}…`;
               const active = t.id === activeThreadId;
               return (
                 <Link
@@ -106,7 +107,9 @@ function ThreadsSidebar() {
                     >
                       {name}
                     </p>
-                    <p className="truncate text-[11px] text-ink-400">{formatDate(t.createdAt)}</p>
+                    <p className="truncate text-[11px] text-ink-400">
+                      {businessName} · {formatDate(t.createdAt)}
+                    </p>
                   </div>
                   {active && <span className="h-2 w-2 shrink-0 rounded-full bg-crimson-500" />}
                 </Link>

@@ -131,7 +131,7 @@ function FlaggedReviewsContent() {
                       <Badge tone="neutral">{r.visibilityStatus}</Badge>
                     </div>
                     <p className="text-xs text-ink-400 mt-1">
-                      business {truncateId(r.businessId, 10)}… · reviewer {truncateId(r.userId, 10)}… ·{" "}
+                      business {truncateId(r.businessId, 10)}… · {r.userName || `reviewer ${truncateId(r.userId, 10)}…`} ·{" "}
                       {formatDateTime(r.createdAt)}
                     </p>
                     {r.content && <p className="text-sm text-ink-700 mt-1.5">{r.content}</p>}

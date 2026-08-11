@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { messageApi } from "@/lib/api";
-import { lookupBusiness } from "@/lib/business-cache";
 import { MessageThreadView } from "@/components/message-thread-view";
 import { PageSpinner } from "@/components/ui/misc";
 
@@ -19,8 +18,7 @@ export default function OwnerMessageThreadPage() {
       .then((threads) => {
         const t = threads.find((th) => th.id === threadId);
         if (t) {
-          const cached = lookupBusiness(t.businessId);
-          setTitle(cached?.name ?? `Business ${t.businessId.slice(0, 8)}…`);
+          setTitle(t.consumerName || `Customer ${t.consumerUserId.slice(0, 8)}…`);
         }
       })
       .finally(() => setLoading(false));

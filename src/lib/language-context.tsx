@@ -18,17 +18,20 @@ const LanguageContext = createContext<LanguageContextValue | null>(null);
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const { profile } = useAuth();
 
-  // Read the last-known choice from localStorage first so the navbar/forms
-  // render in the right language immediately on load, before the profile
-  // API call (userApi.me()) resolves.
-  const [lang, setLangState] = useState<PreferredLanguage>(() => {
-    if (typeof window === "undefined") return "en";
-    return localStorage.getItem(STORAGE_KEY) === "bn" ? "bn" : "en";
-  });
+  // Always start at "en" so the client's first render matches the
+  // server-rendered HTML; the localStorage-saved choice is applied in an
+  // effect after mount to avoid a hydration mismatch.
+  const [lang, setLangState] = useState<PreferredLanguage>("en");
 
   const setLanguage = useCallback((next: PreferredLanguage) => {
     setLangState(next);
     localStorage.setItem(STORAGE_KEY, next);
+  }, []);
+
+  useEffect(() => {
+    if (localStorage.getItem(STORAGE_KEY) === "bn") {
+      setLangState("bn");
+    }
   }, []);
 
   // Once the account profile loads (or is updated via Account settings' Save

@@ -24,6 +24,7 @@ export function SignupForm({
   const { t } = useLanguage();
 
   const [step, setStep] = useState<"details" | "otp">("details");
+  const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -49,6 +50,10 @@ export function SignupForm({
 
   async function requestOtp() {
     setError(null);
+    if (!name.trim()) {
+      setError(t("auth.error.enter_name"));
+      return;
+    }
     if (!isValidBdPhone(phone)) {
       setError(t("auth.error.invalid_phone"));
       return;
@@ -86,7 +91,7 @@ export function SignupForm({
     }
     setVerifying(true);
     try {
-      const tokens = await authApi.register(normalizeBdPhone(phone), code.trim(), password, role);
+      const tokens = await authApi.register(normalizeBdPhone(phone), code.trim(), password, role, name.trim());
       login(tokens);
       show(t("auth.toast.account_created"), "success");
       onSuccess();
@@ -139,6 +144,17 @@ export function SignupForm({
 
   return (
     <div className="space-y-4">
+      <div>
+        <Label htmlFor="signup-name">{t("account.name")}</Label>
+        <Input
+          id="signup-name"
+          autoFocus
+          placeholder={t("account.name_placeholder")}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
+
       <div>
         <Label htmlFor="signup-phone">{t("auth.mobile_number")}</Label>
         <Input
