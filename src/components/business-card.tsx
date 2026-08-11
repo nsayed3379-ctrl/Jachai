@@ -43,6 +43,17 @@ export function BusinessCard({
           {business.verified && (
             <VerifiedBadge compact className="absolute top-2 right-2 shadow" />
           )}
+          {business.flagged && (
+            <span
+              className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-rose-600 px-2 py-1 text-[10px] font-bold text-white shadow"
+              title={business.flagReason ?? undefined}
+            >
+              <svg viewBox="0 0 24 24" className="h-3 w-3" fill="currentColor">
+                <path d="M5 3a1 1 0 0 1 1 1v16a1 1 0 1 1-2 0V4a1 1 0 0 1 1-1Zm2 1h11.5a.5.5 0 0 1 .4.8L16 9l2.9 4.2a.5.5 0 0 1-.4.8H7V4Z" />
+              </svg>
+              Flagged
+            </span>
+          )}
           <span className="absolute bottom-2 left-2 inline-flex items-center rounded-full bg-surface/95 px-2.5 py-1 text-[11px] font-semibold text-ink-700 shadow">
             {business.categoryName}
           </span>
