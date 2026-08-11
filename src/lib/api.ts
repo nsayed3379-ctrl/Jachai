@@ -26,11 +26,13 @@ import type {
   MessageThread,
   ModerationQueueCounts,
   NidVerification,
+  NotificationListResponse,
   PageResponse,
   PreferredLanguage,
   PreSignedUploadResponse,
   Report,
   ReportReason,
+  ReportStatus,
   ReportTargetType,
   Review,
   ReviewResponse,
@@ -233,6 +235,10 @@ export const businessApi = {
     request<BusinessResponse>(`/api/v1/businesses/${id}`, { method: "PUT", body }),
 
   remove: (id: string) => request<void>(`/api/v1/businesses/${id}`, { method: "DELETE" }),
+
+  /** Owner's next step after a flag (report workflow) — notifies every admin, doesn't clear the flag. */
+  requestFlagReview: (id: string) =>
+    request<void>(`/api/v1/businesses/${id}/flag/request-review`, { method: "POST" }),
 };
 
 // ---------------------------------------------------------------------------
@@ -358,8 +364,23 @@ export const reportApi = {
   queue: (page = 0, size = 20) =>
     request<PageResponse<Report>>("/api/v1/reports/queue", { query: { page, size } }),
 
-  resolve: (id: string, notes?: string) =>
-    request<void>(`/api/v1/reports/${id}/resolve`, { method: "POST", body: notes ?? "" }),
+  resolve: (id: string, outcome: Exclude<ReportStatus, "PENDING">, resolutionNote?: string) =>
+    request<void>(`/api/v1/reports/${id}/resolve`, {
+      method: "POST",
+      body: { outcome, resolutionNote: resolutionNote ?? null },
+    }),
+};
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+export const notificationApi = {
+  list: (page = 0, size = 20) =>
+    request<NotificationListResponse>("/api/v1/notifications", { query: { page, size } }),
+
+  markRead: (id: string) => request<void>(`/api/v1/notifications/${id}/read`, { method: "PUT" }),
+
+  markAllRead: () => request<void>("/api/v1/notifications/read-all", { method: "PUT" }),
 };
 
 // ---------------------------------------------------------------------------

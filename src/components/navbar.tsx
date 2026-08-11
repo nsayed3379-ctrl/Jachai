@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthModal } from "@/lib/auth-modal-context";
 import { useLanguage } from "@/lib/language-context";
 import { cn } from "@/lib/utils";
+import { NotificationBell } from "./notification-bell";
 import { ThemeToggle } from "./theme-toggle";
 
 function Logo({ light }: { light: boolean }) {
@@ -142,6 +143,11 @@ export function Navbar() {
         </nav>
 
         <div className="hidden md:flex items-center gap-2">
+          {user && (
+            <NotificationBell
+              className={transparent ? "text-white hover:bg-white/15" : "text-ink-600 hover:bg-ink-100"}
+            />
+          )}
           <ThemeToggle
             className={
               transparent ? "text-white hover:bg-white/15" : "text-ink-600 hover:bg-ink-100"
@@ -247,6 +253,12 @@ export function Navbar() {
             <span className="text-ink-500">{t("nav.theme")}</span>
             <ThemeToggle className="text-ink-600 hover:bg-ink-100" />
           </div>
+          {user && (
+            <div className="flex items-center justify-between px-3 py-2">
+              <span className="text-ink-500">Notifications</span>
+              <NotificationBell className="text-ink-600 hover:bg-ink-100" />
+            </div>
+          )}
           {user?.role === "CONSUMER" && (
             <>
               <Link href="/me/reviews" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>

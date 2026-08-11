@@ -75,6 +75,11 @@ export interface BusinessResponse {
   verified: boolean;
   averageRating: number;
   reviewCount: number;
+  // Set when a LISTING report against this business is resolved ACTION_TAKEN — a visible,
+  // Yelp-style "consumer alert" with the report's reason, not a takedown (see report workflow).
+  flagged: boolean;
+  flagReason: ReportReason | null;
+  flaggedAt: string | null;
 }
 
 export interface CreateBusinessRequest {
@@ -229,7 +234,10 @@ export interface Collection {
 // ---------------------------------------------------------------------------
 export type ReportTargetType = "REVIEW" | "LISTING";
 export type ReportReason = "SPAM" | "FAKE" | "OFFENSIVE" | "OTHER";
-export type ReportStatus = "PENDING" | "RESOLVED";
+// PENDING is the only non-terminal value; the other three are resolution
+// outcomes an admin chooses on resolve — see ResolveReportRequest below.
+export type ReportStatus = "PENDING" | "ACTION_TAKEN" | "DISMISSED" | "DUPLICATE";
+export type ReportPriority = "HIGH" | "NORMAL";
 
 export interface Report {
   id: string;
@@ -238,7 +246,51 @@ export interface Report {
   targetId: string;
   reason: ReportReason;
   status: ReportStatus;
+  referenceCode: string;
+  resolutionNote: string | null;
+  reporterNotifiedAt: string | null;
+  targetOwnerNotifiedAt: string | null;
+  priority: ReportPriority;
+  dueAt: string;
+  isOverdue: boolean;
   createdAt: string;
+}
+
+/** outcome must be ACTION_TAKEN, DISMISSED, or DUPLICATE — never PENDING (rejected server-side). */
+export interface ResolveReportRequest {
+  outcome: Exclude<ReportStatus, "PENDING">;
+  resolutionNote?: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+export type NotificationType =
+  | "REPORT_SUBMITTED"
+  | "REPORT_ACTION_TAKEN"
+  | "REPORT_DISMISSED"
+  | "CONTENT_HIDDEN"
+  | "LISTING_FLAGGED";
+export type NotificationChannel = "SMS" | "IN_APP";
+export type NotificationStatus = "PENDING" | "SENT" | "FAILED" | "READ";
+
+export interface Notification {
+  id: string;
+  recipientUserId: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  relatedEntityType: string | null;
+  relatedEntityId: string | null;
+  channel: NotificationChannel;
+  status: NotificationStatus;
+  createdAt: string;
+  readAt: string | null;
+}
+
+export interface NotificationListResponse {
+  notifications: PageResponse<Notification>;
+  unreadCount: number;
 }
 
 // ---------------------------------------------------------------------------

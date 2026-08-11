@@ -30,3 +30,18 @@ export const VOTE_TYPE_LABELS: Record<string, string> = {
   FUNNY: "Funny",
   COOL: "Cool",
 };
+
+export const REPORT_STATUS_LABELS: Record<string, string> = {
+  PENDING: "Pending",
+  ACTION_TAKEN: "Action taken",
+  DISMISSED: "Dismissed",
+  DUPLICATE: "Duplicate",
+};
+
+export const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
+  REPORT_SUBMITTED: "Report submitted",
+  REPORT_ACTION_TAKEN: "Report resolved",
+  REPORT_DISMISSED: "Report resolved",
+  CONTENT_HIDDEN: "Review removed",
+  LISTING_FLAGGED: "Listing flagged",
+};

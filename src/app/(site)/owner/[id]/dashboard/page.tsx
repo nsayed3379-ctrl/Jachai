@@ -13,6 +13,7 @@ import {
   uploadFileToPresignedUrl,
 } from "@/lib/api";
 import { RoleGate } from "@/components/role-gate";
+import { REPORT_REASON_LABELS } from "@/lib/config";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import { formatDateTime, timeAgo, truncateId } from "@/lib/utils";
 import type {
@@ -322,6 +323,8 @@ function DashboardContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+  const [requestingReview, setRequestingReview] = useState(false);
+  const [reviewRequested, setReviewRequested] = useState(false);
 
   useEffect(() => {
     businessApi
@@ -345,6 +348,20 @@ function DashboardContent() {
       show(errorMessage(err), "error");
     } finally {
       setRegenerating(false);
+    }
+  }
+
+  async function requestFlagReview() {
+    if (!business) return;
+    setRequestingReview(true);
+    try {
+      await businessApi.requestFlagReview(business.id);
+      setReviewRequested(true);
+      show("Admins have been notified and will take another look.", "success");
+    } catch (err) {
+      show(errorMessage(err), "error");
+    } finally {
+      setRequestingReview(false);
     }
   }
 
@@ -377,6 +394,31 @@ function DashboardContent() {
       <p className="text-sm text-ink-400 mb-6">
         {business.categoryName} · {business.areaName}, {business.cityName}
       </p>
+
+      {business.flagged && (
+        <div className="mb-6 rounded-xl border border-rose-500/30 bg-rose-500/5 px-4 py-3.5">
+          <p className="text-sm font-semibold text-rose-700">
+            ⚠ This listing has been flagged
+          </p>
+          <p className="mt-1 text-sm text-rose-700/90">
+            A user report against this listing was reviewed and confirmed for{" "}
+            {business.flagReason ? REPORT_REASON_LABELS[business.flagReason] ?? business.flagReason : "a policy violation"}.
+            A warning is now visible on your public listing. Please review and update your listing so it
+            complies with our community guidelines.
+          </p>
+          <div className="mt-3">
+            {reviewRequested ? (
+              <p className="text-xs text-rose-700/80">
+                ✓ Admins have been notified — this will be reviewed again shortly.
+              </p>
+            ) : (
+              <Button size="sm" variant="outline" onClick={requestFlagReview} loading={requestingReview}>
+                I've fixed this — request review
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-1 border-b border-ink-100 mb-6">
         {tabs.map((t) => (
