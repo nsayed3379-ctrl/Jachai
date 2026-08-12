@@ -68,6 +68,9 @@ export interface BusinessResponse {
   operatingHours: string | null;
   description: string | null;
   coverPhotoUrl: string | null;
+  logoUrl: string | null;
+  // Cover photo (if any) followed by gallery photos, in display order — card carousel source.
+  photoUrls: string[];
   latitude: number;
   longitude: number;
   priceTier: PriceTier;
@@ -91,6 +94,7 @@ export interface CreateBusinessRequest {
   operatingHours?: string | null;
   description?: string | null;
   coverPhotoUrl?: string | null;
+  logoUrl?: string | null;
   latitude: number;
   longitude: number;
   priceTier: PriceTier;

@@ -36,6 +36,7 @@ const emptyForm: CreateBusinessRequest = {
   operatingHours: "",
   description: "",
   coverPhotoUrl: "",
+  logoUrl: "",
   latitude: 23.780636,
   longitude: 90.419559,
   priceTier: "MODERATE",
@@ -88,9 +89,11 @@ export function BusinessForm({ existing }: Props) {
 
   const [submitting, setSubmitting] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fileRef = useRef<HTMLInputElement>(null);
+  const logoFileRef = useRef<HTMLInputElement>(null);
 
   /*
    * New business flow:
@@ -104,6 +107,13 @@ export function BusinessForm({ existing }: Props) {
     useState<File | null>(null);
 
   const [pendingCoverPreview, setPendingCoverPreview] =
+    useState<string | null>(null);
+
+  /* Same pending-until-creation pattern as the cover photo, for the profile picture. */
+  const [pendingLogoFile, setPendingLogoFile] =
+    useState<File | null>(null);
+
+  const [pendingLogoPreview, setPendingLogoPreview] =
     useState<string | null>(null);
 
   /*
@@ -141,6 +151,7 @@ export function BusinessForm({ existing }: Props) {
       operatingHours: existing.operatingHours ?? "",
       description: existing.description ?? "",
       coverPhotoUrl: existing.coverPhotoUrl ?? "",
+      logoUrl: existing.logoUrl ?? "",
       latitude: existing.latitude,
       longitude: existing.longitude,
       priceTier: existing.priceTier,
@@ -237,6 +248,14 @@ export function BusinessForm({ existing }: Props) {
       }
     };
   }, [pendingCoverPreview]);
+
+  useEffect(() => {
+    return () => {
+      if (pendingLogoPreview) {
+        URL.revokeObjectURL(pendingLogoPreview);
+      }
+    };
+  }, [pendingLogoPreview]);
 
   /*
    * Generic form setter
@@ -397,6 +416,109 @@ export function BusinessForm({ existing }: Props) {
   }
 
   /*
+   * Upload profile picture for an existing business
+   */
+  async function handleLogoUpload(
+    file: File | undefined
+  ) {
+    if (!file || !existing) return;
+
+    setUploadingLogo(true);
+
+    try {
+      const presigned =
+        await galleryApi.requestUploadUrl(
+          existing.id,
+          file.name
+        );
+
+      await uploadFileToPresignedUrl(
+        presigned.uploadUrl,
+        file
+      );
+
+      set(
+        "logoUrl",
+        presigned.cdnUrlAfterUpload
+      );
+
+      show("Profile picture uploaded successfully.", "success");
+    } catch (err) {
+      show(errorMessage(err), "error");
+    } finally {
+      setUploadingLogo(false);
+
+      if (logoFileRef.current) {
+        logoFileRef.current.value = "";
+      }
+    }
+  }
+
+  /*
+   * Select profile picture BEFORE business creation.
+   *
+   * The file is only kept locally.
+   * Actual upload happens after business creation.
+   */
+  function handlePendingLogoSelect(
+    file: File | undefined
+  ) {
+    if (!file) return;
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      show(
+        "Please select a JPG, PNG, or WebP image.",
+        "error"
+      );
+
+      if (logoFileRef.current) {
+        logoFileRef.current.value = "";
+      }
+
+      return;
+    }
+
+    /*
+     * Revoke previous preview URL
+     */
+    if (pendingLogoPreview) {
+      URL.revokeObjectURL(pendingLogoPreview);
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+
+    setPendingLogoFile(file);
+    setPendingLogoPreview(previewUrl);
+  }
+
+  /*
+   * Upload a profile picture after the business has been created.
+   */
+  async function uploadLogoFor(
+    businessId: string,
+    file: File
+  ): Promise<string> {
+    const presigned =
+      await galleryApi.requestUploadUrl(
+        businessId,
+        file.name
+      );
+
+    await uploadFileToPresignedUrl(
+      presigned.uploadUrl,
+      file
+    );
+
+    return presigned.cdnUrlAfterUpload;
+  }
+
+  /*
    * Submit business
    */
   async function submit() {
@@ -444,28 +566,32 @@ export function BusinessForm({ existing }: Props) {
       const created = await businessApi.create(form);
 
       /*
-       * If a cover photo was selected before creation,
-       * upload it now using the newly created business ID.
+       * If a cover photo and/or profile picture were selected before
+       * creation, upload them now using the newly created business ID,
+       * then apply both URLs in a single update call.
        */
-      if (pendingCoverFile) {
+      if (pendingCoverFile || pendingLogoFile) {
         try {
-          const cdnUrl = await uploadCoverFor(
-            created.id,
+          const [coverUrl, logoUrl] = await Promise.all([
             pendingCoverFile
-          );
+              ? uploadCoverFor(created.id, pendingCoverFile)
+              : Promise.resolve(form.coverPhotoUrl ?? null),
+            pendingLogoFile
+              ? uploadLogoFor(created.id, pendingLogoFile)
+              : Promise.resolve(form.logoUrl ?? null),
+          ]);
 
-          /*
-           * Update only the cover photo URL after upload.
-           */
           await businessApi.update(created.id, {
             ...form,
-            coverPhotoUrl: cdnUrl,
+            coverPhotoUrl: coverUrl,
+            logoUrl: logoUrl,
           });
 
-          set("coverPhotoUrl", cdnUrl);
+          if (coverUrl) set("coverPhotoUrl", coverUrl);
+          if (logoUrl) set("logoUrl", logoUrl);
 
           show(
-            "Listing and cover photo created successfully.",
+            "Listing and photos created successfully.",
             "success"
           );
         } catch (uploadError) {
@@ -474,7 +600,7 @@ export function BusinessForm({ existing }: Props) {
            * Only the image upload failed.
            */
           show(
-            "Listing created, but the cover photo failed to upload. You can add it from Edit.",
+            "Listing created, but a photo failed to upload. You can add it from Edit.",
             "error"
           );
         }
@@ -861,6 +987,77 @@ export function BusinessForm({ existing }: Props) {
                     {form.coverPhotoUrl}
                   </p>
                 )}
+              </div>
+
+              {/* Profile picture */}
+              <div>
+                <Label>
+                  Profile picture
+                </Label>
+                <FieldHint>
+                  Shown as a circular badge on your listing's
+                  card — a headshot or logo, separate from the
+                  cover/gallery photos.
+                </FieldHint>
+
+                <div className="mt-2 flex items-center gap-3">
+                  {(pendingLogoPreview && !existing) || form.logoUrl ? (
+                    <img
+                      src={pendingLogoPreview && !existing ? pendingLogoPreview : form.logoUrl!}
+                      alt="Profile picture preview"
+                      className="h-14 w-14 rounded-full object-cover border border-ink-200"
+                    />
+                  ) : (
+                    <div className="h-14 w-14 rounded-full bg-ink-100 border border-ink-200" />
+                  )}
+
+                  <div>
+                    {existing ? (
+                      <>
+                        <input
+                          ref={logoFileRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          onChange={(e) =>
+                            handleLogoUpload(
+                              e.target.files?.[0]
+                            )
+                          }
+                          className="text-xs text-ink-500"
+                          disabled={uploadingLogo}
+                        />
+
+                        {uploadingLogo && (
+                          <span className="ml-2 text-xs text-ink-400">
+                            Uploading…
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <input
+                          ref={logoFileRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          onChange={(e) =>
+                            handlePendingLogoSelect(
+                              e.target.files?.[0]
+                            )
+                          }
+                          className="text-xs text-ink-500"
+                          disabled={submitting}
+                        />
+
+                        {pendingLogoFile && (
+                          <p className="mt-1 text-xs text-ink-500">
+                            Selected:{" "}
+                            {pendingLogoFile.name}
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Attributes */}

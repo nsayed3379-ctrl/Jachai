@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
 import { useParams } from "next/navigation";
-import { businessApi, claimApi, galleryApi, messageApi, reviewApi } from "@/lib/api";
+import { businessApi, claimApi, messageApi, reviewApi } from "@/lib/api";
 import { rememberBusiness } from "@/lib/business-cache";
 import { PRICE_TIER_LABELS, REPORT_REASON_LABELS } from "@/lib/config";
 import { useAuth } from "@/lib/auth-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
-import type { BusinessPhoto, BusinessResponse, ReviewResponse } from "@/lib/types";
-import { distanceKm, formatDistance } from "@/lib/utils";
+import type { BusinessResponse, ReviewResponse } from "@/lib/types";
+import { cn, distanceKm, formatDistance } from "@/lib/utils";
 import { StarDisplay } from "@/components/star-rating";
 import { VerifiedBadge } from "@/components/verified-badge";
 import { MapPreview } from "@/components/map-preview";
@@ -29,7 +29,6 @@ export default function BusinessDetailPage() {
   const { show } = useToast();
 
   const [business, setBusiness] = useState<BusinessResponse | null>(null);
-  const [gallery, setGallery] = useState<BusinessPhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,8 +47,13 @@ export default function BusinessDetailPage() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<"idle" | "locating" | "denied">("idle");
 
-  const [coverPhotoFailed, setCoverPhotoFailed] = useState(false);
-  const [failedGalleryPhotoIds, setFailedGalleryPhotoIds] = useState<Set<string>>(new Set());
+  const [heroIndex, setHeroIndex] = useState(0);
+  const [failedPhotoIndexes, setFailedPhotoIndexes] = useState<Set<number>>(new Set());
+  const thumbStripRef = useRef<HTMLDivElement>(null);
+
+  function scrollThumbs(direction: 1 | -1) {
+    thumbStripRef.current?.scrollBy({ left: direction * 200, behavior: "smooth" });
+  }
 
   function showDistanceFromMe() {
     if (!("geolocation" in navigator)) {
@@ -100,7 +104,6 @@ export default function BusinessDetailPage() {
         setBusiness(b);
         rememberBusiness(b);
         loadReviews(b.id, 0);
-        galleryApi.list(b.id).then((g) => !cancelled && setGallery(g)).catch(() => {});
       })
       .catch((err) => !cancelled && setError(errorMessage(err)))
       .finally(() => !cancelled && setLoading(false));
@@ -145,49 +148,120 @@ export default function BusinessDetailPage() {
   if (error || !business) return <ErrorBanner message={error ?? "Business not found"} />;
 
   const isOwnerOfThis = user?.role === "BUSINESS_OWNER";
+  const photos = business.photoUrls;
+  const currentPhoto = photos[heroIndex] && !failedPhotoIndexes.has(heroIndex) ? photos[heroIndex] : null;
+
+  function goToHeroPhoto(index: number) {
+    setHeroIndex((index + photos.length) % photos.length);
+  }
 
   return (
     <div>
       {/* Cover + gallery */}
-      <div className="relative h-64 sm:h-80 w-full rounded-2xl overflow-hidden bg-ink-100">
-        {business.coverPhotoUrl && !coverPhotoFailed ? (
+      <div className="relative h-72 sm:h-96 w-full rounded-2xl overflow-hidden bg-ink-900">
+        {currentPhoto ? (
           <>
+            {/* Blurred backdrop fills the letterboxed space so the full photo can be
+                shown uncropped (object-contain) without bare bars on mismatched aspect ratios. */}
+            <Image src={currentPhoto} alt="" fill className="object-cover blur-2xl scale-110 opacity-50" aria-hidden />
             <Image
-              src={business.coverPhotoUrl}
+              src={currentPhoto}
               alt={business.name}
               fill
-              className="object-cover"
+              className="object-contain"
               priority
-              onError={() => setCoverPhotoFailed(true)}
+              onError={() => setFailedPhotoIndexes((prev) => new Set(prev).add(heroIndex))}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-scrim/50 via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-scrim/40 via-transparent to-transparent pointer-events-none" />
           </>
         ) : (
           <div className="flex h-full items-center justify-center text-ink-300 font-display">
             {business.categoryName}
           </div>
         )}
+
+        {photos.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={() => goToHeroPhoto(heroIndex - 1)}
+              aria-label="Previous photo"
+              className="absolute left-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-ink-700 shadow-lift hover:bg-white transition-colors"
+            >
+              <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M12 15l-5-5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => goToHeroPhoto(heroIndex + 1)}
+              aria-label="Next photo"
+              className="absolute right-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-ink-700 shadow-lift hover:bg-white transition-colors"
+            >
+              <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M8 15l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <span className="absolute bottom-3 right-3 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-medium text-white">
+              {heroIndex + 1} / {photos.length}
+            </span>
+          </>
+        )}
       </div>
 
-      {gallery.filter((p) => !failedGalleryPhotoIds.has(p.id)).length > 0 && (
-        <div className="mt-2 grid grid-cols-4 sm:grid-cols-6 gap-2">
-          {gallery
-            .filter((p) => !failedGalleryPhotoIds.has(p.id))
-            .slice(0, 6)
-            .map((photo) => (
-              <div key={photo.id} className="relative h-16 sm:h-20 rounded-lg overflow-hidden bg-ink-100">
-                <Image
-                  src={photo.url}
-                  alt=""
-                  fill
-                  className="object-cover"
-                  sizes="120px"
-                  onError={() =>
-                    setFailedGalleryPhotoIds((prev) => new Set(prev).add(photo.id))
-                  }
-                />
-              </div>
-            ))}
+      {photos.length > 1 && (
+        <div className="relative mt-2">
+          {photos.length > 4 && (
+            <button
+              type="button"
+              onClick={() => scrollThumbs(-1)}
+              aria-label="Scroll thumbnails left"
+              className="absolute -left-3 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-lift text-ink-700 hover:bg-ink-50"
+            >
+              <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M12 15l-5-5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          )}
+          <div
+            ref={thumbStripRef}
+            className="flex gap-2 overflow-x-auto scroll-smooth px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {photos.map((url, i) =>
+              failedPhotoIndexes.has(i) ? null : (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => goToHeroPhoto(i)}
+                  className={cn(
+                    "relative h-16 sm:h-20 w-24 sm:w-28 shrink-0 rounded-lg overflow-hidden bg-ink-100 ring-2 transition-colors",
+                    i === heroIndex ? "ring-crimson-500" : "ring-transparent hover:ring-ink-200"
+                  )}
+                >
+                  <Image
+                    src={url}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="120px"
+                    onError={() => setFailedPhotoIndexes((prev) => new Set(prev).add(i))}
+                  />
+                </button>
+              )
+            )}
+          </div>
+          {photos.length > 4 && (
+            <button
+              type="button"
+              onClick={() => scrollThumbs(1)}
+              aria-label="Scroll thumbnails right"
+              className="absolute -right-3 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-lift text-ink-700 hover:bg-ink-50"
+            >
+              <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M8 15l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          )}
         </div>
       )}
 
