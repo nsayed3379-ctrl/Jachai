@@ -240,6 +240,10 @@ export const businessApi = {
   /** Owner's next step after a flag (report workflow) — notifies every admin, doesn't clear the flag. */
   requestFlagReview: (id: string) =>
     request<void>(`/api/v1/businesses/${id}/flag/request-review`, { method: "POST" }),
+
+  /** Toggles a direct reaction to the business as a whole (business-card reaction row). */
+  react: (id: string, voteType: VoteType) =>
+    request<void>(`/api/v1/businesses/${id}/react`, { method: "POST", body: { voteType } }),
 };
 
 // ---------------------------------------------------------------------------

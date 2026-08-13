@@ -83,6 +83,11 @@ export interface BusinessResponse {
   flagged: boolean;
   flagReason: ReportReason | null;
   flaggedAt: string | null;
+  // Sum of usefulCount/funnyCount/coolCount across every one of this business's
+  // reviews — not any single review's own counts (see ReviewResponse for that).
+  totalUsefulCount: number;
+  totalFunnyCount: number;
+  totalCoolCount: number;
 }
 
 export interface CreateBusinessRequest {

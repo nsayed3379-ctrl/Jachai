@@ -64,9 +64,9 @@ function MyReviewsContent() {
             const cached = lookupBusiness(r.businessId);
             return (
               <div key={r.id}>
-                <p className="text-xs text-ink-400 mb-1">
+                <p className="font-display font-bold text-ink-900 mb-1">
                   {cached ? (
-                    <Link href={`/business/${cached.slug}`} className="text-crimson-700 hover:underline">
+                    <Link href={`/business/${cached.slug}`} className="hover:underline">
                       {cached.name}
                     </Link>
                   ) : (

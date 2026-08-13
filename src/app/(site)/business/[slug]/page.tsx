@@ -357,7 +357,7 @@ export default function BusinessDetailPage() {
           )}
 
           {/* Reviews */}
-          <div className="mt-8">
+          <div id="reviews" className="mt-8 scroll-mt-20">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-lg font-semibold text-ink-900">Reviews</h2>
               {user?.role === "CONSUMER" && !showReviewForm && !editingReview && (

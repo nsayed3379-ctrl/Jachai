@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, type MouseEvent } from "react";
+import { useState, type MouseEvent, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { businessApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { PRICE_TIER_LABELS } from "@/lib/config";
-import type { BusinessResponse } from "@/lib/types";
+import type { BusinessResponse, VoteType } from "@/lib/types";
 import { cn, distanceKm, formatDistance } from "@/lib/utils";
 import { Card } from "./ui/misc";
 import { StarDisplay } from "./star-rating";
@@ -26,9 +28,17 @@ export function BusinessCard({
   business: BusinessResponse;
   userLocation?: { lat: number; lng: number };
 }) {
+  const { user } = useAuth();
   const [photoIndex, setPhotoIndex] = useState(0);
   const [photoFailed, setPhotoFailed] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
+  const [counts, setCounts] = useState({
+    USEFUL: business.totalUsefulCount,
+    FUNNY: business.totalFunnyCount,
+    COOL: business.totalCoolCount,
+  });
+  const [reacted, setReacted] = useState<Set<VoteType>>(new Set());
+  const [reacting, setReacting] = useState<VoteType | null>(null);
   const distance = userLocation
     ? distanceKm(userLocation, { lat: business.latitude, lng: business.longitude })
     : null;
@@ -43,10 +53,67 @@ export function BusinessCard({
     setPhotoIndex((index + photos.length) % photos.length);
   }
 
+  // Business-level reaction (business.BusinessReaction) — a direct "react to
+  // this business" toggle, distinct from voting on any one specific review.
+  async function react(e: MouseEvent, type: VoteType) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user || reacting) return;
+    setReacting(type);
+    try {
+      await businessApi.react(business.id, type);
+      setReacted((prev) => {
+        const next = new Set(prev);
+        next.has(type) ? next.delete(type) : next.add(type);
+        return next;
+      });
+      setCounts((prev) => ({ ...prev, [type]: prev[type] + (reacted.has(type) ? -1 : 1) }));
+    } catch {
+      // decorative-ish reaction — a failed toggle here just stays as-is, no toast noise
+    } finally {
+      setReacting(null);
+    }
+  }
+
   return (
     <Link href={`/business/${business.slug}`} className="group block h-full">
       <Card className="h-full overflow-hidden flex flex-col transition-all duration-200 group-hover:shadow-lift group-hover:-translate-y-1">
-        <div className="relative h-48 w-full bg-ink-100">
+        {/* Header: identity block sits above the photo, never on top of it —
+            avatar + name + verified badge + category, all on plain white. */}
+        <div className="p-4 pb-3 flex items-center gap-2.5">
+          {business.logoUrl && !logoFailed ? (
+            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full ring-2 ring-white shadow-sm bg-ink-100">
+              <Image
+                src={business.logoUrl}
+                alt=""
+                fill
+                className="object-cover"
+                sizes="40px"
+                onError={() => setLogoFailed(true)}
+              />
+            </div>
+          ) : (
+            <div
+              className={cn(
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ring-2 ring-white shadow-sm",
+                logoColorFor(business.name)
+              )}
+            >
+              {business.name.slice(0, 1).toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <h3 className="font-display font-bold text-ink-900 leading-snug truncate">{business.name}</h3>
+              {business.verified && <VerifiedBadge compact />}
+            </div>
+            <p className="text-xs text-ink-400 truncate">{business.categoryName}</p>
+          </div>
+        </div>
+
+        {/* Photo: kept clean like the activity feed's photo — no badges on
+            top of it. Only functional overlays (carousel controls) stay. */}
+        <div className="relative h-44 w-full bg-ink-100">
           {currentPhoto && !photoFailed ? (
             <Image
               src={currentPhoto}
@@ -93,10 +160,13 @@ export function BusinessCard({
               </div>
             </>
           )}
-          {business.verified && <VerifiedBadge compact className="absolute top-2.5 right-2.5 shadow" />}
+        </div>
+
+        {/* Content: rating + price/location, same plain-white footer treatment as the header. */}
+        <div className="p-4 flex flex-col grow">
           {business.flagged && (
             <span
-              className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 rounded-full bg-rose-600 px-2 py-1 text-[10px] font-bold text-white shadow"
+              className="mb-2 inline-flex w-fit items-center gap-1 rounded-full bg-rose-500/10 border border-rose-500/30 px-2.5 py-1 text-[11px] font-semibold text-rose-600"
               title={business.flagReason ?? undefined}
             >
               <svg viewBox="0 0 24 24" className="h-3 w-3" fill="currentColor">
@@ -105,34 +175,7 @@ export function BusinessCard({
               Flagged
             </span>
           )}
-          {business.logoUrl && !logoFailed ? (
-            <div className="absolute bottom-2.5 right-2.5 h-11 w-11 overflow-hidden rounded-full ring-2 ring-white shadow-md bg-ink-100">
-              <Image
-                src={business.logoUrl}
-                alt=""
-                fill
-                className="object-cover"
-                sizes="44px"
-                onError={() => setLogoFailed(true)}
-              />
-            </div>
-          ) : (
-            <div
-              className={cn(
-                "absolute bottom-2.5 right-2.5 flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold text-white ring-2 ring-white shadow-md",
-                logoColorFor(business.name)
-              )}
-            >
-              {business.name.slice(0, 1).toUpperCase()}
-            </div>
-          )}
-        </div>
-
-        <div className="p-4 flex flex-col grow">
-          <h3 className="font-display font-bold text-ink-900 leading-snug truncate">{business.name}</h3>
-          <p className="text-xs text-ink-400 mt-0.5 truncate">{business.categoryName}</p>
-
-          <div className="mt-2.5 flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <StarDisplay rating={business.averageRating} size="sm" />
             <span className="text-xs font-semibold text-ink-700">{business.averageRating.toFixed(1)}</span>
             <span className="text-xs text-ink-400">({business.reviewCount})</span>
@@ -142,8 +185,100 @@ export function BusinessCard({
             {PRICE_TIER_LABELS[business.priceTier]} · {business.areaName}, {business.cityName}
             {distance !== null && <> · {formatDistance(distance)}</>}
           </p>
+
+          <div className="mt-3 pt-3 border-t border-ink-100 flex items-center gap-4">
+            <ReactionButton
+              icon={<LightbulbIcon />}
+              count={counts.USEFUL}
+              active={reacted.has("USEFUL")}
+              disabled={!user || reacting !== null}
+              label="React useful"
+              onClick={(e) => react(e, "USEFUL")}
+            />
+            <ReactionButton
+              icon={<SmileyIcon />}
+              count={counts.FUNNY}
+              active={reacted.has("FUNNY")}
+              disabled={!user || reacting !== null}
+              label="React funny"
+              onClick={(e) => react(e, "FUNNY")}
+            />
+            <ReactionButton
+              icon={<SunglassesIcon />}
+              count={counts.COOL}
+              active={reacted.has("COOL")}
+              disabled={!user || reacting !== null}
+              label="React cool"
+              onClick={(e) => react(e, "COOL")}
+            />
+          </div>
         </div>
       </Card>
     </Link>
+  );
+}
+
+function ReactionButton({
+  icon,
+  count,
+  active,
+  disabled,
+  label,
+  onClick,
+}: {
+  icon: ReactNode;
+  count: number;
+  active: boolean;
+  disabled: boolean;
+  label: string;
+  onClick: (e: MouseEvent) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className={cn(
+        "flex items-center gap-1.5 text-xs font-medium transition-colors disabled:cursor-default",
+        active ? "text-crimson-700" : "text-ink-400 hover:text-crimson-600 disabled:hover:text-ink-400"
+      )}
+    >
+      {icon}
+      <span>{count}</span>
+    </button>
+  );
+}
+
+function LightbulbIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-[15px] w-[15px]" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path
+        d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.55.42.6 1.03.6 1.6V16h6v-.6c0-.57.05-1.18.6-1.6A6 6 0 0 0 12 3Z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function SmileyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-[15px] w-[15px]" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8.5 10.5h.01M15.5 10.5h.01" strokeLinecap="round" />
+      <path d="M8 14.3c1 1.4 2.4 2.1 4 2.1s3-.7 4-2.1" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SunglassesIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-[15px] w-[15px]" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M2.5 8.5h4.8a2.7 2.7 0 0 1 2.6 2 2.2 2.2 0 0 0 4.2 0 2.7 2.7 0 0 1 2.6-2h4.8" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="5.8" cy="12.3" r="3.2" />
+      <circle cx="18.2" cy="12.3" r="3.2" />
+    </svg>
   );
 }
