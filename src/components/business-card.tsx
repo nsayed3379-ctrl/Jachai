@@ -1,16 +1,48 @@
 "use client";
 
-import { useState, type MouseEvent, type ReactNode } from "react";
+import { useState, type MouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { businessApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { PRICE_TIER_LABELS } from "@/lib/config";
-import type { BusinessResponse, VoteType } from "@/lib/types";
+import type { BusinessReactionType, BusinessResponse } from "@/lib/types";
 import { avatarColorClass, cn, distanceKm, formatDistance } from "@/lib/utils";
 import { Card } from "./ui/misc";
 import { StarDisplay } from "./star-rating";
 import { VerifiedBadge } from "./verified-badge";
+
+const REACTIONS: {
+  type: BusinessReactionType;
+  emoji: string;
+  label: string;
+  activeClass: string;
+}[] = [
+  {
+    type: "LIKE",
+    emoji: "👍",
+    label: "Like",
+    activeClass: "bg-sky-50 ring-1 ring-sky-300 text-sky-700",
+  },
+  {
+    type: "DISLIKE",
+    emoji: "👎",
+    label: "Dislike",
+    activeClass: "bg-ink-100 ring-1 ring-ink-300 text-ink-700",
+  },
+  {
+    type: "LOVE",
+    emoji: "❤️",
+    label: "Love",
+    activeClass: "bg-rose-50 ring-1 ring-rose-300 text-rose-700",
+  },
+  {
+    type: "WOW",
+    emoji: "😮",
+    label: "Wow",
+    activeClass: "bg-amber-50 ring-1 ring-amber-300 text-amber-700",
+  },
+];
 
 export function BusinessCard({
   business,
@@ -23,13 +55,14 @@ export function BusinessCard({
   const [photoIndex, setPhotoIndex] = useState(0);
   const [photoFailed, setPhotoFailed] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
-  const [counts, setCounts] = useState({
-    USEFUL: business.totalUsefulCount,
-    FUNNY: business.totalFunnyCount,
-    COOL: business.totalCoolCount,
+  const [counts, setCounts] = useState<Record<BusinessReactionType, number>>({
+    LIKE: business.totalLikeCount,
+    DISLIKE: business.totalDislikeCount,
+    LOVE: business.totalLoveCount,
+    WOW: business.totalWowCount,
   });
-  const [reacted, setReacted] = useState<Set<VoteType>>(new Set());
-  const [reacting, setReacting] = useState<VoteType | null>(null);
+  const [reacted, setReacted] = useState<Set<BusinessReactionType>>(new Set());
+  const [reacting, setReacting] = useState<BusinessReactionType | null>(null);
   const distance = userLocation
     ? distanceKm(userLocation, { lat: business.latitude, lng: business.longitude })
     : null;
@@ -46,21 +79,29 @@ export function BusinessCard({
 
   // Business-level reaction (business.BusinessReaction) — a direct "react to
   // this business" toggle, distinct from voting on any one specific review.
-  async function react(e: MouseEvent, type: VoteType) {
+  async function react(e: MouseEvent, type: BusinessReactionType) {
     e.preventDefault();
     e.stopPropagation();
     if (!user || reacting) return;
+    const wasActive = reacted.has(type);
     setReacting(type);
+    // optimistic update — flips immediately, no wait for the network round trip
+    setReacted((prev) => {
+      const next = new Set(prev);
+      wasActive ? next.delete(type) : next.add(type);
+      return next;
+    });
+    setCounts((prev) => ({ ...prev, [type]: prev[type] + (wasActive ? -1 : 1) }));
     try {
       await businessApi.react(business.id, type);
+    } catch {
+      // roll back on failure
       setReacted((prev) => {
         const next = new Set(prev);
-        next.has(type) ? next.delete(type) : next.add(type);
+        wasActive ? next.add(type) : next.delete(type);
         return next;
       });
-      setCounts((prev) => ({ ...prev, [type]: prev[type] + (reacted.has(type) ? -1 : 1) }));
-    } catch {
-      // decorative-ish reaction — a failed toggle here just stays as-is, no toast noise
+      setCounts((prev) => ({ ...prev, [type]: prev[type] + (wasActive ? 1 : -1) }));
     } finally {
       setReacting(null);
     }
@@ -68,7 +109,7 @@ export function BusinessCard({
 
   return (
     <Link href={`/business/${business.slug}`} className="group block h-full">
-      <Card className="h-full overflow-hidden flex flex-col transition-all duration-200 group-hover:shadow-lift group-hover:-translate-y-1">
+      <Card className="h-full overflow-hidden flex flex-col rounded-2xl border border-ink-100 transition-all duration-200 group-hover:shadow-lift group-hover:-translate-y-1 group-hover:border-ink-200">
         {/* Header: identity block sits above the photo, never on top of it —
             avatar + name + verified badge + category, all on plain white. */}
         <div className="p-4 pb-3 flex items-center gap-2.5">
@@ -182,99 +223,39 @@ export function BusinessCard({
             {distance !== null && <> · {formatDistance(distance)}</>}
           </p>
 
-          <div className="mt-3 pt-3 border-t border-ink-100 flex items-center gap-4">
-            <ReactionButton
-              icon={<LightbulbIcon />}
-              count={counts.USEFUL}
-              active={reacted.has("USEFUL")}
-              disabled={!user || reacting !== null}
-              label="React useful"
-              onClick={(e) => react(e, "USEFUL")}
-            />
-            <ReactionButton
-              icon={<SmileyIcon />}
-              count={counts.FUNNY}
-              active={reacted.has("FUNNY")}
-              disabled={!user || reacting !== null}
-              label="React funny"
-              onClick={(e) => react(e, "FUNNY")}
-            />
-            <ReactionButton
-              icon={<SunglassesIcon />}
-              count={counts.COOL}
-              active={reacted.has("COOL")}
-              disabled={!user || reacting !== null}
-              label="React cool"
-              onClick={(e) => react(e, "COOL")}
-            />
+          <div className="mt-3 pt-3 border-t border-ink-100 flex items-center gap-1.5">
+            {REACTIONS.map(({ type, emoji, label, activeClass }) => {
+              const isActive = reacted.has(type);
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={(e) => react(e, type)}
+                  disabled={!user || reacting !== null}
+                  aria-label={label}
+                  title={label}
+                  className={cn(
+                    "flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition-all duration-150 disabled:cursor-default",
+                    isActive
+                      ? activeClass
+                      : "text-ink-400 hover:bg-ink-50 hover:text-ink-600 disabled:hover:bg-transparent disabled:hover:text-ink-400"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "leading-none transition-transform duration-150",
+                      isActive ? "scale-125" : "scale-100"
+                    )}
+                  >
+                    {emoji}
+                  </span>
+                  <span>{counts[type]}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </Card>
     </Link>
-  );
-}
-
-function ReactionButton({
-  icon,
-  count,
-  active,
-  disabled,
-  label,
-  onClick,
-}: {
-  icon: ReactNode;
-  count: number;
-  active: boolean;
-  disabled: boolean;
-  label: string;
-  onClick: (e: MouseEvent) => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={label}
-      title={label}
-      className={cn(
-        "flex items-center gap-1.5 text-xs font-medium transition-colors disabled:cursor-default",
-        active ? "text-crimson-700" : "text-ink-400 hover:text-crimson-600 disabled:hover:text-ink-400"
-      )}
-    >
-      {icon}
-      <span>{count}</span>
-    </button>
-  );
-}
-
-function LightbulbIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-[15px] w-[15px]" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path
-        d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.55.42.6 1.03.6 1.6V16h6v-.6c0-.57.05-1.18.6-1.6A6 6 0 0 0 12 3Z"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function SmileyIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-[15px] w-[15px]" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M8.5 10.5h.01M15.5 10.5h.01" strokeLinecap="round" />
-      <path d="M8 14.3c1 1.4 2.4 2.1 4 2.1s3-.7 4-2.1" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function SunglassesIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-[15px] w-[15px]" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M2.5 8.5h4.8a2.7 2.7 0 0 1 2.6 2 2.2 2.2 0 0 0 4.2 0 2.7 2.7 0 0 1 2.6-2h4.8" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="5.8" cy="12.3" r="3.2" />
-      <circle cx="18.2" cy="12.3" r="3.2" />
-    </svg>
   );
 }
