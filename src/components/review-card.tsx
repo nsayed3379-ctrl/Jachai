@@ -5,7 +5,7 @@ import Image from "next/image";
 import { reviewApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
-import { cn, timeAgo, truncateId } from "@/lib/utils";
+import { avatarColorClass, avatarInitials, cn, timeAgo, truncateId } from "@/lib/utils";
 import type { ReviewResponse, VoteType } from "@/lib/types";
 import { StarDisplay } from "./star-rating";
 import { Badge } from "./ui/misc";
@@ -69,19 +69,30 @@ export function ReviewCard({
     }
   }
 
+  const displayName = review.userName || `reviewer ${truncateId(review.userId)}`;
+
   return (
     <div className="border-b border-ink-100 py-5 last:border-0">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <StarDisplay rating={review.rating} size="sm" />
-            {review.visibilityStatus === "NOT_RECOMMENDED" && (
-              <Badge tone="gold">Not currently recommended</Badge>
+        <div className="flex items-start gap-3">
+          <div
+            className={cn(
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white",
+              avatarColorClass(review.userName ?? review.userId)
             )}
+          >
+            {avatarInitials(review.userName)}
           </div>
-          <p className="mt-1 text-xs text-ink-400">
-            {review.userName || `reviewer ${truncateId(review.userId)}`} · {timeAgo(review.createdAt)}
-          </p>
+          <div>
+            <p className="text-sm font-bold text-ink-900">{displayName}</p>
+            <p className="text-xs text-ink-400">{timeAgo(review.createdAt)}</p>
+            <div className="mt-1 flex items-center gap-2">
+              <StarDisplay rating={review.rating} size="sm" />
+              {review.visibilityStatus === "NOT_RECOMMENDED" && (
+                <Badge tone="gold">Not currently recommended</Badge>
+              )}
+            </div>
+          </div>
         </div>
         <ReportButton targetType="REVIEW" targetId={review.id} />
       </div>

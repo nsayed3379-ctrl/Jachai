@@ -7,19 +7,10 @@ import { businessApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { PRICE_TIER_LABELS } from "@/lib/config";
 import type { BusinessResponse, VoteType } from "@/lib/types";
-import { cn, distanceKm, formatDistance } from "@/lib/utils";
+import { avatarColorClass, cn, distanceKm, formatDistance } from "@/lib/utils";
 import { Card } from "./ui/misc";
 import { StarDisplay } from "./star-rating";
 import { VerifiedBadge } from "./verified-badge";
-
-const LOGO_COLORS = ["bg-brand-600", "bg-crimson-600", "bg-gold-600", "bg-ink-500"];
-
-// Deterministic color per business so a logo-less card's fallback badge stays consistent on rerenders.
-function logoColorFor(seed: string): string {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  return LOGO_COLORS[hash % LOGO_COLORS.length];
-}
 
 export function BusinessCard({
   business,
@@ -96,7 +87,7 @@ export function BusinessCard({
             <div
               className={cn(
                 "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ring-2 ring-white shadow-sm",
-                logoColorFor(business.name)
+                avatarColorClass(business.name)
               )}
             >
               {business.name.slice(0, 1).toUpperCase()}
@@ -124,8 +115,13 @@ export function BusinessCard({
               onError={() => setPhotoFailed(true)}
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-ink-300 font-display text-sm">
-              {business.categoryName}
+            <div className="flex h-full flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-ink-900 to-ink-800 text-ink-400">
+              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <circle cx="9" cy="11" r="2" />
+                <path d="m21 15-4.5-4.5a2 2 0 0 0-2.8 0L5 19" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span className="font-display text-xs text-ink-300">{business.categoryName}</span>
             </div>
           )}
           {photos.length > 1 && (

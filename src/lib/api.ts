@@ -30,6 +30,7 @@ import type {
   PageResponse,
   PreferredLanguage,
   PreSignedUploadResponse,
+  RatingBreakdown,
   RecentActivityItem,
   Report,
   ReportReason,
@@ -37,6 +38,7 @@ import type {
   ReportTargetType,
   Review,
   ReviewResponse,
+  ReviewSortOption,
   SubmitReviewRequest,
   TokenPairDto,
   UpdateBusinessRequest,
@@ -261,9 +263,9 @@ export const reviewApi = {
   vote: (id: string, voteType: VoteType) =>
     request<void>(`/api/v1/reviews/${id}/vote`, { method: "POST", body: { voteType } }),
 
-  listForBusiness: (businessId: string, page = 0, size = 20) =>
+  listForBusiness: (businessId: string, page = 0, size = 20, sort: ReviewSortOption = "newest") =>
     request<PageResponse<ReviewResponse>>(`/api/v1/reviews/business/${businessId}`, {
-      query: { page, size },
+      query: { page, size, sort },
     }),
 
   ownerDashboard: (businessId: string, page = 0, size = 20) =>
@@ -275,6 +277,9 @@ export const reviewApi = {
     request<unknown[][]>(`/api/v1/reviews/business/${businessId}/rating-trend`, {
       query: { bucket },
     }),
+
+  ratingBreakdown: (businessId: string) =>
+    request<RatingBreakdown>(`/api/v1/reviews/business/${businessId}/rating-breakdown`, { auth: false }),
 
   mine: (page = 0, size = 20) =>
     request<PageResponse<ReviewResponse>>("/api/v1/reviews/mine", { query: { page, size } }),

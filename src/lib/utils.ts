@@ -86,6 +86,22 @@ export function truncateId(id: string, len = 8): string {
   return id ? id.slice(0, len) : id;
 }
 
+const AVATAR_COLORS = ["bg-brand-600", "bg-crimson-600", "bg-gold-600", "bg-ink-500"];
+
+/** First letter(s) of a display name for a fallback avatar badge, e.g. "Sean W." -> "SW". */
+export function avatarInitials(name: string | null | undefined): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
+}
+
+/** Deterministic color per seed (name or id) so the same person's fallback avatar stays consistent. */
+export function avatarColorClass(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
+
 export function ratingToStars(rating: number): string {
   const full = Math.round(rating);
   return "★".repeat(full) + "☆".repeat(Math.max(0, 5 - full));

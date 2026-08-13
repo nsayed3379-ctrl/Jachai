@@ -184,6 +184,18 @@ export interface RecentActivityItem {
   createdAt: string;
 }
 
+// Business detail page "Overall rating" bar chart (com.bdreview.platform.review.RatingBreakdownResponse).
+export interface RatingBreakdown {
+  fiveStar: number;
+  fourStar: number;
+  threeStar: number;
+  twoStar: number;
+  oneStar: number;
+  total: number;
+}
+
+export type ReviewSortOption = "newest" | "highest" | "lowest";
+
 export interface SubmitReviewRequest {
   businessId: string;
   rating: number;

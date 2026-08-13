@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useParams } from "next/navigation";
-import { businessApi, claimApi, messageApi, reviewApi } from "@/lib/api";
+import { businessApi, claimApi, messageApi, referenceApi, reviewApi } from "@/lib/api";
 import { rememberBusiness } from "@/lib/business-cache";
 import { PRICE_TIER_LABELS, REPORT_REASON_LABELS } from "@/lib/config";
 import { useAuth } from "@/lib/auth-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
-import type { BusinessResponse, ReviewResponse } from "@/lib/types";
+import type { BusinessResponse, ReviewResponse, ReviewSortOption } from "@/lib/types";
 import { cn, distanceKm, formatDistance } from "@/lib/utils";
 import { StarDisplay } from "@/components/star-rating";
 import { VerifiedBadge } from "@/components/verified-badge";
@@ -16,10 +17,12 @@ import { MapPreview } from "@/components/map-preview";
 import { ShareButton } from "@/components/share-button";
 import { BookmarkButton } from "@/components/bookmark-button";
 import { ReportButton } from "@/components/report-button";
+import { BusinessCard } from "@/components/business-card";
 import { ReviewCard } from "@/components/review-card";
 import { ReviewForm } from "@/components/review-form";
 import { AiSummaryCard } from "@/components/ai-summary-card";
-import { Badge, EmptyState, ErrorBanner, PageSpinner, Pagination } from "@/components/ui/misc";
+import { RatingBreakdownChart } from "@/components/rating-breakdown-chart";
+import { EmptyState, ErrorBanner, PageSpinner, Pagination } from "@/components/ui/misc";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/field";
 
@@ -35,8 +38,10 @@ export default function BusinessDetailPage() {
   const [reviews, setReviews] = useState<ReviewResponse[]>([]);
   const [reviewPage, setReviewPage] = useState(0);
   const [reviewTotalPages, setReviewTotalPages] = useState(0);
+  const [reviewSort, setReviewSort] = useState<ReviewSortOption>("newest");
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [reviewsError, setReviewsError] = useState<string | null>(null);
+  const [reviewsAuthRequired, setReviewsAuthRequired] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [editingReview, setEditingReview] = useState<ReviewResponse | null>(null);
 
@@ -55,6 +60,11 @@ export default function BusinessDetailPage() {
     thumbStripRef.current?.scrollBy({ left: direction * 200, behavior: "smooth" });
   }
 
+  function openReviewForm() {
+    setShowReviewForm(true);
+    document.getElementById("reviews")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   function showDistanceFromMe() {
     if (!("geolocation" in navigator)) {
       setLocationStatus("denied");
@@ -69,28 +79,35 @@ export default function BusinessDetailPage() {
   }
 
   const loadReviews = useCallback(
-    (businessId: string, page: number) => {
+    (businessId: string, page: number, sort: ReviewSortOption = reviewSort) => {
       setReviewsLoading(true);
       setReviewsError(null);
+      setReviewsAuthRequired(false);
       reviewApi
-        .listForBusiness(businessId, page, 10)
+        .listForBusiness(businessId, page, 10, sort)
         .then((res) => {
           setReviews(res.content);
           setReviewTotalPages(res.totalPages);
         })
         .catch((err) => {
-          // Reviews require auth per current backend rules — show a
-          // friendly prompt instead of a raw 401/403 if logged out.
-          setReviewsError(
-            user
-              ? errorMessage(err)
-              : "Log in to view and write reviews for this business."
-          );
+          // Reviews require auth per current backend rules — a polished CTA
+          // renders for the logged-out case instead of a raw 401/403 banner.
+          if (user) {
+            setReviewsError(errorMessage(err));
+          } else {
+            setReviewsAuthRequired(true);
+          }
         })
         .finally(() => setReviewsLoading(false));
     },
-    [user]
+    [user, reviewSort]
   );
+
+  function changeReviewSort(sort: ReviewSortOption) {
+    setReviewSort(sort);
+    setReviewPage(0);
+    if (business) loadReviews(business.id, 0, sort);
+  }
 
   useEffect(() => {
     if (!slug) return;
@@ -116,6 +133,30 @@ export default function BusinessDetailPage() {
   function refreshReviews() {
     if (business) loadReviews(business.id, reviewPage);
   }
+
+  const [similarBusinesses, setSimilarBusinesses] = useState<BusinessResponse[]>([]);
+
+  useEffect(() => {
+    if (!business) return;
+    let cancelled = false;
+    // BusinessResponse only carries categoryName, not categoryId — look the id
+    // up from the public category list rather than fabricating a filter.
+    referenceApi
+      .categories()
+      .then((categories) => {
+        const category = categories.find((c) => c.name === business.categoryName);
+        if (!category) return null;
+        return businessApi.search({ categoryId: category.id, sort: "rating", size: 7 });
+      })
+      .then((res) => {
+        if (cancelled || !res) return;
+        setSimilarBusinesses(res.content.filter((b) => b.id !== business.id).slice(0, 6));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [business?.id, business?.categoryName]);
 
   async function sendMessage() {
     if (!business || !messageText.trim()) return;
@@ -175,8 +216,13 @@ export default function BusinessDetailPage() {
             <div className="absolute inset-0 bg-gradient-to-t from-scrim/40 via-transparent to-transparent pointer-events-none" />
           </>
         ) : (
-          <div className="flex h-full items-center justify-center text-ink-300 font-display">
-            {business.categoryName}
+          <div className="flex h-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-ink-900 to-ink-800 text-ink-400">
+            <svg viewBox="0 0 24 24" className="h-9 w-9" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="3" y="5" width="18" height="14" rx="2" />
+              <circle cx="9" cy="11" r="2" />
+              <path d="m21 15-4.5-4.5a2 2 0 0 0-2.8 0L5 19" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <p className="font-display text-sm text-ink-300">No photos yet · {business.categoryName}</p>
           </div>
         )}
 
@@ -202,8 +248,13 @@ export default function BusinessDetailPage() {
                 <path d="M8 15l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
-            <span className="absolute bottom-3 right-3 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-medium text-white">
-              {heroIndex + 1} / {photos.length}
+            <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-xs font-semibold text-white">
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <circle cx="9" cy="11" r="2" />
+                <path d="m21 15-4.5-4.5a2 2 0 0 0-2.8 0L5 19" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              See all {photos.length} photos
             </span>
           </>
         )}
@@ -233,6 +284,8 @@ export default function BusinessDetailPage() {
                   key={i}
                   type="button"
                   onClick={() => goToHeroPhoto(i)}
+                  aria-label={`View photo ${i + 1} of ${photos.length}`}
+                  aria-current={i === heroIndex}
                   className={cn(
                     "relative h-16 sm:h-20 w-24 sm:w-28 shrink-0 rounded-lg overflow-hidden bg-ink-100 ring-2 transition-colors",
                     i === heroIndex ? "ring-crimson-500" : "ring-transparent hover:ring-ink-200"
@@ -281,70 +334,82 @@ export default function BusinessDetailPage() {
         </div>
       )}
 
-      <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Main column */}
         <div className="lg:col-span-2">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="font-display text-3xl font-extrabold text-ink-900">{business.name}</h1>
-                {business.verified && <VerifiedBadge />}
-              </div>
-              <p className="mt-1 text-sm text-ink-500">
-                {business.categoryName} · {business.areaName}, {business.cityName} ·{" "}
-                {PRICE_TIER_LABELS[business.priceTier]}
-                {userLocation && (
-                  <>
-                    {" "}
-                    · {formatDistance(distanceKm(userLocation, { lat: business.latitude, lng: business.longitude }))}
-                  </>
-                )}
-                {!userLocation && locationStatus !== "denied" && (
-                  <>
-                    {" "}
-                    ·{" "}
-                    <button
-                      type="button"
-                      onClick={showDistanceFromMe}
-                      disabled={locationStatus === "locating"}
-                      className="text-crimson-600 hover:underline disabled:opacity-60"
-                    >
-                      {locationStatus === "locating" ? "Locating…" : "Show distance from me"}
-                    </button>
-                  </>
-                )}
-              </p>
-              <div className="mt-2 flex items-center gap-2">
-                <StarDisplay rating={business.averageRating} />
-                <span className="text-sm text-ink-600">
-                  {business.averageRating.toFixed(1)} ({business.reviewCount} reviews)
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <BookmarkButton businessId={business.id} />
-              <ShareButton name={business.name} slug={business.slug} />
-              <ReportButton targetType="LISTING" targetId={business.id} />
-            </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="font-display text-[32px] leading-tight font-extrabold text-ink-900">{business.name}</h1>
+            {business.verified && <VerifiedBadge />}
           </div>
 
-          {business.attributes.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {business.attributes.map((attr) => (
-                <Badge key={attr} tone="crimson">
-                  {attr}
-                </Badge>
-              ))}
+          <div className="mt-1.5 flex items-center gap-2">
+            <StarDisplay rating={business.averageRating} />
+            <a href="#reviews" className="text-sm font-semibold text-ink-800 hover:underline">
+              {business.averageRating.toFixed(1)}
+            </a>
+            <a href="#reviews" className="text-sm text-ink-500 hover:underline">
+              ({business.reviewCount} {business.reviewCount === 1 ? "review" : "reviews"})
+            </a>
+          </div>
+
+          <p className="mt-1.5 text-sm text-ink-500">
+            {business.categoryName} · {PRICE_TIER_LABELS[business.priceTier]} · {business.areaName}, {business.cityName}
+            {userLocation && (
+              <>
+                {" "}
+                · {formatDistance(distanceKm(userLocation, { lat: business.latitude, lng: business.longitude }))}
+              </>
+            )}
+            {!userLocation && locationStatus !== "denied" && (
+              <>
+                {" "}
+                ·{" "}
+                <button
+                  type="button"
+                  onClick={showDistanceFromMe}
+                  disabled={locationStatus === "locating"}
+                  className="text-crimson-600 hover:underline disabled:opacity-60"
+                >
+                  {locationStatus === "locating" ? "Locating…" : "Show distance from me"}
+                </button>
+              </>
+            )}
+          </p>
+
+          {/* Action row: Yelp-style — a prominent primary CTA, then icon+label utility actions. */}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {user?.role === "CONSUMER" && !showReviewForm && !editingReview && (
+              <Button onClick={openReviewForm}>Write a Review</Button>
+            )}
+            <BookmarkButton businessId={business.id} />
+            <ShareButton name={business.name} slug={business.slug} />
+            <ReportButton targetType="LISTING" targetId={business.id} />
+          </div>
+
+          {business.description && (
+            <div className="mt-5">
+              <h2 className="font-display text-lg font-semibold text-ink-900 mb-2">About the Business</h2>
+              <AboutText text={business.description} />
             </div>
           )}
 
-          {business.description && (
-            <p className="mt-4 text-sm text-ink-700 leading-relaxed whitespace-pre-wrap">
-              {business.description}
-            </p>
+          {business.attributes.length > 0 && (
+            <div className="mt-5">
+              <h2 className="font-display text-lg font-semibold text-ink-900 mb-3">Amenities and More</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2.5">
+                {business.attributes.map((attr) => (
+                  <div key={attr} className="flex items-center gap-2 text-sm text-ink-700">
+                    <svg viewBox="0 0 20 20" className="h-4 w-4 flex-none text-ink-600" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4 10.5 8 14l8-8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    {attr}
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
-          <div className="mt-5">
+          <div className="mt-4">
             <AiSummaryCard businessId={business.id} />
           </div>
 
@@ -357,14 +422,31 @@ export default function BusinessDetailPage() {
           )}
 
           {/* Reviews */}
-          <div id="reviews" className="mt-8 scroll-mt-20">
-            <div className="flex items-center justify-between">
-              <h2 className="font-display text-lg font-semibold text-ink-900">Reviews</h2>
-              {user?.role === "CONSUMER" && !showReviewForm && !editingReview && (
-                <Button size="sm" onClick={() => setShowReviewForm(true)}>
-                  Write a review
-                </Button>
+          <div id="reviews" className="mt-8 scroll-mt-20 border-t border-ink-100 pt-6">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-display text-xl font-bold text-ink-900">Recommended Reviews</h2>
+              {!reviewsAuthRequired && reviews.length > 0 && (
+                <label className="flex items-center gap-2 text-xs text-ink-500">
+                  Sort by
+                  <select
+                    value={reviewSort}
+                    onChange={(e) => changeReviewSort(e.target.value as ReviewSortOption)}
+                    className="rounded-full border border-ink-200 bg-surface px-3 py-1.5 text-xs font-medium text-ink-700"
+                  >
+                    <option value="newest">Newest</option>
+                    <option value="highest">Highest rated</option>
+                    <option value="lowest">Lowest rated</option>
+                  </select>
+                </label>
               )}
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-6 mb-2">
+              <div className="text-center">
+                <p className="font-display text-3xl font-extrabold text-ink-900">{business.averageRating.toFixed(1)}</p>
+                <StarDisplay rating={business.averageRating} />
+              </div>
+              <RatingBreakdownChart businessId={business.id} />
             </div>
 
             {showReviewForm && (
@@ -395,11 +477,44 @@ export default function BusinessDetailPage() {
 
             <div className="mt-4">
               {reviewsLoading && <PageSpinner />}
-              {!reviewsLoading && reviewsError && <ErrorBanner message={reviewsError} />}
-              {!reviewsLoading && !reviewsError && reviews.length === 0 && (
-                <EmptyState title="No reviews yet" description="Be the first to share your experience." />
+
+              {!reviewsLoading && reviewsAuthRequired && (
+                <div className="rounded-xl border border-ink-100 bg-sand-50/60 p-6 text-center">
+                  <p className="font-display text-base font-semibold text-ink-900">Share your experience</p>
+                  <p className="mt-1 text-sm text-ink-500">
+                    Log in to read what others said and write your own review of {business.name}.
+                  </p>
+                  <div className="mt-4 flex justify-center gap-2">
+                    <Link href="/login">
+                      <Button size="sm">Log in</Button>
+                    </Link>
+                    <Link href="/signup">
+                      <Button size="sm" variant="outline">
+                        Sign up
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
               )}
+
+              {!reviewsLoading && !reviewsAuthRequired && reviewsError && <ErrorBanner message={reviewsError} />}
+
+              {!reviewsLoading && !reviewsAuthRequired && !reviewsError && reviews.length === 0 && (
+                <EmptyState
+                  title="No reviews yet"
+                  description="Be the first to share your experience with this business."
+                  action={
+                    user?.role === "CONSUMER" && !showReviewForm ? (
+                      <Button size="sm" onClick={openReviewForm}>
+                        Write the first review
+                      </Button>
+                    ) : undefined
+                  }
+                />
+              )}
+
               {!reviewsLoading &&
+                !reviewsAuthRequired &&
                 !reviewsError &&
                 reviews.map((r) => (
                   <ReviewCard key={r.id} review={r} onChanged={refreshReviews} onEdit={setEditingReview} />
@@ -414,23 +529,62 @@ export default function BusinessDetailPage() {
               />
             </div>
           </div>
+
+          {similarBusinesses.length > 0 && (
+            <div className="mt-8 border-t border-ink-100 pt-6">
+              <h2 className="font-display text-lg font-semibold text-ink-900 mb-3">Similar businesses nearby</h2>
+              <div className="flex gap-4 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {similarBusinesses.map((b) => (
+                  <div key={b.id} className="w-56 shrink-0">
+                    <BusinessCard business={b} userLocation={userLocation ?? undefined} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-5">
+        {/* Sidebar — sticky on desktop so it stays useful while the (much longer) main column scrolls. */}
+        <div className="space-y-5 lg:sticky lg:top-20">
           <MapPreview latitude={business.latitude} longitude={business.longitude} name={business.name} />
 
-          <div className="rounded-xl border border-ink-100/70 bg-surface p-4 shadow-card">
-            <p className="text-xs font-semibold uppercase tracking-wide text-ink-400 mb-2">Contact</p>
-            <p className="text-sm text-ink-700">{business.contactNumber}</p>
+          {business.verified && (
+            <div className="rounded-xl border border-brand-200 bg-brand-50 p-4">
+              <div className="flex items-center gap-2">
+                <VerifiedBadge compact />
+                <p className="text-sm font-semibold text-brand-800">NID-Verified Business</p>
+              </div>
+              <p className="mt-1.5 text-xs text-brand-700/80 leading-relaxed">
+                Jachai has verified this owner&apos;s national ID against the business&apos;s registered contact number.
+              </p>
+            </div>
+          )}
+
+          <div className="rounded-xl border border-ink-100/70 bg-surface p-4 shadow-card space-y-3">
+            <a href={`tel:${business.contactNumber}`} className="flex items-center gap-2.5 text-sm text-ink-700 hover:text-crimson-700">
+              <svg viewBox="0 0 24 24" className="h-4 w-4 flex-none text-ink-400" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L14 13l5 2v4a2 2 0 0 1-2 2C9.5 21 3 14.5 3 6a2 2 0 0 1 1-2Z" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {business.contactNumber}
+            </a>
             {business.operatingHours && (
-              <>
-                <p className="text-xs font-semibold uppercase tracking-wide text-ink-400 mt-3 mb-1">
-                  Operating hours
-                </p>
-                <p className="text-sm text-ink-700 whitespace-pre-wrap">{business.operatingHours}</p>
-              </>
+              <div className="flex items-start gap-2.5 text-sm text-ink-700">
+                <svg viewBox="0 0 24 24" className="h-4 w-4 flex-none text-ink-400 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3 3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span className="whitespace-pre-wrap">{business.operatingHours}</span>
+              </div>
             )}
+            <div className="flex items-start gap-2.5 text-sm text-ink-700">
+              <svg viewBox="0 0 24 24" className="h-4 w-4 flex-none text-ink-400 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12Z" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="12" cy="9" r="2.5" />
+              </svg>
+              <span>
+                {business.areaName}, {business.cityName}
+              </span>
+            </div>
           </div>
 
           {user?.role === "CONSUMER" && (
@@ -452,5 +606,31 @@ export default function BusinessDetailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+const ABOUT_PREVIEW_LENGTH = 280;
+
+function AboutText({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = text.length > ABOUT_PREVIEW_LENGTH;
+  const shown = expanded || !isLong ? text : `${text.slice(0, ABOUT_PREVIEW_LENGTH).trimEnd()}…`;
+
+  return (
+    <p className="text-sm text-ink-700 leading-relaxed whitespace-pre-wrap">
+      {shown}
+      {isLong && !expanded && (
+        <>
+          {" "}
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className="font-semibold text-crimson-700 hover:underline"
+          >
+            Read more
+          </button>
+        </>
+      )}
+    </p>
   );
 }
