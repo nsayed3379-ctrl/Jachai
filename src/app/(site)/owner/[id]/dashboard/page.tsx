@@ -15,7 +15,7 @@ import {
 import { RoleGate } from "@/components/role-gate";
 import { REPORT_REASON_LABELS } from "@/lib/config";
 import { errorMessage, useToast } from "@/lib/toast-context";
-import { formatDateTime, timeAgo, truncateId } from "@/lib/utils";
+import { cn,formatDateTime, timeAgo, truncateId } from "@/lib/utils";
 import type {
   BusinessPhoto,
   BusinessResponse,
@@ -243,7 +243,12 @@ function GalleryTab({ businessId }: { businessId: string }) {
   const [photos, setPhotos] = useState<BusinessPhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [pending, setPending] = useState<{ file: File; previewUrl: string }[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
+  const pendingRef = useRef(pending);
+  pendingRef.current = pending;
 
   function load() {
     setLoading(true);
@@ -251,34 +256,83 @@ function GalleryTab({ businessId }: { businessId: string }) {
   }
   useEffect(load, [businessId]);
 
-  async function handleUpload(files: FileList | null) {
+  // Revoke any not-yet-uploaded preview URLs if the tab/page unmounts, so we
+  // don't leak blob: URLs for files the owner selected but never uploaded.
+  useEffect(() => {
+    return () => {
+      pendingRef.current.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+    };
+  }, []);
+
+  function handleFilesSelected(files: FileList | null) {
     if (!files || files.length === 0) return;
-    if (photos.length + files.length > 10) {
+    const incoming = Array.from(files).map((file) => ({ file, previewUrl: URL.createObjectURL(file) }));
+    if (photos.length + pending.length + incoming.length > 10) {
+      show("Maximum 10 gallery photos.", "error");
+      incoming.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+    setPending((prev) => [...prev, ...incoming]);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  function removePending(index: number) {
+    setPending((prev) => {
+      const next = [...prev];
+      const [removed] = next.splice(index, 1);
+      if (removed) URL.revokeObjectURL(removed.previewUrl);
+      return next;
+    });
+  }
+
+  async function handleUpload() {
+    if (pending.length === 0) return;
+    if (photos.length + pending.length > 10) {
       show("Maximum 10 gallery photos.", "error");
       return;
     }
     setUploading(true);
     try {
-      for (const file of Array.from(files)) {
-        const presigned = await galleryApi.requestUploadUrl(businessId, file.name);
-        await uploadFileToPresignedUrl(presigned.uploadUrl, file);
+      for (const p of pending) {
+        const presigned = await galleryApi.requestUploadUrl(businessId, p.file.name);
+        await uploadFileToPresignedUrl(presigned.uploadUrl, p.file);
         await galleryApi.confirm(businessId, presigned.cdnUrlAfterUpload);
       }
+      pending.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+      setPending([]);
       load();
     } catch (err) {
       show(errorMessage(err), "error");
     } finally {
       setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
     }
   }
 
-  async function remove(photoId: string) {
+  function toggleSelected(photoId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(photoId)) next.delete(photoId);
+      else next.add(photoId);
+      return next;
+    });
+  }
+
+  async function deleteSelected() {
+    const count = selectedIds.size;
+    if (count === 0) return;
+    if (!confirm(`Delete ${count} selected photo${count > 1 ? "s" : ""}? This cannot be undone.`)) return;
+    setDeleting(true);
     try {
-      await galleryApi.remove(businessId, photoId);
+      for (const photoId of selectedIds) {
+        await galleryApi.remove(businessId, photoId);
+      }
+      setSelectedIds(new Set());
       load();
     } catch (err) {
       show(errorMessage(err), "error");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -286,30 +340,79 @@ function GalleryTab({ businessId }: { businessId: string }) {
 
   return (
     <div>
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        multiple
-        onChange={(e) => handleUpload(e.target.files)}
-        className="text-sm"
-      />
-      {uploading && <span className="ml-2 text-xs text-ink-400">Uploading…</span>}
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          onChange={(e) => handleFilesSelected(e.target.files)}
+          className="text-sm"
+        />
+        <Button size="sm" onClick={handleUpload} loading={uploading} disabled={pending.length === 0}>
+          Upload{pending.length > 0 ? ` (${pending.length})` : ""}
+        </Button>
+        {selectedIds.size > 0 && (
+          <Button size="sm" variant="danger" onClick={deleteSelected} loading={deleting}>
+            Delete selected ({selectedIds.size})
+          </Button>
+        )}
+      </div>
       <p className="text-xs text-ink-400 mt-1">{photos.length}/10 photos</p>
 
-      <div className="mt-3 grid grid-cols-3 sm:grid-cols-5 gap-2">
-        {photos.map((p) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <div key={p.id} className="relative group aspect-square rounded overflow-hidden bg-ink-100">
-            <img src={p.url} alt="" className="h-full w-full object-cover" />
-            <button
-              onClick={() => remove(p.id)}
-              className="absolute inset-0 bg-scrim/50 text-white text-xs opacity-0 group-hover:opacity-100 flex items-center justify-center"
-            >
-              Remove
-            </button>
+      {pending.length > 0 && (
+        <div className="mt-3">
+          <p className="text-xs font-medium text-ink-500 mb-1">Ready to upload — click Upload to confirm</p>
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+            {pending.map((p, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <div
+                key={p.previewUrl}
+                className="relative aspect-square rounded overflow-hidden bg-ink-100 border-2 border-dashed border-ink-300"
+              >
+                <img src={p.previewUrl} alt="" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removePending(i)}
+                  aria-label="Remove from upload queue"
+                  className="absolute top-1 right-1 h-5 w-5 rounded-full bg-scrim/70 text-white text-xs flex items-center justify-center"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
+      )}
+
+      <div className="mt-3 grid grid-cols-3 sm:grid-cols-5 gap-2">
+        {photos.map((p) => {
+          const selected = selectedIds.has(p.id);
+          return (
+            <button
+              type="button"
+              key={p.id}
+              onClick={() => toggleSelected(p.id)}
+              aria-pressed={selected}
+              aria-label={selected ? "Deselect photo" : "Select photo"}
+              className={cn(
+                "relative aspect-square rounded overflow-hidden bg-ink-100 text-left",
+                selected && "ring-2 ring-crimson-600"
+              )}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={p.url} alt="" className="h-full w-full object-cover" />
+              <span
+                className={cn(
+                  "absolute top-1 left-1 h-5 w-5 rounded border flex items-center justify-center text-[11px] font-bold",
+                  selected ? "bg-crimson-600 border-crimson-600 text-white" : "bg-white/85 border-ink-300 text-transparent"
+                )}
+              >
+                ✓
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
