@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/lib/theme-context";
 import { ToastProvider } from "@/lib/toast-context";
 import { Navbar } from "@/components/navbar";
 import { AuthModal } from "@/components/auth/auth-modal";
+import { SiteFooter } from "@/components/site-footer";
 
 // Runs before hydration so the correct theme class is on <html> for the
 // very first paint — without this the page flashes light before JS applies
@@ -46,12 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <AuthModalProvider>
                   <Navbar />
                   {children}
-                  <footer className="border-t border-ink-100 py-8 mt-12">
-                    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-xs text-ink-400 flex flex-wrap justify-between gap-2">
-                      <span>© {new Date().getFullYear()} Jachai. Dhaka-first, verification-centric.</span>
-                      <span>Built for Bangladesh's local businesses.</span>
-                    </div>
-                  </footer>
+                  <SiteFooter />
                   <AuthModal />
                 </AuthModalProvider>
               </LanguageProvider>

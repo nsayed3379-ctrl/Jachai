@@ -158,6 +158,27 @@ export interface Review {
   createdAt: string;
 }
 
+// Home page "Recent Activity" feed — one row per public review, pre-joined
+// with just enough business + reviewer context to render a card without a
+// second round trip per item (com.bdreview.platform.review.RecentActivityResponse).
+export interface RecentActivityItem {
+  reviewId: string;
+  businessId: string;
+  businessName: string | null;
+  businessSlug: string | null;
+  businessCoverPhotoUrl: string | null;
+  businessCategoryName: string | null;
+  userId: string;
+  userName: string | null;
+  rating: number;
+  content: string | null;
+  photoUrls: string[];
+  usefulCount: number;
+  funnyCount: number;
+  coolCount: number;
+  createdAt: string;
+}
+
 export interface SubmitReviewRequest {
   businessId: string;
   rating: number;

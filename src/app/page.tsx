@@ -5,9 +5,11 @@ import { businessApi } from "@/lib/api";
 import { PAGE_SIZE } from "@/lib/config";
 import { rememberBusinesses } from "@/lib/business-cache";
 import { errorMessage } from "@/lib/toast-context";
-import type { BusinessResponse, BusinessSearchParams } from "@/lib/types";
+import type { Area, BusinessResponse, BusinessSearchParams, Category } from "@/lib/types";
 import { BusinessCard } from "@/components/business-card";
 import { BusinessFilters } from "@/components/business-filters";
+import { CategoriesGrid } from "@/components/categories-grid";
+import { ExploreCities } from "@/components/explore-cities";
 import { EmptyState, ErrorBanner, PageSpinner, Pagination } from "@/components/ui/misc";
 
 const HERO_IMAGE_URL =
@@ -24,6 +26,23 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+
+  // Seed the search from a footer/shared deep link (e.g. "/?categoryId=...")
+  // once on mount — plain window.location instead of useSearchParams() so
+  // this stays a single client component with no Suspense boundary needed.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const categoryId = url.searchParams.get("categoryId");
+    const areaId = url.searchParams.get("areaId");
+    if (!categoryId && !areaId) return;
+    setParams((prev) => ({
+      ...prev,
+      categoryId: categoryId ?? prev.categoryId,
+      areaId: areaId ?? prev.areaId,
+      page: 0,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,6 +89,16 @@ export default function HomePage() {
 
   function scrollToResults() {
     resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function applyCategory(category: Category) {
+    setParams((prev) => ({ ...prev, categoryId: category.id, page: 0 }));
+    scrollToResults();
+  }
+
+  function applyArea(area: Area) {
+    setParams((prev) => ({ ...prev, areaId: area.id, page: 0 }));
+    scrollToResults();
   }
 
   function showDistances() {
@@ -147,7 +176,10 @@ export default function HomePage() {
       </section>
 
       {/* BusinessList: owns its own width-constrained container */}
-      <div ref={resultsRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 scroll-mt-20">
+      <div ref={resultsRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 scroll-mt-20 border-t border-ink-100">
+        <h2 className="font-display text-2xl md:text-3xl font-bold text-ink-900 text-center pt-2 mb-8">
+          Browse businesses
+        </h2>
         {loading && <PageSpinner />}
         {!loading && error && <ErrorBanner message={error} />}
 
@@ -190,6 +222,9 @@ export default function HomePage() {
           </>
         )}
       </div>
+
+      <CategoriesGrid onSelect={applyCategory} />
+      <ExploreCities onSelectArea={applyArea} />
     </>
   );
 }

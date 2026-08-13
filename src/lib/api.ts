@@ -30,6 +30,7 @@ import type {
   PageResponse,
   PreferredLanguage,
   PreSignedUploadResponse,
+  RecentActivityItem,
   Report,
   ReportReason,
   ReportStatus,
@@ -273,6 +274,9 @@ export const reviewApi = {
 
   mine: (page = 0, size = 20) =>
     request<PageResponse<ReviewResponse>>("/api/v1/reviews/mine", { query: { page, size } }),
+
+  recent: (page = 0, size = 9) =>
+    request<PageResponse<RecentActivityItem>>("/api/v1/reviews/recent", { auth: false, query: { page, size } }),
 };
 
 // ---------------------------------------------------------------------------
