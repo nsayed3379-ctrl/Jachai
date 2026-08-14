@@ -5,7 +5,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { businessApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthModal } from "@/lib/auth-modal-context";
 import { PRICE_TIER_LABELS } from "@/lib/config";
+import { errorMessage, useToast } from "@/lib/toast-context";
 import type { BusinessReactionType, BusinessResponse } from "@/lib/types";
 import { avatarColorClass, cn, distanceKm, formatDistance } from "@/lib/utils";
 import { Card } from "./ui/misc";
@@ -52,6 +54,8 @@ export function BusinessCard({
   userLocation?: { lat: number; lng: number };
 }) {
   const { user } = useAuth();
+  const { openLogin } = useAuthModal();
+  const { show } = useToast();
   const [photoIndex, setPhotoIndex] = useState(0);
   const [photoFailed, setPhotoFailed] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
@@ -82,7 +86,11 @@ export function BusinessCard({
   async function react(e: MouseEvent, type: BusinessReactionType) {
     e.preventDefault();
     e.stopPropagation();
-    if (!user || reacting) return;
+    if (!user) {
+      openLogin();
+      return;
+    }
+    if (reacting) return;
     const wasActive = reacted.has(type);
     setReacting(type);
     // optimistic update — flips immediately, no wait for the network round trip
@@ -94,7 +102,7 @@ export function BusinessCard({
     setCounts((prev) => ({ ...prev, [type]: prev[type] + (wasActive ? -1 : 1) }));
     try {
       await businessApi.react(business.id, type);
-    } catch {
+    } catch (err) {
       // roll back on failure
       setReacted((prev) => {
         const next = new Set(prev);
@@ -102,6 +110,7 @@ export function BusinessCard({
         return next;
       });
       setCounts((prev) => ({ ...prev, [type]: prev[type] + (wasActive ? 1 : -1) }));
+      show(errorMessage(err), "error");
     } finally {
       setReacting(null);
     }
@@ -231,7 +240,7 @@ export function BusinessCard({
                   key={type}
                   type="button"
                   onClick={(e) => react(e, type)}
-                  disabled={!user || reacting !== null}
+                  disabled={reacting !== null}
                   aria-label={label}
                   title={label}
                   className={cn(
