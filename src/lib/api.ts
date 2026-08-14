@@ -12,6 +12,7 @@ import type {
   BusinessAttribute,
   BusinessClaim,
   BusinessPhoto,
+  BusinessReactionType,
   BusinessResponse,
   BusinessReviewSummary,
   BusinessSearchParams,
@@ -244,8 +245,8 @@ export const businessApi = {
     request<void>(`/api/v1/businesses/${id}/flag/request-review`, { method: "POST" }),
 
   /** Toggles a direct reaction to the business as a whole (business-card reaction row). */
-  react: (id: string, voteType: VoteType) =>
-    request<void>(`/api/v1/businesses/${id}/react`, { method: "POST", body: { voteType } }),
+  react: (id: string, reactionType: BusinessReactionType) =>
+    request<void>(`/api/v1/businesses/${id}/react`, { method: "POST", body: { reactionType } }),
 };
 
 // ---------------------------------------------------------------------------

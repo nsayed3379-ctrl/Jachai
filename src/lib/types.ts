@@ -57,6 +57,10 @@ export interface BusinessAttribute {
 // ---------------------------------------------------------------------------
 export type PriceTier = "BUDGET" | "MODERATE" | "EXPENSIVE" | "VERY_EXPENSIVE";
 
+// Business-card reaction row — distinct from VoteType, which is a per-review
+// useful/funny/cool vote (see VoteType below).
+export type BusinessReactionType = "LIKE" | "DISLIKE" | "LOVE" | "WOW";
+
 export interface BusinessResponse {
   id: string;
   name: string;
@@ -83,11 +87,12 @@ export interface BusinessResponse {
   flagged: boolean;
   flagReason: ReportReason | null;
   flaggedAt: string | null;
-  // Sum of usefulCount/funnyCount/coolCount across every one of this business's
-  // reviews — not any single review's own counts (see ReviewResponse for that).
-  totalUsefulCount: number;
-  totalFunnyCount: number;
-  totalCoolCount: number;
+  // Business-card reaction totals (Like/Dislike/Love/Wow) — a direct reaction
+  // to the business as a whole, not derived from review votes.
+  totalLikeCount: number;
+  totalDislikeCount: number;
+  totalLoveCount: number;
+  totalWowCount: number;
 }
 
 export interface CreateBusinessRequest {
