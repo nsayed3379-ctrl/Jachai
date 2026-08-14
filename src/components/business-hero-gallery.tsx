@@ -1,0 +1,225 @@
+"use client";
+
+import { useState, type TouchEvent } from "react";
+import { PRICE_TIER_LABELS } from "@/lib/config";
+import type { BusinessResponse } from "@/lib/types";
+import { distanceKm, formatDistance } from "@/lib/utils";
+import { GalleryImage } from "./gallery-image";
+import { PhotoGalleryModal } from "./photo-gallery-modal";
+import { StarDisplay } from "./star-rating";
+import { VerifiedBadge } from "./verified-badge";
+
+// Cinematic bottom gradient — brighter at the top so the photo itself stays
+// visible, dark enough at the bottom to carry large white type. Four stops
+// needed for the falloff Tailwind's 3-stop from/via/to utilities can't
+// express, so this is plain CSS rather than gradient utility classes.
+const HERO_GRADIENT = {
+  backgroundImage:
+    "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.65) 25%, rgba(0,0,0,0.25) 55%, rgba(0,0,0,0) 80%)",
+};
+
+/**
+ * Business detail page hero — full viewport width (breaks out of the
+ * page's centered max-w-7xl container via a negative-margin technique, a
+ * scoped CSS trick rather than restructuring the shared site layout that
+ * every other route also uses), one cinematic photo, business identity
+ * overlaid directly on the gradient. Every other photo lives behind
+ * "See all N photos"; the hero itself never shows more than one at a time.
+ */
+export function BusinessHeroGallery({
+  business,
+  userLocation,
+  locationStatus,
+  onShowDistance,
+}: {
+  business: BusinessResponse;
+  userLocation: { lat: number; lng: number } | null;
+  locationStatus: "idle" | "locating" | "denied";
+  onShowDistance: () => void;
+}) {
+  const photos = business.photoUrls;
+  const [heroIndex, setHeroIndex] = useState(0);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
+  function shift(delta: number) {
+    setHeroIndex((i) => (i + delta + photos.length) % photos.length);
+  }
+
+  function openLightbox() {
+    setLightboxIndex(heroIndex);
+    setGalleryOpen(true);
+  }
+
+  function openGrid() {
+    setLightboxIndex(null);
+    setGalleryOpen(true);
+  }
+
+  function onTouchStart(e: TouchEvent) {
+    setTouchStartX(e.touches[0].clientX);
+  }
+  function onTouchEnd(e: TouchEvent) {
+    if (touchStartX === null) return;
+    const delta = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(delta) > 40) shift(delta < 0 ? 1 : -1);
+    setTouchStartX(null);
+  }
+
+  const distance = userLocation
+    ? formatDistance(distanceKm(userLocation, { lat: business.latitude, lng: business.longitude }))
+    : null;
+
+  return (
+    <div
+      className="relative w-screen ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] h-[380px] sm:h-[460px] md:h-[520px] lg:h-[580px] overflow-hidden bg-ink-900"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
+      {photos.length > 0 ? (
+        <>
+          <GalleryImage src={photos[heroIndex]} alt={business.name} sizes="100vw" priority position="top" />
+          <div className="absolute inset-0 pointer-events-none" style={HERO_GRADIENT} />
+        </>
+      ) : (
+        <div className="flex h-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-ink-900 to-ink-800 text-ink-400">
+          <svg viewBox="0 0 24 24" className="h-9 w-9" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <rect x="3" y="5" width="18" height="14" rx="2" />
+            <circle cx="9" cy="11" r="2" />
+            <path d="m21 15-4.5-4.5a2 2 0 0 0-2.8 0L5 19" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <p className="font-display text-sm text-ink-300">Photos coming soon</p>
+        </div>
+      )}
+
+      {photos.length > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={() => shift(-1)}
+            aria-label="Show previous photo"
+            className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-ink-700 shadow-lift transition-colors hover:bg-white"
+          >
+            <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <path d="M12 15l-5-5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => shift(1)}
+            aria-label="Show next photo"
+            className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-ink-700 shadow-lift transition-colors hover:bg-white"
+          >
+            <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <path d="M8 15l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </>
+      )}
+
+      {photos.length > 0 && (
+        <button
+          type="button"
+          onClick={photos.length === 1 ? openLightbox : openGrid}
+          className="absolute bottom-7 sm:bottom-9 right-6 sm:right-12 inline-flex items-center gap-2 rounded-full bg-black/55 px-4 sm:px-5 py-2.5 sm:py-3 text-sm sm:text-base font-semibold text-white backdrop-blur-sm transition-colors hover:bg-black/70"
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="5" width="18" height="14" rx="2" />
+            <circle cx="9" cy="11" r="2" />
+            <path d="m21 15-4.5-4.5a2 2 0 0 0-2.8 0L5 19" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          {photos.length === 1 ? "View photo" : `See all ${photos.length} photos`}
+        </button>
+      )}
+
+      {/* Business identity, overlaid bottom-left on the gradient — inset from
+          the screen edge like real content, even though the photo itself is full-bleed.
+          pointer-events-none on this wrapper because it spans the full hero width
+          (inset-x-0) and would otherwise sit on top of — and swallow clicks meant
+          for — the "See all photos" button in the bottom-right; only the actual
+          interactive children below opt back in with pointer-events-auto. */}
+      <div className="absolute inset-x-0 bottom-0 px-6 sm:px-10 lg:px-16 xl:px-24 pb-8 sm:pb-10 lg:pb-14 pointer-events-none">
+        <div className="max-w-[900px]">
+          <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-[1.05] drop-shadow-sm">
+            {business.name}
+          </h1>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2.5">
+            <StarDisplay rating={business.averageRating} size="lg" />
+            <span className="text-xl font-bold text-white">{business.averageRating.toFixed(1)}</span>
+            <a
+              href="#reviews"
+              className="pointer-events-auto text-base sm:text-lg text-white/80 hover:text-white hover:underline"
+            >
+              ({business.reviewCount} {business.reviewCount === 1 ? "review" : "reviews"})
+            </a>
+          </div>
+
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-base sm:text-lg text-white/90 drop-shadow-sm">
+            {business.verified && (
+              <>
+                <VerifiedBadge />
+                <span aria-hidden className="text-white/50">
+                  ·
+                </span>
+              </>
+            )}
+            <span>{PRICE_TIER_LABELS[business.priceTier]}</span>
+            <span aria-hidden className="text-white/50">
+              ·
+            </span>
+            <span>{business.categoryName}</span>
+            <span aria-hidden className="text-white/50">
+              ·
+            </span>
+            <span>
+              {business.areaName}, {business.cityName}
+            </span>
+            {distance && (
+              <>
+                <span aria-hidden className="text-white/50">
+                  ·
+                </span>
+                <span>{distance}</span>
+              </>
+            )}
+            {!userLocation && locationStatus !== "denied" && (
+              <>
+                <span aria-hidden className="text-white/50">
+                  ·
+                </span>
+                <button
+                  type="button"
+                  onClick={onShowDistance}
+                  disabled={locationStatus === "locating"}
+                  className="pointer-events-auto underline decoration-white/50 hover:decoration-white disabled:opacity-60"
+                >
+                  {locationStatus === "locating" ? "Locating…" : "Show distance from me"}
+                </button>
+              </>
+            )}
+          </div>
+
+          {business.operatingHours && (
+            <div className="mt-2 flex items-start gap-2 text-base sm:text-lg text-white/90 drop-shadow-sm">
+              <svg viewBox="0 0 24 24" className="h-5 w-5 flex-none mt-0.5" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3 3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span className="whitespace-pre-wrap">{business.operatingHours}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <PhotoGalleryModal
+        open={galleryOpen}
+        onClose={() => setGalleryOpen(false)}
+        photos={photos}
+        businessName={business.name}
+        initialIndex={lightboxIndex}
+      />
+    </div>
+  );
+}

@@ -1,16 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import Image from "next/image";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { businessApi, claimApi, messageApi, referenceApi, reviewApi } from "@/lib/api";
 import { rememberBusiness } from "@/lib/business-cache";
-import { PRICE_TIER_LABELS, REPORT_REASON_LABELS } from "@/lib/config";
+import { REPORT_REASON_LABELS } from "@/lib/config";
 import { useAuth } from "@/lib/auth-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import type { BusinessResponse, ReviewResponse, ReviewSortOption } from "@/lib/types";
-import { cn, distanceKm, formatDistance } from "@/lib/utils";
 import { StarDisplay } from "@/components/star-rating";
 import { VerifiedBadge } from "@/components/verified-badge";
 import { MapPreview } from "@/components/map-preview";
@@ -18,6 +16,7 @@ import { ShareButton } from "@/components/share-button";
 import { BookmarkButton } from "@/components/bookmark-button";
 import { ReportButton } from "@/components/report-button";
 import { BusinessCard } from "@/components/business-card";
+import { BusinessHeroGallery } from "@/components/business-hero-gallery";
 import { ReviewCard } from "@/components/review-card";
 import { ReviewForm } from "@/components/review-form";
 import { AiSummaryCard } from "@/components/ai-summary-card";
@@ -51,14 +50,6 @@ export default function BusinessDetailPage() {
 
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<"idle" | "locating" | "denied">("idle");
-
-  const [heroIndex, setHeroIndex] = useState(0);
-  const [failedPhotoIndexes, setFailedPhotoIndexes] = useState<Set<number>>(new Set());
-  const thumbStripRef = useRef<HTMLDivElement>(null);
-
-  function scrollThumbs(direction: 1 | -1) {
-    thumbStripRef.current?.scrollBy({ left: direction * 200, behavior: "smooth" });
-  }
 
   function openReviewForm() {
     setShowReviewForm(true);
@@ -190,133 +181,15 @@ export default function BusinessDetailPage() {
 
   const isOwnerOfThis = user?.role === "BUSINESS_OWNER";
   const photos = business.photoUrls;
-  const currentPhoto = photos[heroIndex] && !failedPhotoIndexes.has(heroIndex) ? photos[heroIndex] : null;
-
-  function goToHeroPhoto(index: number) {
-    setHeroIndex((index + photos.length) % photos.length);
-  }
 
   return (
     <div>
-      {/* Cover + gallery */}
-      <div className="relative h-72 sm:h-96 w-full rounded-2xl overflow-hidden bg-ink-900">
-        {currentPhoto ? (
-          <>
-            {/* Blurred backdrop fills the letterboxed space so the full photo can be
-                shown uncropped (object-contain) without bare bars on mismatched aspect ratios. */}
-            <Image src={currentPhoto} alt="" fill className="object-cover blur-2xl scale-110 opacity-50" aria-hidden />
-            <Image
-              src={currentPhoto}
-              alt={business.name}
-              fill
-              className="object-contain"
-              priority
-              onError={() => setFailedPhotoIndexes((prev) => new Set(prev).add(heroIndex))}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-scrim/40 via-transparent to-transparent pointer-events-none" />
-          </>
-        ) : (
-          <div className="flex h-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-ink-900 to-ink-800 text-ink-400">
-            <svg viewBox="0 0 24 24" className="h-9 w-9" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="3" y="5" width="18" height="14" rx="2" />
-              <circle cx="9" cy="11" r="2" />
-              <path d="m21 15-4.5-4.5a2 2 0 0 0-2.8 0L5 19" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <p className="font-display text-sm text-ink-300">No photos yet · {business.categoryName}</p>
-          </div>
-        )}
-
-        {photos.length > 1 && (
-          <>
-            <button
-              type="button"
-              onClick={() => goToHeroPhoto(heroIndex - 1)}
-              aria-label="Previous photo"
-              className="absolute left-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-ink-700 shadow-lift hover:bg-white transition-colors"
-            >
-              <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2">
-                <path d="M12 15l-5-5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={() => goToHeroPhoto(heroIndex + 1)}
-              aria-label="Next photo"
-              className="absolute right-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-ink-700 shadow-lift hover:bg-white transition-colors"
-            >
-              <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2">
-                <path d="M8 15l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-            <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-xs font-semibold text-white">
-              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="5" width="18" height="14" rx="2" />
-                <circle cx="9" cy="11" r="2" />
-                <path d="m21 15-4.5-4.5a2 2 0 0 0-2.8 0L5 19" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              See all {photos.length} photos
-            </span>
-          </>
-        )}
-      </div>
-
-      {photos.length > 1 && (
-        <div className="relative mt-2">
-          {photos.length > 4 && (
-            <button
-              type="button"
-              onClick={() => scrollThumbs(-1)}
-              aria-label="Scroll thumbnails left"
-              className="absolute -left-3 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-lift text-ink-700 hover:bg-ink-50"
-            >
-              <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2">
-                <path d="M12 15l-5-5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          )}
-          <div
-            ref={thumbStripRef}
-            className="flex gap-2 overflow-x-auto scroll-smooth px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          >
-            {photos.map((url, i) =>
-              failedPhotoIndexes.has(i) ? null : (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => goToHeroPhoto(i)}
-                  aria-label={`View photo ${i + 1} of ${photos.length}`}
-                  aria-current={i === heroIndex}
-                  className={cn(
-                    "relative h-16 sm:h-20 w-24 sm:w-28 shrink-0 rounded-lg overflow-hidden bg-ink-100 ring-2 transition-colors",
-                    i === heroIndex ? "ring-crimson-500" : "ring-transparent hover:ring-ink-200"
-                  )}
-                >
-                  <Image
-                    src={url}
-                    alt=""
-                    fill
-                    className="object-cover"
-                    sizes="120px"
-                    onError={() => setFailedPhotoIndexes((prev) => new Set(prev).add(i))}
-                  />
-                </button>
-              )
-            )}
-          </div>
-          {photos.length > 4 && (
-            <button
-              type="button"
-              onClick={() => scrollThumbs(1)}
-              aria-label="Scroll thumbnails right"
-              className="absolute -right-3 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-lift text-ink-700 hover:bg-ink-50"
-            >
-              <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2">
-                <path d="M8 15l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          )}
-        </div>
-      )}
+      <BusinessHeroGallery
+        business={business}
+        userLocation={userLocation}
+        locationStatus={locationStatus}
+        onShowDistance={showDistanceFromMe}
+      />
 
       {business.flagged && (
         <div className="mt-4 flex items-start gap-3 rounded-xl border border-rose-500/30 bg-rose-500/5 px-4 py-3">
@@ -337,47 +210,9 @@ export default function BusinessDetailPage() {
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Main column */}
         <div className="lg:col-span-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="font-display text-[32px] leading-tight font-extrabold text-ink-900">{business.name}</h1>
-            {business.verified && <VerifiedBadge />}
-          </div>
-
-          <div className="mt-1.5 flex items-center gap-2">
-            <StarDisplay rating={business.averageRating} />
-            <a href="#reviews" className="text-sm font-semibold text-ink-800 hover:underline">
-              {business.averageRating.toFixed(1)}
-            </a>
-            <a href="#reviews" className="text-sm text-ink-500 hover:underline">
-              ({business.reviewCount} {business.reviewCount === 1 ? "review" : "reviews"})
-            </a>
-          </div>
-
-          <p className="mt-1.5 text-sm text-ink-500">
-            {business.categoryName} · {PRICE_TIER_LABELS[business.priceTier]} · {business.areaName}, {business.cityName}
-            {userLocation && (
-              <>
-                {" "}
-                · {formatDistance(distanceKm(userLocation, { lat: business.latitude, lng: business.longitude }))}
-              </>
-            )}
-            {!userLocation && locationStatus !== "denied" && (
-              <>
-                {" "}
-                ·{" "}
-                <button
-                  type="button"
-                  onClick={showDistanceFromMe}
-                  disabled={locationStatus === "locating"}
-                  className="text-crimson-600 hover:underline disabled:opacity-60"
-                >
-                  {locationStatus === "locating" ? "Locating…" : "Show distance from me"}
-                </button>
-              </>
-            )}
-          </p>
-
-          {/* Action row: Yelp-style — a prominent primary CTA, then icon+label utility actions. */}
-          <div className="mt-4 flex flex-wrap items-center gap-2">
+          {/* Action row: Yelp-style — a prominent primary CTA, then icon+label utility actions.
+              Name/rating/category/hours now live in the hero overlay itself. */}
+          <div className="flex flex-wrap items-center gap-2">
             {user?.role === "CONSUMER" && !showReviewForm && !editingReview && (
               <Button onClick={openReviewForm}>Write a Review</Button>
             )}
