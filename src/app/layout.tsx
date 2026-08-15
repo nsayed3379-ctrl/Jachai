@@ -3,6 +3,7 @@ import { Sora, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { AuthModalProvider } from "@/lib/auth-modal-context";
+import { HomeSearchProvider } from "@/lib/home-search-context";
 import { LanguageProvider } from "@/lib/language-context";
 import { ThemeProvider } from "@/lib/theme-context";
 import { ToastProvider } from "@/lib/toast-context";
@@ -45,10 +46,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <AuthProvider>
               <LanguageProvider>
                 <AuthModalProvider>
-                  <Navbar />
-                  {children}
-                  <SiteFooter />
-                  <AuthModal />
+                  <HomeSearchProvider>
+                    <Navbar />
+                    {children}
+                    <SiteFooter />
+                    <AuthModal />
+                  </HomeSearchProvider>
                 </AuthModalProvider>
               </LanguageProvider>
             </AuthProvider>

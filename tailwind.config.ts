@@ -95,6 +95,40 @@ const config: Config = {
         pop: "0 8px 24px rgba(22,30,26,0.12)",
         lift: "0 16px 32px rgba(22,30,26,0.16), 0 2px 8px rgba(22,30,26,0.08)",
       },
+      keyframes: {
+        cardFadeInUp: {
+          "0%": { opacity: "0", transform: "translateY(20px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        heroFadeIn: {
+          "0%": { opacity: "0", transform: "translateY(14px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        scaleIn: {
+          "0%": { opacity: "0", transform: "scale(0.96)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+        fadeInSoft: {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+        kenBurns: {
+          "0%": { transform: "scale(1)" },
+          "100%": { transform: "scale(1.08)" },
+        },
+        shimmerMove: {
+          "0%": { backgroundPosition: "-400px 0" },
+          "100%": { backgroundPosition: "400px 0" },
+        },
+      },
+      animation: {
+        "card-in": "cardFadeInUp 0.6s cubic-bezier(0.16,1,0.3,1) both",
+        "hero-in": "heroFadeIn 0.7s cubic-bezier(0.16,1,0.3,1) both",
+        "scale-in": "scaleIn 0.5s cubic-bezier(0.16,1,0.3,1) both",
+        "fade-in": "fadeInSoft 0.5s ease-out both",
+        "ken-burns": "kenBurns 18s ease-out forwards",
+        shimmer: "shimmerMove 1.6s ease-in-out infinite",
+      },
     },
   },
   plugins: [],

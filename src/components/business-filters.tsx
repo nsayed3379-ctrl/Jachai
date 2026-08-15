@@ -1,12 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { referenceApi } from "@/lib/api";
 import { PRICE_TIER_LABELS, SORT_LABELS } from "@/lib/config";
 import { cn } from "@/lib/utils";
 import type { Area, BusinessSearchParams, Category, City, PriceTier, SortOption } from "@/lib/types";
-import { Button } from "./ui/button";
-import { Select } from "./ui/field";
 import { MobileFilters } from "./business-filters-mobile";
 import { TabletFilters } from "./business-filters-tablet";
 
@@ -25,6 +22,8 @@ export function FilterDropdown<T extends string | number>({
   options,
   onChange,
   highlightWhenSet = true,
+  variant = "pill",
+  triggerClassName,
 }: {
   label: string;
   value: T | undefined;
@@ -33,6 +32,12 @@ export function FilterDropdown<T extends string | number>({
   /** Sort isn't a filter (it doesn't narrow results), so it stays neutrally
    * styled even once a non-default value is picked, unlike Price/Rating. */
   highlightWhenSet?: boolean;
+  /** "pill" (default): bordered white button — used in the mobile/tablet filter
+   *  sheets. "flat": no border or background at all, just "Label ▾" — used for
+   *  the Navbar's inline search controls, which supply their own text color
+   *  via triggerClassName since the Navbar can be transparent-over-photo. */
+  variant?: "pill" | "flat";
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -61,12 +66,19 @@ export function FilterDropdown<T extends string | number>({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={cn(
-          "h-10 inline-flex items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-colors whitespace-nowrap",
-          active
-            ? "border-crimson-300 bg-crimson-50 text-crimson-700"
-            : "border-ink-200 bg-surface text-ink-700 hover:border-ink-300"
-        )}
+        className={
+          variant === "flat"
+            ? cn(
+                "h-9 inline-flex items-center gap-1 px-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors hover:bg-white/10",
+                triggerClassName
+              )
+            : cn(
+                "h-10 inline-flex items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-colors whitespace-nowrap",
+                active
+                  ? "border-crimson-300 bg-crimson-50 text-crimson-700"
+                  : "border-ink-200 bg-surface text-ink-700 hover:border-ink-300"
+              )
+        }
       >
         {hasValue ? `${label}: ${activeLabel}` : label}
         <svg
@@ -170,121 +182,123 @@ export interface LocationData {
   setCityId: (id: string) => void;
 }
 
-function DesktopFilters({ value, onChange, onUseMyLocation, locationStatus, categories, cities, areas, cityId, setCityId }: FiltersProps & LocationData) {
+function PinIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8">
+      <path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21Z" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="12" cy="9.5" r="2.3" fill={filled ? "white" : "none"} />
+    </svg>
+  );
+}
+
+// The Navbar's inline search (home page, lg+): flat "Label ▾" controls — no
+// box, no border, no background of their own — for Category/City/Area/Price/
+// Rating, plus a small "Near me" action pill. `light` controls text color
+// since the Navbar can be transparent-over-photo (white) or solid (dark).
+export function PrimarySearchBar({
+  value,
+  onChange,
+  onUseMyLocation,
+  locationStatus,
+  categories,
+  cities,
+  areas,
+  cityId,
+  setCityId,
+  light,
+  className,
+}: Omit<FiltersProps, "onSearch"> & LocationData & { light?: boolean; className?: string }) {
   function set<K extends keyof BusinessSearchParams>(key: K, val: BusinessSearchParams[K]) {
     onChange({ ...value, [key]: val, page: 0 });
   }
 
+  const categoryOptions: DropdownOption<string>[] = [
+    { value: undefined, label: "All categories" },
+    ...categories.map((c) => ({ value: c.id, label: c.name })),
+  ];
+  const cityOptions: DropdownOption<string>[] = cities.map((c) => ({ value: c.id, label: c.name }));
+  const areaOptions: DropdownOption<string>[] = [
+    { value: undefined, label: "All areas" },
+    ...areas.map((a) => ({ value: a.id, label: a.name })),
+  ];
+
+  const triggerClassName = light ? "text-white hover:bg-white/15" : "text-ink-700 hover:bg-ink-100";
+
   return (
-    <div className="space-y-4">
-      {/* Primary controls: where and what to search */}
-      <div className="flex flex-wrap gap-3">
-        <Select
-          className={cn(searchRowControl, "w-auto flex-1 min-w-[160px]")}
-          value={value.categoryId ?? ""}
-          onChange={(e) => set("categoryId", e.target.value || undefined)}
-        >
-          <option value="">All categories</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </Select>
+    <div className={cn("flex items-center gap-0.5", className)}>
+      <FilterDropdown
+        variant="flat"
+        triggerClassName={triggerClassName}
+        label="Category"
+        value={value.categoryId}
+        options={categoryOptions}
+        onChange={(v) => set("categoryId", v)}
+      />
+      <FilterDropdown
+        variant="flat"
+        triggerClassName={triggerClassName}
+        label="City"
+        value={cityId || undefined}
+        options={cityOptions}
+        onChange={(v) => {
+          if (!v) return;
+          setCityId(v);
+          set("areaId", undefined);
+        }}
+      />
+      <FilterDropdown
+        variant="flat"
+        triggerClassName={triggerClassName}
+        label="Area"
+        value={value.areaId}
+        options={areaOptions}
+        onChange={(v) => set("areaId", v)}
+      />
+      <FilterDropdown
+        variant="flat"
+        triggerClassName={triggerClassName}
+        label="Price"
+        value={value.priceTier}
+        options={PRICE_OPTIONS}
+        onChange={(v) => set("priceTier", v)}
+      />
+      <FilterDropdown
+        variant="flat"
+        triggerClassName={triggerClassName}
+        label="Rating"
+        value={value.minRating}
+        options={RATING_OPTIONS}
+        onChange={(v) => set("minRating", v)}
+      />
 
-        <Select
-          className={cn(searchRowControl, "w-auto flex-1 min-w-[140px]")}
-          value={cityId}
-          onChange={(e) => { setCityId(e.target.value); set("areaId", undefined); }}
-        >
-          {cities.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </Select>
-
-        <Select
-          className={cn(searchRowControl, "w-auto flex-1 min-w-[140px]")}
-          value={value.areaId ?? ""}
-          onChange={(e) => set("areaId", e.target.value || undefined)}
-        >
-          <option value="">All areas</option>
-          {areas.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
-          ))}
-        </Select>
-
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onUseMyLocation}
-          loading={locationStatus === "locating"}
-          className={searchRowControl}
-        >
-          📍 {locationStatus === "granted" ? "Using your location" : "Near me"}
-        </Button>
-      </div>
-
-      {/* Refine controls: a quiet second tier, one pill per filter */}
-      <div className="flex flex-wrap items-center gap-2.5 pt-3.5 border-t border-ink-100">
-        <FilterDropdown label="Price" value={value.priceTier} options={PRICE_OPTIONS} onChange={(v) => set("priceTier", v)} />
-        <FilterDropdown label="Rating" value={value.minRating} options={RATING_OPTIONS} onChange={(v) => set("minRating", v)} />
-
-        <div className="ml-auto">
-          <FilterDropdown
-            label="Sort"
-            value={value.sort ?? "newest"}
-            options={SORT_OPTIONS}
-            onChange={(v) => set("sort", v ?? "newest")}
-            highlightWhenSet={false}
-          />
-        </div>
-      </div>
-
-      {locationStatus === "denied" && (
-        <p className="text-xs text-ink-600">Location permission denied — filter by area instead.</p>
-      )}
+      <button
+        type="button"
+        onClick={onUseMyLocation}
+        disabled={locationStatus === "locating"}
+        className="ml-1.5 shrink-0 inline-flex items-center gap-1.5 rounded-full bg-crimson-600 text-white text-sm font-semibold px-4 h-9 transition-colors hover:bg-crimson-500 disabled:opacity-70 disabled:cursor-wait"
+      >
+        {locationStatus === "locating" ? (
+          <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+          </svg>
+        ) : (
+          <PinIcon filled={locationStatus === "granted"} />
+        )}
+        <span className="whitespace-nowrap">{locationStatus === "granted" ? "Using location" : "Near me"}</span>
+      </button>
     </div>
   );
 }
 
-export function BusinessFilters(props: FiltersProps) {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [cities, setCities] = useState<City[]>([]);
-  const [areas, setAreas] = useState<Area[]>([]);
-  const [cityId, setCityId] = useState<string>("");
-
-  useEffect(() => {
-    referenceApi.categories().then(setCategories).catch(() => {});
-    referenceApi.cities().then((list) => {
-      setCities(list);
-      if (list.length > 0) setCityId(list[0].id);
-    }).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (!cityId) {
-      setAreas([]);
-      return;
-    }
-    referenceApi.areas(cityId).then(setAreas).catch(() => {});
-  }, [cityId]);
-
-  const locationData: LocationData = { categories, cities, areas, cityId, setCityId };
-
+export function BusinessFilters(props: FiltersProps & LocationData) {
   return (
     <>
       <div className="md:hidden">
-        <MobileFilters {...props} {...locationData} />
+        <MobileFilters {...props} />
       </div>
       <div className="hidden md:block lg:hidden">
-        <TabletFilters {...props} {...locationData} />
-      </div>
-      <div className="hidden lg:block">
-        <DesktopFilters {...props} {...locationData} />
+        <TabletFilters {...props} />
       </div>
     </>
   );
