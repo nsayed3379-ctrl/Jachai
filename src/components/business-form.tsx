@@ -25,8 +25,8 @@ import { ErrorBanner, Spinner } from "./ui/misc";
 
 interface Props {
   existing?: BusinessResponse;
-  /** Handoff from the duplicate-check pre-step — name/category/city/area already picked, no need to retype. */
-  initialValues?: Pick<CreateBusinessRequest, "name" | "categoryId" | "cityId" | "areaId">;
+  /** Handoff from the "search first" pre-step — typically just the searched name, so it isn't retyped. */
+  initialValues?: Partial<Pick<CreateBusinessRequest, "name" | "categoryId" | "cityId" | "areaId">>;
 }
 
 const emptyForm: CreateBusinessRequest = {

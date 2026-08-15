@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { referenceApi } from "@/lib/api";
 import { PRICE_TIER_LABELS, SORT_LABELS } from "@/lib/config";
 import { cn } from "@/lib/utils";
-import type { Area, BusinessSearchParams, Category, City, PriceTier, SortOption } from "@/lib/types";
+import type { BusinessSearchParams, PriceTier, SortOption } from "@/lib/types";
 import { Button } from "./ui/button";
-import { Select } from "./ui/field";
+import { SearchQueryInput } from "./search-query-input";
 import { MobileFilters } from "./business-filters-mobile";
 import { TabletFilters } from "./business-filters-tablet";
 
@@ -157,76 +156,115 @@ export interface FiltersProps {
   onChange: (next: BusinessSearchParams) => void;
   onUseMyLocation: () => void;
   locationStatus: "idle" | "locating" | "granted" | "denied";
-  /** Scrolls to the results grid — used by the mobile primary "Search" button
-   * (search itself is already live/reactive; this just gets the user there). */
+  /** Scrolls to the results grid — used after a search commits (search itself is already reactive via onChange). */
   onSearch: () => void;
 }
 
-export interface LocationData {
-  categories: Category[];
-  cities: City[];
-  areas: Area[];
-  cityId: string;
-  setCityId: (id: string) => void;
+/** Draft q/location state + the commit logic shared by all three breakpoint layouts. */
+export function usePrimarySearch(value: BusinessSearchParams, onChange: FiltersProps["onChange"], onSearch: () => void) {
+  const [q, setQ] = useState(value.q ?? "");
+  const [location, setLocation] = useState(value.location ?? "");
+
+  function submit() {
+    const trimmedQ = q.trim();
+    const trimmedLocation = location.trim();
+    onChange({
+      ...value,
+      q: trimmedQ || undefined,
+      location: trimmedLocation || undefined,
+      // Typing a location supersedes a previously-used "near me" GPS fix.
+      ...(trimmedLocation ? { lat: undefined, lng: undefined, radiusMeters: undefined } : {}),
+      sort: trimmedQ ? "relevance" : value.sort === "relevance" ? "newest" : value.sort,
+      page: 0,
+    });
+    onSearch();
+  }
+
+  return { q, setQ, location, setLocation, submit };
 }
 
-function DesktopFilters({ value, onChange, onUseMyLocation, locationStatus, categories, cities, areas, cityId, setCityId }: FiltersProps & LocationData) {
+export function PrimarySearchRow({
+  value,
+  onChange,
+  onUseMyLocation,
+  locationStatus,
+  onSearch,
+}: FiltersProps) {
+  const { q, setQ, location, setLocation, submit } = usePrimarySearch(value, onChange, onSearch);
+
+  function useMyLocation() {
+    setLocation("");
+    // Commit whatever's already typed so page.tsx's geolocation callback
+    // sees the current query and can rank by relevance instead of pure distance.
+    onChange({ ...value, q: q.trim() || undefined, location: undefined, page: 0 });
+    onUseMyLocation();
+  }
+
+  return (
+    <div className="flex flex-col md:flex-row md:items-center gap-2 rounded-2xl md:rounded-full border border-ink-200 bg-surface p-1.5 md:p-1.5 shadow-sm">
+      <SearchQueryInput
+        value={q}
+        onChange={setQ}
+        onSubmit={submit}
+        inputClassName="w-full h-11 rounded-full md:rounded-l-full md:rounded-r-none border-0 bg-transparent pr-4 text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none focus:ring-0"
+      />
+
+      <div className="hidden md:block h-7 w-px bg-ink-200 shrink-0" />
+
+      <div className="relative flex-1 min-w-0">
+        <svg
+          viewBox="0 0 20 20"
+          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path d="M10 18s6-5.5 6-10a6 6 0 1 0-12 0c0 4.5 6 10 6 10Z" strokeLinejoin="round" />
+          <circle cx="10" cy="8" r="2" />
+        </svg>
+        <input
+          type="text"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && submit()}
+          placeholder="Location"
+          className="w-full h-11 rounded-full border-0 bg-transparent pl-10 pr-4 text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none focus:ring-0"
+        />
+      </div>
+
+      <button
+        type="button"
+        onClick={useMyLocation}
+        disabled={locationStatus === "locating"}
+        className="shrink-0 h-9 px-3.5 mx-1 rounded-full text-xs font-medium text-crimson-700 hover:bg-crimson-50 transition-colors disabled:opacity-60 whitespace-nowrap"
+      >
+        📍 {locationStatus === "locating" ? "Locating…" : locationStatus === "granted" ? "Using your location" : "Near me"}
+      </button>
+
+      <Button size="lg" className="shrink-0 m-0.5" onClick={submit} aria-label="Search">
+        <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="9" cy="9" r="6" />
+          <path d="M17 17l-4.3-4.3" strokeLinecap="round" />
+        </svg>
+      </Button>
+    </div>
+  );
+}
+
+function DesktopFilters({ value, onChange, onUseMyLocation, locationStatus, onSearch }: FiltersProps) {
   function set<K extends keyof BusinessSearchParams>(key: K, val: BusinessSearchParams[K]) {
     onChange({ ...value, [key]: val, page: 0 });
   }
 
   return (
     <div className="space-y-4">
-      {/* Primary controls: where and what to search */}
-      <div className="flex flex-wrap gap-3">
-        <Select
-          className={cn(searchRowControl, "w-auto flex-1 min-w-[160px]")}
-          value={value.categoryId ?? ""}
-          onChange={(e) => set("categoryId", e.target.value || undefined)}
-        >
-          <option value="">All categories</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </Select>
-
-        <Select
-          className={cn(searchRowControl, "w-auto flex-1 min-w-[140px]")}
-          value={cityId}
-          onChange={(e) => { setCityId(e.target.value); set("areaId", undefined); }}
-        >
-          {cities.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </Select>
-
-        <Select
-          className={cn(searchRowControl, "w-auto flex-1 min-w-[140px]")}
-          value={value.areaId ?? ""}
-          onChange={(e) => set("areaId", e.target.value || undefined)}
-        >
-          <option value="">All areas</option>
-          {areas.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
-          ))}
-        </Select>
-
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onUseMyLocation}
-          loading={locationStatus === "locating"}
-          className={searchRowControl}
-        >
-          📍 {locationStatus === "granted" ? "Using your location" : "Near me"}
-        </Button>
-      </div>
+      <PrimarySearchRow
+        value={value}
+        onChange={onChange}
+        onUseMyLocation={onUseMyLocation}
+        locationStatus={locationStatus}
+        onSearch={onSearch}
+      />
 
       {/* Refine controls: a quiet second tier, one pill per filter */}
       <div className="flex flex-wrap items-center gap-2.5 pt-3.5 border-t border-ink-100">
@@ -245,46 +283,23 @@ function DesktopFilters({ value, onChange, onUseMyLocation, locationStatus, cate
       </div>
 
       {locationStatus === "denied" && (
-        <p className="text-xs text-ink-600">Location permission denied — filter by area instead.</p>
+        <p className="text-xs text-ink-600">Location permission denied — enter a location manually instead.</p>
       )}
     </div>
   );
 }
 
 export function BusinessFilters(props: FiltersProps) {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [cities, setCities] = useState<City[]>([]);
-  const [areas, setAreas] = useState<Area[]>([]);
-  const [cityId, setCityId] = useState<string>("");
-
-  useEffect(() => {
-    referenceApi.categories().then(setCategories).catch(() => {});
-    referenceApi.cities().then((list) => {
-      setCities(list);
-      if (list.length > 0) setCityId(list[0].id);
-    }).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (!cityId) {
-      setAreas([]);
-      return;
-    }
-    referenceApi.areas(cityId).then(setAreas).catch(() => {});
-  }, [cityId]);
-
-  const locationData: LocationData = { categories, cities, areas, cityId, setCityId };
-
   return (
     <>
       <div className="md:hidden">
-        <MobileFilters {...props} {...locationData} />
+        <MobileFilters {...props} />
       </div>
       <div className="hidden md:block lg:hidden">
-        <TabletFilters {...props} {...locationData} />
+        <TabletFilters {...props} />
       </div>
       <div className="hidden lg:block">
-        <DesktopFilters {...props} {...locationData} />
+        <DesktopFilters {...props} />
       </div>
     </>
   );

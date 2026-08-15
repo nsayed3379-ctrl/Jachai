@@ -4,15 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { PriceTier, SortOption } from "@/lib/types";
 import { Button } from "./ui/button";
-import { Select } from "./ui/field";
 import {
   FilterOptionPill,
   PRICE_OPTIONS,
   RATING_OPTIONS,
   SORT_OPTIONS,
+  PrimarySearchRow,
   searchRowControl,
   type FiltersProps,
-  type LocationData,
 } from "./business-filters";
 
 function FiltersPopover({ value, onChange }: Pick<FiltersProps, "value" | "onChange">) {
@@ -119,64 +118,24 @@ function FiltersPopover({ value, onChange }: Pick<FiltersProps, "value" | "onCha
   );
 }
 
-export function TabletFilters({ value, onChange, onUseMyLocation, locationStatus, categories, cities, areas, cityId, setCityId }: FiltersProps & LocationData) {
-  function set<K extends keyof typeof value>(key: K, val: (typeof value)[K]) {
-    onChange({ ...value, [key]: val, page: 0 });
-  }
-
+export function TabletFilters({ value, onChange, onUseMyLocation, locationStatus, onSearch }: FiltersProps) {
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-3">
-        <Select
-          className={cn(searchRowControl, "w-auto flex-1 min-w-[150px]")}
-          value={value.categoryId ?? ""}
-          onChange={(e) => set("categoryId", e.target.value || undefined)}
-        >
-          <option value="">All categories</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </Select>
-
-        <Select
-          className={cn(searchRowControl, "w-auto flex-1 min-w-[130px]")}
-          value={cityId}
-          onChange={(e) => {
-            setCityId(e.target.value);
-            set("areaId", undefined);
-          }}
-        >
-          {cities.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </Select>
-
-        <Select
-          className={cn(searchRowControl, "w-auto flex-1 min-w-[130px]")}
-          value={value.areaId ?? ""}
-          onChange={(e) => set("areaId", e.target.value || undefined)}
-        >
-          <option value="">All areas</option>
-          {areas.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
-          ))}
-        </Select>
-
-        <Button type="button" variant="outline" onClick={onUseMyLocation} loading={locationStatus === "locating"} className={searchRowControl}>
-          📍 {locationStatus === "granted" ? "Using your location" : "Near me"}
-        </Button>
-
+      <div className="flex items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <PrimarySearchRow
+            value={value}
+            onChange={onChange}
+            onUseMyLocation={onUseMyLocation}
+            locationStatus={locationStatus}
+            onSearch={onSearch}
+          />
+        </div>
         <FiltersPopover value={value} onChange={onChange} />
       </div>
 
       {locationStatus === "denied" && (
-        <p className="text-xs text-ink-600">Location permission denied — filter by area instead.</p>
+        <p className="text-xs text-ink-600">Location permission denied — enter a location manually instead.</p>
       )}
     </div>
   );

@@ -81,3 +81,28 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
+
+/* Skeleton loading placeholders (business-grid loading state) — paired with
+   the `animate-shimmer` utility from tailwind.config.ts. */
+.skeleton {
+  background-image: linear-gradient(
+    90deg,
+    rgb(var(--ink-100)) 25%,
+    rgb(var(--ink-50)) 37%,
+    rgb(var(--ink-100)) 63%
+  );
+  background-size: 400px 100%;
+}
+
+/* Respect the OS-level "reduce motion" setting — everything above still
+   renders, it just stops moving. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

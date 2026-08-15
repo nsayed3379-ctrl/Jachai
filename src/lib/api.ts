@@ -231,11 +231,11 @@ export const businessApi = {
 
   mine: () => request<BusinessResponse[]>("/api/v1/businesses/mine"),
 
-  /** Pre-check before "add a business" — same category + area, fuzzy name match. */
-  potentialDuplicates: (categoryId: string, areaId: string, name: string) =>
+  /** Free-text pre-check before "add a business" — e.g. "Biriyani House Mirpur" or just "KFC". */
+  potentialDuplicates: (q: string) =>
     request<BusinessResponse[]>("/api/v1/businesses/potential-duplicates", {
       auth: false,
-      query: { categoryId, areaId, name },
+      query: { q },
     }),
 
   create: (body: CreateBusinessRequest) =>

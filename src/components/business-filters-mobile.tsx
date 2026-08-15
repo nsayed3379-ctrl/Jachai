@@ -3,15 +3,15 @@
 import { useState } from "react";
 import type { PriceTier, SortOption } from "@/lib/types";
 import { Button } from "./ui/button";
-import { Select } from "./ui/field";
 import { BottomSheet } from "./ui/bottom-sheet";
+import { SearchQueryInput } from "./search-query-input";
 import {
   FilterOptionPill,
   PRICE_OPTIONS,
   RATING_OPTIONS,
   SORT_OPTIONS,
+  usePrimarySearch,
   type FiltersProps,
-  type LocationData,
 } from "./business-filters";
 
 function FiltersSheetContent({
@@ -95,60 +95,61 @@ function FiltersSheetContent({
   );
 }
 
-export function MobileFilters({ value, onChange, onUseMyLocation, locationStatus, onSearch, categories, cities, areas, cityId, setCityId }: FiltersProps & LocationData) {
+export function MobileFilters({ value, onChange, onUseMyLocation, locationStatus, onSearch }: FiltersProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
+  const { q, setQ, location, setLocation, submit } = usePrimarySearch(value, onChange, onSearch);
 
-  function set<K extends keyof typeof value>(key: K, val: (typeof value)[K]) {
-    onChange({ ...value, [key]: val, page: 0 });
+  function useMyLocation() {
+    setLocation("");
+    // Commit whatever's already typed so page.tsx's geolocation callback
+    // sees the current query and can rank by relevance instead of pure distance.
+    onChange({ ...value, q: q.trim() || undefined, location: undefined, page: 0 });
+    onUseMyLocation();
   }
 
   const activeRefineCount = [value.priceTier, value.minRating].filter((v) => v !== undefined).length;
 
   return (
     <div className="space-y-2.5">
-      <Select
-        className="h-12 w-full rounded-xl text-base"
-        value={value.categoryId ?? ""}
-        onChange={(e) => set("categoryId", e.target.value || undefined)}
-      >
-        <option value="">All categories</option>
-        {categories.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </Select>
+      <SearchQueryInput
+        value={q}
+        onChange={setQ}
+        onSubmit={submit}
+        inputClassName="h-12 w-full rounded-xl border border-ink-200 bg-surface text-base focus:outline-none focus:ring-2 focus:ring-crimson-500/30 focus:border-crimson-500"
+      />
 
-      <Select
-        className="h-12 w-full rounded-xl text-base"
-        value={cityId}
-        onChange={(e) => {
-          setCityId(e.target.value);
-          set("areaId", undefined);
-        }}
-      >
-        {cities.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </Select>
+      <div className="relative">
+        <svg
+          viewBox="0 0 20 20"
+          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path d="M10 18s6-5.5 6-10a6 6 0 1 0-12 0c0 4.5 6 10 6 10Z" strokeLinejoin="round" />
+          <circle cx="10" cy="8" r="2" />
+        </svg>
+        <input
+          type="text"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && submit()}
+          placeholder="Location"
+          className="h-12 w-full rounded-xl border border-ink-200 bg-surface pl-10 pr-4 text-base text-ink-900 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-crimson-500/30 focus:border-crimson-500"
+        />
+      </div>
 
-      <Select
-        className="h-12 w-full rounded-xl text-base"
-        value={value.areaId ?? ""}
-        onChange={(e) => set("areaId", e.target.value || undefined)}
+      <button
+        type="button"
+        onClick={useMyLocation}
+        disabled={locationStatus === "locating"}
+        className="text-xs font-medium text-crimson-700 disabled:opacity-60"
       >
-        <option value="">All areas</option>
-        {areas.map((a) => (
-          <option key={a.id} value={a.id}>
-            {a.name}
-          </option>
-        ))}
-      </Select>
+        📍 {locationStatus === "locating" ? "Locating…" : locationStatus === "granted" ? "Using your location" : "Near me"}
+      </button>
 
       <div className="flex gap-2 pt-1">
-        <Button className="flex-1 h-12 rounded-xl text-base" onClick={onSearch}>
+        <Button className="flex-1 h-12 rounded-xl text-base" onClick={submit}>
           🔍 Search
         </Button>
         <Button
@@ -166,7 +167,7 @@ export function MobileFilters({ value, onChange, onUseMyLocation, locationStatus
       </div>
 
       {locationStatus === "denied" && (
-        <p className="text-xs text-ink-600">Location permission denied — filter by area instead.</p>
+        <p className="text-xs text-ink-600">Location permission denied — enter a location manually instead.</p>
       )}
 
       <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)} labelledBy="mobile-filters-heading">

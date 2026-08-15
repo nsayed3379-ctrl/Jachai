@@ -113,7 +113,7 @@ export interface CreateBusinessRequest {
 
 export type UpdateBusinessRequest = CreateBusinessRequest;
 
-export type SortOption = "rating" | "distance" | "newest" | "most_reviewed";
+export type SortOption = "relevance" | "rating" | "distance" | "newest" | "most_reviewed";
 
 export interface BusinessSearchParams {
   categoryId?: string;
@@ -123,6 +123,10 @@ export interface BusinessSearchParams {
   lat?: number;
   lng?: number;
   radiusMeters?: number;
+  /** Free-text search-bar query — business name, category/service keyword, or a natural-language phrase. */
+  q?: string;
+  /** Free-text location field (e.g. "Mirpur", "Dhanmondi, Dhaka") — matched against area/city names, not a dropdown. */
+  location?: string;
   sort?: SortOption;
   page?: number;
   size?: number;

@@ -12,6 +12,7 @@ export const PRICE_TIER_LABELS: Record<string, string> = {
 };
 
 export const SORT_LABELS: Record<string, string> = {
+  relevance: "Relevance",
   newest: "Newest",
   rating: "Highest rated",
   distance: "Nearest",
