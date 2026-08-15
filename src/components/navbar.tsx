@@ -5,9 +5,11 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthModal } from "@/lib/auth-modal-context";
+import { useHomeSearch } from "@/lib/home-search-context";
 import { useLanguage } from "@/lib/language-context";
 import { type AccountMode, getStoredAccountMode, setStoredAccountMode } from "@/lib/storage";
 import { cn } from "@/lib/utils";
+import { PrimarySearchBar } from "./business-filters";
 import { ThemeToggle } from "./theme-toggle";
 
 function Logo({ light }: { light: boolean }) {
@@ -113,6 +115,8 @@ export function Navbar() {
   const [accountMode, setAccountMode] = useState<AccountMode>("personal");
   const pathname = usePathname();
   const isHero = pathname === "/";
+  const { params, setParams, locationStatus, useMyLocation, categories, cities, areas, cityId, setCityId } =
+    useHomeSearch();
   const [scrolled, setScrolled] = useState(!isHero);
 
   // Read the persisted mode after mount only, so SSR/first paint always
@@ -152,10 +156,30 @@ export function Navbar() {
         transparent ? "bg-transparent border-b border-transparent" : "border-b border-ink-100 bg-surface/90 backdrop-blur shadow-sm"
       )}
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-3">
         <Logo light={transparent} />
 
-        <nav className="hidden md:flex items-center gap-1 text-sm font-medium">
+        {/* Primary search (Category/City/Area/Price/Rating/Near me) lives right
+            here on the home page — see lib/home-search-context.tsx for the
+            shared state this and page.tsx's results grid both read/write. */}
+        {isHero && (
+          <div className="hidden lg:flex items-center min-w-0 mx-2">
+            <PrimarySearchBar
+              value={params}
+              onChange={setParams}
+              onUseMyLocation={useMyLocation}
+              locationStatus={locationStatus}
+              categories={categories}
+              cities={cities}
+              areas={areas}
+              cityId={cityId}
+              setCityId={setCityId}
+              light={transparent}
+            />
+          </div>
+        )}
+
+        <nav className="hidden md:flex items-center gap-1 text-sm font-medium ml-auto">
           {user?.role === "ADMIN" && (
             <Link href="/admin" className={linkClass}>
               {t("nav.admin")}
@@ -271,7 +295,7 @@ export function Navbar() {
         </div>
 
         <button
-          className={cn("md:hidden p-2 rounded-full", transparent ? "text-white hover:bg-white/15" : "hover:bg-ink-100")}
+          className={cn("md:hidden ml-auto p-2 rounded-full", transparent ? "text-white hover:bg-white/15" : "hover:bg-ink-100")}
           onClick={() => setMenuOpen((v) => !v)}
           aria-label="Toggle menu"
         >

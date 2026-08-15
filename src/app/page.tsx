@@ -1,11 +1,14 @@
+
+
+
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { businessApi } from "@/lib/api";
-import { PAGE_SIZE } from "@/lib/config";
 import { rememberBusinesses } from "@/lib/business-cache";
+import { useHomeSearch } from "@/lib/home-search-context";
 import { errorMessage } from "@/lib/toast-context";
-import type { Area, BusinessResponse, BusinessSearchParams, Category } from "@/lib/types";
+import type { Area, BusinessResponse, Category } from "@/lib/types";
 import { BusinessCard } from "@/components/business-card";
 import { BusinessFilters } from "@/components/business-filters";
 import { CategoriesGrid } from "@/components/categories-grid";
@@ -15,9 +18,10 @@ import { EmptyState, ErrorBanner, Pagination } from "@/components/ui/misc";
 
 // Rotates every HERO_ROTATE_INTERVAL_MS — see the crossfade layers below.
 const HERO_IMAGES = [
-  "https://images.unsplash.com/photo-1538333581680-29dd4752ddf2?auto=format&fit=crop&w=2000&q=75",
   "https://t3.ftcdn.net/jpg/08/87/43/12/360_F_887431211_oTMtoK4uDoTBYq57CjxkwNBzqExhPYfF.jpg",
   "https://c8.alamy.com/comp/2HTN8DN/car-auto-service-and-vehicle-maintenance-workshop-center-automobile-garage-shop-and-spare-part-changing-automotive-services-station-business-car-re-2HTN8DN.jpg",
+  "https://alvarezandmarsal-crg.com/wp-content/uploads/2021/07/The-future-Image-Inactive@2x.jpg",
+  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSlKhRY6buGBK63OnPUWrFw9ja-5CWLgv4K3R2HarHgKg&s=10",
 ];
 const HERO_ROTATE_INTERVAL_MS = 5000;
 
@@ -46,8 +50,21 @@ function SkeletonCard() {
 }
 
 export default function HomePage() {
-  const [params, setParams] = useState<BusinessSearchParams>({ sort: "newest", page: 0, size: PAGE_SIZE });
-  const [locationStatus, setLocationStatus] = useState<"idle" | "locating" | "granted" | "denied">("idle");
+  // Category/City/Area/Near-me now live in the Navbar (home page only) —
+  // this page and the Navbar both read/write the same shared state instead
+  // of keeping two disconnected copies. See lib/home-search-context.tsx.
+  const {
+    params,
+    setParams,
+    locationStatus,
+    useMyLocation,
+    categories,
+    cities,
+    areas,
+    cityId,
+    setCityId,
+  } = useHomeSearch();
+
   const [browseLocation, setBrowseLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [browseLocationStatus, setBrowseLocationStatus] = useState<"idle" | "locating" | "denied">("idle");
   const [results, setResults] = useState<BusinessResponse[]>([]);
@@ -64,7 +81,8 @@ export default function HomePage() {
   // layer is "on top" every HERO_ROTATE_INTERVAL_MS. Explicitly clearing any
   // interval already sitting in heroTimerRef before starting a new one
   // guards against ever having two timers alive at once (e.g. React Strict
-  // Mode's dev-only double-invoke, or a hot-reload).
+  // Mode's dev-only double-invoke, or a hot-reload) — that's what causes
+  // rotations to suddenly speed up after the first one.
   useEffect(() => {
     if (heroTimerRef.current) clearInterval(heroTimerRef.current);
     heroTimerRef.current = setInterval(() => {
@@ -84,12 +102,12 @@ export default function HomePage() {
     const categoryId = url.searchParams.get("categoryId");
     const areaId = url.searchParams.get("areaId");
     if (!categoryId && !areaId) return;
-    setParams((prev) => ({
-      ...prev,
-      categoryId: categoryId ?? prev.categoryId,
-      areaId: areaId ?? prev.areaId,
+    setParams({
+      ...params,
+      categoryId: categoryId ?? params.categoryId,
+      areaId: areaId ?? params.areaId,
       page: 0,
-    }));
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -113,42 +131,17 @@ export default function HomePage() {
     };
   }, [params]);
 
-  function useMyLocation() {
-    if (!("geolocation" in navigator)) {
-      setLocationStatus("denied");
-      return;
-    }
-    setLocationStatus("locating");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLocationStatus("granted");
-        setParams((prev) => ({
-          ...prev,
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          radiusMeters: 5000,
-          // A query already typed keeps ranking by relevance (radius just narrows candidates);
-          // "Near me" on its own falls back to pure proximity, as before.
-          sort: prev.q ? "relevance" : "distance",
-          page: 0,
-        }));
-      },
-      () => setLocationStatus("denied"),
-      { timeout: 8000 }
-    );
-  }
-
   function scrollToResults() {
     resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function applyCategory(category: Category) {
-    setParams((prev) => ({ ...prev, categoryId: category.id, page: 0 }));
+    setParams({ ...params, categoryId: category.id, page: 0 });
     scrollToResults();
   }
 
   function applyArea(area: Area) {
-    setParams((prev) => ({ ...prev, areaId: area.id, page: 0 }));
+    setParams({ ...params, areaId: area.id, page: 0 });
     scrollToResults();
   }
 
@@ -172,20 +165,24 @@ export default function HomePage() {
 
   return (
     <>
-      {/* Hero: true full-viewport section, not nested inside any max-width container.
-          Height/spacing is tiered per breakpoint — mobile gets a deliberately short
-          hero (heading + CTA above the fold), tablet/desktop keep the tall version. */}
-      <section className="relative w-full min-h-[480px] md:min-h-[640px] lg:min-h-screen overflow-hidden">
-        {/* BackgroundImage — rotates through HERO_IMAGES every HERO_ROTATE_INTERVAL_MS.
-            Every photo is stacked in the same spot; only the current one is
-            opacity-100, and transition-opacity crossfades between them.
-            animate-ken-burns is unconditional (every layer, from mount) — it must
-            never be toggled in step with the opacity crossfade, or the transform
-            snaps back to scale(1) the instant a layer becomes active, which reads
-            as a jerky "kick" right as it fades in. */}
+      {/* Hero: the primary Category/City/Area/Near-me search now lives up in
+          the Navbar itself (see components/navbar.tsx) — this section is just
+          the quieter Price/Rating/Sort refine row, a category quick-nav strip,
+          and a clean full-bleed photo with a headline underneath. */}
+      <section className="relative w-full min-h-[480px] md:min-h-[640px] lg:min-h-screen overflow-hidden flex flex-col">
+        {/* BackgroundImage — rotates through HERO_IMAGES every 2s. Every photo
+            is stacked in the same spot; only the current one is opacity-100,
+            and transition-opacity crossfades between them. animate-ken-burns
+            restarts on each layer the moment it becomes the visible one. */}
         {HERO_IMAGES.map((url, i) => (
           <div
             key={url}
+            // animate-ken-burns is unconditional (every layer, from mount) —
+            // it must NEVER be toggled on/off in step with the opacity
+            // crossfade, or the transform snaps back to scale(1) the instant
+            // a layer becomes active, which reads as a jerky "kick" right as
+            // it fades in. Only opacity animates on rotation; the zoom runs
+            // completely independently underneath it, so the fade is smooth.
             className={`absolute inset-0 bg-cover bg-center animate-ken-burns transition-opacity duration-[1500ms] ease-in-out ${
               i === heroIndex ? "opacity-100" : "opacity-0"
             }`}
@@ -193,57 +190,79 @@ export default function HomePage() {
           />
         ))}
         {/* Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-scrim/60 via-scrim/25 to-scrim/5" />
-        {/* Extra darkening behind the transparent navbar so its white text stays legible over any photo */}
-        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-scrim/55 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-scrim/70 via-scrim/30 to-scrim/10" />
 
-        {/* Container: only the content is width-constrained, not the section itself */}
-        <div className="relative flex flex-col justify-start pt-20 md:pt-24 lg:pt-32 pb-8 md:pb-10 lg:pb-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* SearchCard — one shared card chrome for all three tiers; BusinessFilters
-              itself decides what to render inside per breakpoint (mobile/tablet/desktop
-              are dedicated components, not a shared layout squeezed to fit). */}
-          {/* relative z-20: backdrop-blur creates its own stacking context, so
-              without an explicit z-index here the dropdown popovers inside
-              BusinessFilters would render underneath the HeroContent below it. */}
-          <div className="relative z-20 rounded-2xl md:rounded-[28px] lg:rounded-[32px] border border-white/60 bg-surface/85 backdrop-blur-xl p-4 md:p-6 lg:p-8 shadow-lift animate-hero-in">
-            <BusinessFilters
-              value={params}
-              onChange={setParams}
-              onUseMyLocation={useMyLocation}
-              locationStatus={locationStatus}
-              onSearch={scrollToResults}
-            />
+        {/* mt-16 sits this flush under the fixed h-16 navbar. On lg+, the
+            Navbar itself now carries the entire search (Category/City/Area/
+            Price/Rating/Near-me — see components/navbar.tsx), so this strip
+            only needs to render for mobile/tablet, which don't have room for
+            an inline navbar search and still use their own bottom-sheet/
+            popover — plus the category quick-nav strip, which stays lg+ only. */}
+        <div className="relative z-20 mt-16 animate-hero-in">
+          <div className="lg:hidden bg-scrim/90 backdrop-blur-md border-b border-white/10">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+              {/* Full self-contained mobile/tablet filter UI (bottom sheet /
+                  popover) — unchanged. Below lg only; lg+ uses the Navbar's
+                  inline search instead, so this whole div is lg:hidden above. */}
+              <BusinessFilters
+                value={params}
+                onChange={setParams}
+                onUseMyLocation={useMyLocation}
+                locationStatus={locationStatus}
+                onSearch={scrollToResults}
+                categories={categories}
+                cities={cities}
+                areas={areas}
+                cityId={cityId}
+                setCityId={setCityId}
+              />
+            </div>
           </div>
 
-          {/* HeroContent */}
-          <div className="max-w-xl mt-4 md:mt-6 lg:mt-8">
-            <h1
-              className="animate-hero-in font-display text-3xl md:text-5xl lg:text-6xl font-extrabold text-white leading-[1.15] md:leading-[1.12] tracking-tight drop-shadow-sm"
-              style={{ animationDelay: "100ms" }}
-            >
-              Find a business you can actually trust
-            </h1>
-            <button
-              type="button"
-              onClick={scrollToResults}
-              style={{ animationDelay: "220ms" }}
-              className="animate-hero-in mt-4 md:mt-5 inline-flex items-center gap-2.5 rounded-full bg-crimson-600 text-white font-semibold px-6 md:px-7 py-3 md:py-3.5 text-sm md:text-base shadow-lift transition-all duration-200 hover:bg-crimson-500 hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0 active:scale-95"
-            >
-              <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="9" cy="9" r="6" />
-                <path d="M17 17l-4.3-4.3" strokeLinecap="round" />
-              </svg>
-              Start exploring
-            </button>
-            <p
-              className="animate-hero-in mt-3 md:mt-4 text-white/90 text-sm md:text-base max-w-md leading-relaxed"
-              style={{ animationDelay: "320ms" }}
-            >
-              Search verified local businesses across Dhaka — filtered by category, area, price,
-              and rating, with owner verification you won&apos;t find on Google Maps or
-              Facebook.
-            </p>
-          </div>
+          {categories.length > 0 && (
+            <div className="hidden lg:block backdrop-blur-md">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center gap-1 overflow-x-auto">
+                {categories.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => applyCategory(c)}
+                    className="shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium text-white/85 whitespace-nowrap transition-colors hover:bg-white/10 hover:text-white"
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* HeroContent — headline + single CTA, anchored toward the bottom of
+            the photo (the search work now happens up in the navbar/strip above). */}
+        <div className="relative z-10 flex-1 flex flex-col justify-end max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pb-14 md:pb-16 lg:pb-44">
+          <h1
+            className="max-w-2xl font-sans text-2xl md:text-3xl lg:text-5xl font-extrabold text-white leading-[1.15] md:leading-[1.12] tracking-tight drop-shadow-sm animate-hero-in"
+            style={{ animationDelay: "150ms" }}
+          >
+            Find a business you can actually trust
+          </h1>
+          <p
+            className="animate-hero-in mt-3 md:mt-10 text-white/90 text-sm md:text-base max-w-md leading-relaxed"
+            style={{ animationDelay: "300ms" }}
+          >
+            Search verified local businesses across Dhaka — filtered by category, area, price,
+            and rating, with owner verification you won&apos;t find on Google Maps or
+            Facebook.
+          </p>
+          <button
+            type="button"
+            onClick={scrollToResults}
+            style={{ animationDelay: "420ms" }}
+            className="animate-hero-in mt-4 md:mt-5 w-fit inline-flex items-center gap-2.5 rounded-full bg-crimson-600 text-white font-semibold px-6 md:px-7 py-3 md:py-3.5 text-sm md:text-base shadow-lift transition-all duration-200 hover:bg-crimson-500 hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0 active:scale-95"
+          >
+
+            Start exploring
+          </button>
         </div>
       </section>
 
@@ -300,7 +319,7 @@ export default function HomePage() {
             <Pagination
               page={params.page ?? 0}
               totalPages={totalPages}
-              onChange={(page) => setParams((prev) => ({ ...prev, page }))}
+              onChange={(page) => setParams({ ...params, page })}
             />
           </>
         )}

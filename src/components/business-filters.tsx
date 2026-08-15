@@ -3,9 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { PRICE_TIER_LABELS, SORT_LABELS } from "@/lib/config";
 import { cn } from "@/lib/utils";
-import type { BusinessSearchParams, PriceTier, SortOption } from "@/lib/types";
-import { Button } from "./ui/button";
-import { SearchQueryInput } from "./search-query-input";
+import type { Area, BusinessSearchParams, Category, City, PriceTier, SortOption } from "@/lib/types";
 import { MobileFilters } from "./business-filters-mobile";
 import { TabletFilters } from "./business-filters-tablet";
 
@@ -24,6 +22,8 @@ export function FilterDropdown<T extends string | number>({
   options,
   onChange,
   highlightWhenSet = true,
+  variant = "pill",
+  triggerClassName,
 }: {
   label: string;
   value: T | undefined;
@@ -32,6 +32,12 @@ export function FilterDropdown<T extends string | number>({
   /** Sort isn't a filter (it doesn't narrow results), so it stays neutrally
    * styled even once a non-default value is picked, unlike Price/Rating. */
   highlightWhenSet?: boolean;
+  /** "pill" (default): bordered white button — used in the mobile/tablet filter
+   *  sheets. "flat": no border or background at all, just "Label ▾" — used for
+   *  the Navbar's inline search controls, which supply their own text color
+   *  via triggerClassName since the Navbar can be transparent-over-photo. */
+  variant?: "pill" | "flat";
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -60,12 +66,19 @@ export function FilterDropdown<T extends string | number>({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={cn(
-          "h-10 inline-flex items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-colors whitespace-nowrap",
-          active
-            ? "border-crimson-300 bg-crimson-50 text-crimson-700"
-            : "border-ink-200 bg-surface text-ink-700 hover:border-ink-300"
-        )}
+        className={
+          variant === "flat"
+            ? cn(
+                "h-9 inline-flex items-center gap-1 px-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors hover:bg-white/10",
+                triggerClassName
+              )
+            : cn(
+                "h-10 inline-flex items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-colors whitespace-nowrap",
+                active
+                  ? "border-crimson-300 bg-crimson-50 text-crimson-700"
+                  : "border-ink-200 bg-surface text-ink-700 hover:border-ink-300"
+              )
+        }
       >
         {hasValue ? `${label}: ${activeLabel}` : label}
         <svg
@@ -156,140 +169,129 @@ export interface FiltersProps {
   onChange: (next: BusinessSearchParams) => void;
   onUseMyLocation: () => void;
   locationStatus: "idle" | "locating" | "granted" | "denied";
-  /** Scrolls to the results grid — used after a search commits (search itself is already reactive via onChange). */
+  /** Scrolls to the results grid — used by the mobile primary "Search" button
+   * (search itself is already live/reactive; this just gets the user there). */
   onSearch: () => void;
 }
 
-/** Draft q/location state + the commit logic shared by all three breakpoint layouts. */
-export function usePrimarySearch(value: BusinessSearchParams, onChange: FiltersProps["onChange"], onSearch: () => void) {
-  const [q, setQ] = useState(value.q ?? "");
-  const [location, setLocation] = useState(value.location ?? "");
-
-  function submit() {
-    const trimmedQ = q.trim();
-    const trimmedLocation = location.trim();
-    onChange({
-      ...value,
-      q: trimmedQ || undefined,
-      location: trimmedLocation || undefined,
-      // Typing a location supersedes a previously-used "near me" GPS fix.
-      ...(trimmedLocation ? { lat: undefined, lng: undefined, radiusMeters: undefined } : {}),
-      sort: trimmedQ ? "relevance" : value.sort === "relevance" ? "newest" : value.sort,
-      page: 0,
-    });
-    onSearch();
-  }
-
-  return { q, setQ, location, setLocation, submit };
+export interface LocationData {
+  categories: Category[];
+  cities: City[];
+  areas: Area[];
+  cityId: string;
+  setCityId: (id: string) => void;
 }
 
-export function PrimarySearchRow({
+function PinIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8">
+      <path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21Z" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="12" cy="9.5" r="2.3" fill={filled ? "white" : "none"} />
+    </svg>
+  );
+}
+
+// The Navbar's inline search (home page, lg+): flat "Label ▾" controls — no
+// box, no border, no background of their own — for Category/City/Area/Price/
+// Rating, plus a small "Near me" action pill. `light` controls text color
+// since the Navbar can be transparent-over-photo (white) or solid (dark).
+export function PrimarySearchBar({
   value,
   onChange,
   onUseMyLocation,
   locationStatus,
-  onSearch,
-}: FiltersProps) {
-  const { q, setQ, location, setLocation, submit } = usePrimarySearch(value, onChange, onSearch);
-
-  function useMyLocation() {
-    setLocation("");
-    // Commit whatever's already typed so page.tsx's geolocation callback
-    // sees the current query and can rank by relevance instead of pure distance.
-    onChange({ ...value, q: q.trim() || undefined, location: undefined, page: 0 });
-    onUseMyLocation();
-  }
-
-  return (
-    <div className="flex flex-col md:flex-row md:items-center gap-2 rounded-2xl md:rounded-full border border-ink-200 bg-surface p-1.5 md:p-1.5 shadow-sm">
-      <SearchQueryInput
-        value={q}
-        onChange={setQ}
-        onSubmit={submit}
-        inputClassName="w-full h-11 rounded-full md:rounded-l-full md:rounded-r-none border-0 bg-transparent pr-4 text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none focus:ring-0"
-      />
-
-      <div className="hidden md:block h-7 w-px bg-ink-200 shrink-0" />
-
-      <div className="relative flex-1 min-w-0">
-        <svg
-          viewBox="0 0 20 20"
-          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path d="M10 18s6-5.5 6-10a6 6 0 1 0-12 0c0 4.5 6 10 6 10Z" strokeLinejoin="round" />
-          <circle cx="10" cy="8" r="2" />
-        </svg>
-        <input
-          type="text"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && submit()}
-          placeholder="Location"
-          className="w-full h-11 rounded-full border-0 bg-transparent pl-10 pr-4 text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none focus:ring-0"
-        />
-      </div>
-
-      <button
-        type="button"
-        onClick={useMyLocation}
-        disabled={locationStatus === "locating"}
-        className="shrink-0 h-9 px-3.5 mx-1 rounded-full text-xs font-medium text-crimson-700 hover:bg-crimson-50 transition-colors disabled:opacity-60 whitespace-nowrap"
-      >
-        📍 {locationStatus === "locating" ? "Locating…" : locationStatus === "granted" ? "Using your location" : "Near me"}
-      </button>
-
-      <Button size="lg" className="shrink-0 m-0.5" onClick={submit} aria-label="Search">
-        <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="9" cy="9" r="6" />
-          <path d="M17 17l-4.3-4.3" strokeLinecap="round" />
-        </svg>
-      </Button>
-    </div>
-  );
-}
-
-function DesktopFilters({ value, onChange, onUseMyLocation, locationStatus, onSearch }: FiltersProps) {
+  categories,
+  cities,
+  areas,
+  cityId,
+  setCityId,
+  light,
+  className,
+}: Omit<FiltersProps, "onSearch"> & LocationData & { light?: boolean; className?: string }) {
   function set<K extends keyof BusinessSearchParams>(key: K, val: BusinessSearchParams[K]) {
     onChange({ ...value, [key]: val, page: 0 });
   }
 
+  const categoryOptions: DropdownOption<string>[] = [
+    { value: undefined, label: "All categories" },
+    ...categories.map((c) => ({ value: c.id, label: c.name })),
+  ];
+  const cityOptions: DropdownOption<string>[] = cities.map((c) => ({ value: c.id, label: c.name }));
+  const areaOptions: DropdownOption<string>[] = [
+    { value: undefined, label: "All areas" },
+    ...areas.map((a) => ({ value: a.id, label: a.name })),
+  ];
+
+  const triggerClassName = light ? "text-white hover:bg-white/15" : "text-ink-700 hover:bg-ink-100";
+
   return (
-    <div className="space-y-4">
-      <PrimarySearchRow
-        value={value}
-        onChange={onChange}
-        onUseMyLocation={onUseMyLocation}
-        locationStatus={locationStatus}
-        onSearch={onSearch}
+    <div className={cn("flex items-center gap-0.5", className)}>
+      <FilterDropdown
+        variant="flat"
+        triggerClassName={triggerClassName}
+        label="Category"
+        value={value.categoryId}
+        options={categoryOptions}
+        onChange={(v) => set("categoryId", v)}
+      />
+      <FilterDropdown
+        variant="flat"
+        triggerClassName={triggerClassName}
+        label="City"
+        value={cityId || undefined}
+        options={cityOptions}
+        onChange={(v) => {
+          if (!v) return;
+          setCityId(v);
+          set("areaId", undefined);
+        }}
+      />
+      <FilterDropdown
+        variant="flat"
+        triggerClassName={triggerClassName}
+        label="Area"
+        value={value.areaId}
+        options={areaOptions}
+        onChange={(v) => set("areaId", v)}
+      />
+      <FilterDropdown
+        variant="flat"
+        triggerClassName={triggerClassName}
+        label="Price"
+        value={value.priceTier}
+        options={PRICE_OPTIONS}
+        onChange={(v) => set("priceTier", v)}
+      />
+      <FilterDropdown
+        variant="flat"
+        triggerClassName={triggerClassName}
+        label="Rating"
+        value={value.minRating}
+        options={RATING_OPTIONS}
+        onChange={(v) => set("minRating", v)}
       />
 
-      {/* Refine controls: a quiet second tier, one pill per filter */}
-      <div className="flex flex-wrap items-center gap-2.5 pt-3.5 border-t border-ink-100">
-        <FilterDropdown label="Price" value={value.priceTier} options={PRICE_OPTIONS} onChange={(v) => set("priceTier", v)} />
-        <FilterDropdown label="Rating" value={value.minRating} options={RATING_OPTIONS} onChange={(v) => set("minRating", v)} />
-
-        <div className="ml-auto">
-          <FilterDropdown
-            label="Sort"
-            value={value.sort ?? "newest"}
-            options={SORT_OPTIONS}
-            onChange={(v) => set("sort", v ?? "newest")}
-            highlightWhenSet={false}
-          />
-        </div>
-      </div>
-
-      {locationStatus === "denied" && (
-        <p className="text-xs text-ink-600">Location permission denied — enter a location manually instead.</p>
-      )}
+      <button
+        type="button"
+        onClick={onUseMyLocation}
+        disabled={locationStatus === "locating"}
+        className="ml-1.5 shrink-0 inline-flex items-center gap-1.5 rounded-full bg-crimson-600 text-white text-sm font-semibold px-4 h-9 transition-colors hover:bg-crimson-500 disabled:opacity-70 disabled:cursor-wait"
+      >
+        {locationStatus === "locating" ? (
+          <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+          </svg>
+        ) : (
+          <PinIcon filled={locationStatus === "granted"} />
+        )}
+        <span className="whitespace-nowrap">{locationStatus === "granted" ? "Using location" : "Near me"}</span>
+      </button>
     </div>
   );
 }
 
-export function BusinessFilters(props: FiltersProps) {
+export function BusinessFilters(props: FiltersProps & LocationData) {
   return (
     <>
       <div className="md:hidden">
@@ -297,9 +299,6 @@ export function BusinessFilters(props: FiltersProps) {
       </div>
       <div className="hidden md:block lg:hidden">
         <TabletFilters {...props} />
-      </div>
-      <div className="hidden lg:block">
-        <DesktopFilters {...props} />
       </div>
     </>
   );
