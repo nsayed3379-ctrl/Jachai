@@ -121,7 +121,7 @@ function ThreadsSidebar() {
 
 export default function MessagesLayout({ children }: { children: React.ReactNode }) {
   return (
-    <RoleGate allow={["CONSUMER"]}>
+    <RoleGate>
       <div className="w-full max-w-5xl mx-auto px-4 py-8">
         <div className="flex flex-col sm:flex-row h-[75vh] rounded-2xl border border-ink-200/70 bg-surface shadow-xl shadow-ink-900/5 overflow-hidden">
           <ThreadsSidebar />

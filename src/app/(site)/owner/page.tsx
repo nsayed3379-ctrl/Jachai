@@ -113,7 +113,7 @@ function MyBusinessesContent() {
 
 export default function OwnerBusinessesPage() {
   return (
-    <RoleGate allow={["BUSINESS_OWNER"]}>
+    <RoleGate>
       <MyBusinessesContent />
     </RoleGate>
   );

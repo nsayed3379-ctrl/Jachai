@@ -5,7 +5,7 @@ import { BusinessForm } from "@/components/business-form";
 
 export default function NewBusinessPage() {
   return (
-    <RoleGate allow={["BUSINESS_OWNER"]}>
+    <RoleGate>
       <h1 className="font-display text-2xl font-bold text-ink-900 mb-6">List your business</h1>
       <BusinessForm />
     </RoleGate>

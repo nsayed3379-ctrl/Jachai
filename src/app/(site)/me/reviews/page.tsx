@@ -104,7 +104,7 @@ function MyReviewsContent() {
 
 export default function MyReviewsPage() {
   return (
-    <RoleGate allow={["CONSUMER"]}>
+    <RoleGate>
       <MyReviewsContent />
     </RoleGate>
   );

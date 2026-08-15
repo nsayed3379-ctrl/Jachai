@@ -8,6 +8,8 @@ import type { PreferredLanguage } from "./types";
 const dictionary: Record<PreferredLanguage, Record<string, string>> = {
   en: {
     // Navbar
+    "nav.mode_personal": "Personal",
+    "nav.mode_business": "Business",
     "nav.my_businesses": "My businesses",
     "nav.inbox": "Inbox",
     "nav.admin": "Admin",
@@ -57,16 +59,12 @@ const dictionary: Record<PreferredLanguage, Record<string, string>> = {
     "auth.otp_code_label": "6-digit code",
     "auth.sent_to": "Sent to {phone}",
     "auth.hint.min_8_chars": "At least 8 characters.",
-    "auth.hint.one_account_type": "One phone number can hold only one account type.",
 
     // Login form
     "auth.forgot_password": "Forgot password?",
     "auth.no_account": "Don't have an account?",
 
     // Signup form
-    "auth.account_type": "Account type",
-    "auth.customer": "Customer",
-    "auth.business_owner": "Business Owner",
     "auth.have_account": "Already have an account?",
     "auth.verify_create_account": "Verify & create account",
     "auth.back": "← Back",
@@ -98,6 +96,8 @@ const dictionary: Record<PreferredLanguage, Record<string, string>> = {
   },
   bn: {
     // Navbar
+    "nav.mode_personal": "ব্যক্তিগত",
+    "nav.mode_business": "ব্যবসা",
     "nav.my_businesses": "আমার ব্যবসা",
     "nav.inbox": "ইনবক্স",
     "nav.admin": "অ্যাডমিন",
@@ -147,16 +147,12 @@ const dictionary: Record<PreferredLanguage, Record<string, string>> = {
     "auth.otp_code_label": "৬-সংখ্যার কোড",
     "auth.sent_to": "পাঠানো হয়েছে {phone}",
     "auth.hint.min_8_chars": "কমপক্ষে ৮ অক্ষর।",
-    "auth.hint.one_account_type": "একটি ফোন নম্বরে শুধু একটি অ্যাকাউন্ট টাইপ থাকতে পারে।",
 
     // Login form
     "auth.forgot_password": "পাসওয়ার্ড ভুলে গেছেন?",
     "auth.no_account": "অ্যাকাউন্ট নেই?",
 
     // Signup form
-    "auth.account_type": "অ্যাকাউন্টের ধরন",
-    "auth.customer": "গ্রাহক",
-    "auth.business_owner": "ব্যবসার মালিক",
     "auth.have_account": "ইতিমধ্যে অ্যাকাউন্ট আছে?",
     "auth.verify_create_account": "যাচাই করুন ও অ্যাকাউন্ট তৈরি করুন",
     "auth.back": "← পেছনে",

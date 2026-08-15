@@ -6,7 +6,6 @@ import { useAuth } from "@/lib/auth-context";
 import { useLanguage } from "@/lib/language-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import { isValidBdPhone, isValidPassword, normalizeBdPhone } from "@/lib/utils";
-import type { UserRole } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { FieldError, FieldHint, Input, Label } from "@/components/ui/field";
 
@@ -28,7 +27,6 @@ export function SignupForm({
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("CONSUMER");
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -91,7 +89,10 @@ export function SignupForm({
     }
     setVerifying(true);
     try {
-      const tokens = await authApi.register(normalizeBdPhone(phone), code.trim(), password, role, name.trim());
+      // Every account can both write reviews and add/manage businesses (spec:
+      // one account, switch modes in the nav) — role is just the backend's
+      // required-but-unused-for-gating field, always CONSUMER at signup.
+      const tokens = await authApi.register(normalizeBdPhone(phone), code.trim(), password, "CONSUMER", name.trim());
       login(tokens);
       show(t("auth.toast.account_created"), "success");
       onSuccess();
@@ -188,31 +189,6 @@ export function SignupForm({
           onChange={(e) => setConfirmPassword(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && requestOtp()}
         />
-      </div>
-
-      <div>
-        <Label>{t("auth.account_type")}</Label>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => setRole("CONSUMER")}
-            className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
-              role === "CONSUMER" ? "border-crimson-600 bg-crimson-50 text-crimson-800" : "border-ink-200 text-ink-600 hover:border-ink-300"
-            }`}
-          >
-            {t("auth.customer")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setRole("BUSINESS_OWNER")}
-            className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
-              role === "BUSINESS_OWNER" ? "border-crimson-600 bg-crimson-50 text-crimson-800" : "border-ink-200 text-ink-600 hover:border-ink-300"
-            }`}
-          >
-            {t("auth.business_owner")}
-          </button>
-        </div>
-        <FieldHint>{t("auth.hint.one_account_type")}</FieldHint>
       </div>
 
       <FieldError>{error}</FieldError>

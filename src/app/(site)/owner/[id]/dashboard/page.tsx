@@ -453,7 +453,7 @@ function DashboardContent() {
 
 export default function OwnerDashboardPage() {
   return (
-    <RoleGate allow={["BUSINESS_OWNER"]}>
+    <RoleGate>
       <DashboardContent />
     </RoleGate>
   );

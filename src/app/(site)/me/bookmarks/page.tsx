@@ -185,7 +185,7 @@ function BookmarksContent() {
 
 export default function BookmarksPage() {
   return (
-    <RoleGate allow={["CONSUMER"]}>
+    <RoleGate>
       <BookmarksContent />
     </RoleGate>
   );

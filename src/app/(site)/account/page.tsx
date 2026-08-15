@@ -176,7 +176,7 @@ function AccountContent() {
 
 export default function AccountPage() {
   return (
-    <RoleGate allow={["CONSUMER", "BUSINESS_OWNER", "ADMIN"]}>
+    <RoleGate>
       <AccountContent />
     </RoleGate>
   );

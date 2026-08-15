@@ -130,7 +130,7 @@ function NotificationsContent() {
 
 export default function NotificationsPage() {
   return (
-    <RoleGate allow={["CONSUMER", "BUSINESS_OWNER", "ADMIN"]}>
+    <RoleGate>
       <NotificationsContent />
     </RoleGate>
   );

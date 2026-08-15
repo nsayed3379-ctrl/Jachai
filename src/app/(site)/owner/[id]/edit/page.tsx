@@ -45,7 +45,7 @@ function EditContent() {
 
 export default function EditBusinessPage() {
   return (
-    <RoleGate allow={["BUSINESS_OWNER"]}>
+    <RoleGate>
       <EditContent />
     </RoleGate>
   );

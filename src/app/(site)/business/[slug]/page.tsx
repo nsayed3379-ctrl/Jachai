@@ -175,7 +175,6 @@ export default function BusinessDetailPage() {
   if (loading) return <PageSpinner />;
   if (error || !business) return <ErrorBanner message={error ?? "Business not found"} />;
 
-  const isOwnerOfThis = user?.role === "BUSINESS_OWNER";
   const photos = business.photoUrls;
 
   return (
@@ -209,7 +208,7 @@ export default function BusinessDetailPage() {
           {/* Action row: Yelp-style — a prominent primary CTA, then icon+label utility actions.
               Name/rating/category/hours now live in the hero overlay itself. */}
           <div className="flex flex-wrap items-center gap-2">
-            {user?.role === "CONSUMER" && !showReviewForm && !editingReview && (
+            {user && !showReviewForm && !editingReview && (
               <Button onClick={openReviewForm}>Write a Review</Button>
             )}
             <BookmarkButton businessId={business.id} />
@@ -244,7 +243,7 @@ export default function BusinessDetailPage() {
             <AiSummaryCard businessId={business.id} />
           </div>
 
-          {!isOwnerOfThis && user && (
+          {user && (
             <div className="mt-3">
               <button
                 onClick={() => setClaimModalOpen(true)}
@@ -345,7 +344,7 @@ export default function BusinessDetailPage() {
                   title="No reviews yet"
                   description="Be the first to share your experience with this business."
                   action={
-                    user?.role === "CONSUMER" && !showReviewForm ? (
+                    user && !showReviewForm ? (
                       <Button size="sm" onClick={openReviewForm}>
                         Write the first review
                       </Button>
@@ -428,7 +427,7 @@ export default function BusinessDetailPage() {
             </div>
           </div>
 
-          {user?.role === "CONSUMER" && (
+          {user && (
             <div className="rounded-xl border border-ink-100/70 bg-surface p-4 shadow-card">
               <p className="text-xs font-semibold uppercase tracking-wide text-ink-400 mb-2">
                 Message the owner
