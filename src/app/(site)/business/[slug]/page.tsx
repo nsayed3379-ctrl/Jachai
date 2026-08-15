@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { businessApi, claimApi, messageApi, referenceApi, reviewApi } from "@/lib/api";
+import { businessApi, messageApi, referenceApi, reviewApi } from "@/lib/api";
 import { rememberBusiness } from "@/lib/business-cache";
 import { REPORT_REASON_LABELS } from "@/lib/config";
 import { useAuth } from "@/lib/auth-context";
@@ -14,6 +14,7 @@ import { VerifiedBadge } from "@/components/verified-badge";
 import { MapPreview } from "@/components/map-preview";
 import { ShareButton } from "@/components/share-button";
 import { BookmarkButton } from "@/components/bookmark-button";
+import { ClaimBusinessModal } from "@/components/claim-business-modal";
 import { ReportButton } from "@/components/report-button";
 import { BusinessCard } from "@/components/business-card";
 import { BusinessHeroGallery } from "@/components/business-hero-gallery";
@@ -46,7 +47,7 @@ export default function BusinessDetailPage() {
 
   const [messageText, setMessageText] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
-  const [claiming, setClaiming] = useState(false);
+  const [claimModalOpen, setClaimModalOpen] = useState(false);
 
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<"idle" | "locating" | "denied">("idle");
@@ -163,17 +164,12 @@ export default function BusinessDetailPage() {
     }
   }
 
-  async function fileClaim() {
-    if (!business) return;
-    setClaiming(true);
-    try {
-      await claimApi.file(business.id, "PHONE");
-      show("Claim filed — an admin will verify and get back to you.", "success");
-    } catch (err) {
-      show(errorMessage(err), "error");
-    } finally {
-      setClaiming(false);
-    }
+  function refreshBusiness() {
+    if (!slug) return;
+    businessApi.getBySlug(slug).then((b) => {
+      setBusiness(b);
+      rememberBusiness(b);
+    });
   }
 
   if (loading) return <PageSpinner />;
@@ -250,9 +246,19 @@ export default function BusinessDetailPage() {
 
           {!isOwnerOfThis && user && (
             <div className="mt-3">
-              <button onClick={fileClaim} disabled={claiming} className="text-xs text-ink-400 hover:text-crimson-700 hover:underline">
-                Is this your business? File a claim →
+              <button
+                onClick={() => setClaimModalOpen(true)}
+                className="text-xs text-ink-400 hover:text-crimson-700 hover:underline"
+              >
+                Is this your business? Claim it →
               </button>
+              <ClaimBusinessModal
+                open={claimModalOpen}
+                onClose={() => setClaimModalOpen(false)}
+                businessId={business.id}
+                businessName={business.name}
+                onClaimed={refreshBusiness}
+              />
             </div>
           )}
 
@@ -387,10 +393,10 @@ export default function BusinessDetailPage() {
             <div className="rounded-xl border border-brand-200 bg-brand-50 p-4">
               <div className="flex items-center gap-2">
                 <VerifiedBadge compact />
-                <p className="text-sm font-semibold text-brand-800">NID-Verified Business</p>
+                <p className="text-sm font-semibold text-brand-800">Verified Business</p>
               </div>
               <p className="mt-1.5 text-xs text-brand-700/80 leading-relaxed">
-                Jachai has verified this owner&apos;s national ID against the business&apos;s registered contact number.
+                Jachai has verified this business&apos;s registered contact number.
               </p>
             </div>
           )}

@@ -64,7 +64,7 @@ export function SiteFooter() {
         <div>
           <h4 className="font-display font-bold text-ink-900 mb-3">Jachai</h4>
           <p className="text-ink-500 leading-relaxed mb-4">
-            Bangladesh&apos;s trust-first local business directory — NID-verified owners, real reviews.
+            Bangladesh&apos;s trust-first local business directory — verified owners, real reviews.
           </p>
           <h4 className="font-display font-bold text-ink-900 mb-2 text-xs uppercase tracking-wide">Language</h4>
           <div className="flex gap-2">

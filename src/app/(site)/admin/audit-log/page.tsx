@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/field";
 import { EmptyState, ErrorBanner, PageSpinner } from "@/components/ui/misc";
 
-const ENTITY_TYPES = ["REPORT", "NID_VERIFICATION", "REVIEW", "BUSINESS_CLAIM"];
+const ENTITY_TYPES = ["REPORT", "REVIEW", "BUSINESS_CLAIM"];
 
 function AuditLogContent() {
   const [entityType, setEntityType] = useState(ENTITY_TYPES[0]);
@@ -56,7 +56,7 @@ function AuditLogContent() {
         </div>
         <div className="flex-1 min-w-[16rem]">
           <Label>Entity ID (UUID)</Label>
-          <Input value={entityId} onChange={(e) => setEntityId(e.target.value)} placeholder="e.g. from a report or NID row above" />
+          <Input value={entityId} onChange={(e) => setEntityId(e.target.value)} placeholder="e.g. from a report row above" />
         </div>
         <Button onClick={search} loading={loading}>
           Search

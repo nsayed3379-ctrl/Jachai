@@ -30,7 +30,7 @@ const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 export const metadata: Metadata = {
   title: "Jachai — Verified local businesses",
   description:
-    "Find and review verified local businesses in Bangladesh — search by category, area, and rating, with NID-verified trust badges.",
+    "Find and review verified local businesses in Bangladesh — search by category, area, and rating, with verified trust badges.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

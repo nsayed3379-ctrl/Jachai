@@ -26,7 +26,6 @@ import type {
   Message,
   MessageThread,
   ModerationQueueCounts,
-  NidVerification,
   NotificationListResponse,
   PageResponse,
   PreferredLanguage,
@@ -301,36 +300,42 @@ export const summaryApi = {
 };
 
 // ---------------------------------------------------------------------------
-// NID verification
-// ---------------------------------------------------------------------------
-export const nidApi = {
-  submit: (businessId: string, encryptedImageRef: string) =>
-    request<NidVerification>("/api/v1/nid-verifications", {
-      method: "POST",
-      body: { businessId, encryptedImageRef },
-    }),
-
-  history: (businessId: string) =>
-    request<NidVerification[]>(`/api/v1/nid-verifications/business/${businessId}`),
-
-  queue: (page = 0, size = 20) =>
-    request<PageResponse<NidVerification>>("/api/v1/nid-verifications/queue", {
-      query: { page, size },
-    }),
-
-  resolve: (id: string, approve: boolean, notes?: string) =>
-    request<void>(`/api/v1/nid-verifications/${id}/resolve`, {
-      method: "POST",
-      body: { approve, notes: notes ?? null },
-    }),
-};
-
-// ---------------------------------------------------------------------------
 // Business claim
 // ---------------------------------------------------------------------------
 export const claimApi = {
-  file: (businessId: string, verificationMethod: VerificationMethod) =>
-    request<BusinessClaim>("/api/v1/claims", { method: "POST", body: { businessId, verificationMethod } }),
+  requestPhone: (businessId: string) =>
+    request<void>("/api/v1/claims/phone/request", { method: "POST", body: { businessId } }),
+
+  verifyPhone: (businessId: string, code: string) =>
+    request<BusinessClaim>("/api/v1/claims/phone/verify", { method: "POST", body: { businessId, code } }),
+
+  requestEmail: (email: string) =>
+    request<void>("/api/v1/claims/email/request", { method: "POST", body: { email } }),
+
+  verifyEmail: (businessId: string, email: string, code: string) =>
+    request<BusinessClaim>("/api/v1/claims/email/verify", { method: "POST", body: { businessId, email, code } }),
+
+  documentUploadUrl: (filename: string) =>
+    request<PreSignedUploadResponse>("/api/v1/claims/document/upload-url", {
+      method: "POST",
+      query: { filename },
+    }),
+
+  fileDocument: (businessId: string, documentRef: string) =>
+    request<BusinessClaim>("/api/v1/claims", {
+      method: "POST",
+      body: { businessId, verificationMethod: "DOCUMENT" as VerificationMethod, documentRef },
+    }),
+
+  documentBlobUrl: async (claimId: string): Promise<string> => {
+    const token = getStoredAccessToken();
+    const res = await fetch(`${API_BASE_URL}/api/v1/claims/${claimId}/document`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    if (!res.ok) throw new ApiClientError(res.status, "Failed to load document", null);
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
+  },
 
   mine: () => request<BusinessClaim[]>("/api/v1/claims/mine"),
 

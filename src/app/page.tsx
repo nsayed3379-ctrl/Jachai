@@ -168,7 +168,7 @@ export default function HomePage() {
             </button>
             <p className="mt-3 md:mt-4 text-white/90 text-sm md:text-base max-w-md leading-relaxed">
               Search verified local businesses across Dhaka — filtered by category, area, price,
-              and rating, with NID-checked owner verification you won&apos;t find on Google Maps or
+              and rating, with owner verification you won&apos;t find on Google Maps or
               Facebook.
             </p>
           </div>

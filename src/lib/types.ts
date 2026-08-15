@@ -226,27 +226,10 @@ export interface BusinessReviewSummary {
 }
 
 // ---------------------------------------------------------------------------
-// NID verification
-// ---------------------------------------------------------------------------
-export type NidVerificationStatus = "PENDING" | "APPROVED" | "REJECTED";
-
-export interface NidVerification {
-  id: string;
-  businessId: string;
-  ownerUserId: string;
-  encryptedImageRef: string;
-  status: NidVerificationStatus;
-  resolvedByAdminId: string | null;
-  resolvedAt: string | null;
-  imagePurgeAt: string | null;
-  createdAt: string;
-}
-
-// ---------------------------------------------------------------------------
 // Business claim
 // ---------------------------------------------------------------------------
 export type ClaimStatus = "PENDING" | "APPROVED" | "REJECTED";
-export type VerificationMethod = "PHONE" | "NID";
+export type VerificationMethod = "PHONE" | "EMAIL" | "DOCUMENT";
 
 export interface BusinessClaim {
   id: string;
@@ -347,7 +330,6 @@ export interface NotificationListResponse {
 // ---------------------------------------------------------------------------
 export interface ModerationQueueCounts {
   pendingReports: number;
-  pendingNidVerifications: number;
   flaggedReviews: number;
 }
 

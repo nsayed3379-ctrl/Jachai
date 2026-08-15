@@ -46,7 +46,7 @@ const dictionary: Record<PreferredLanguage, Record<string, string>> = {
     "modal.forgot_password.description": "We'll text you a one-time code to confirm it's you.",
     "modal.illustration.title": "Find a business you can actually trust",
     "modal.illustration.subtitle":
-      "NID-verified local businesses, real reviews, and a platform built for Bangladesh.",
+      "Verified local businesses, real reviews, and a platform built for Bangladesh.",
 
     // Shared auth fields/labels
     "auth.mobile_number": "Mobile number",

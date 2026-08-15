@@ -7,7 +7,6 @@ import {
   businessApi,
   galleryApi,
   messageApi,
-  nidApi,
   reviewApi,
   summaryApi,
   uploadFileToPresignedUrl,
@@ -20,7 +19,6 @@ import type {
   BusinessPhoto,
   BusinessResponse,
   MessageThread,
-  NidVerification,
   ReviewResponse,
 } from "@/lib/types";
 import { StarDisplay } from "@/components/star-rating";
@@ -29,7 +27,7 @@ import { RatingTrendChart } from "@/components/rating-trend-chart";
 import { Badge, EmptyState, ErrorBanner, PageSpinner, Pagination } from "@/components/ui/misc";
 import { Button } from "@/components/ui/button";
 
-type Tab = "reviews" | "trend" | "verification" | "gallery";
+type Tab = "reviews" | "trend" | "gallery";
 
 function ReviewsTab({ business }: { business: BusinessResponse }) {
   const [reviews, setReviews] = useState<ReviewResponse[]>([]);
@@ -144,96 +142,6 @@ function TrendTab({ businessId }: { businessId: string }) {
       {loading && <PageSpinner />}
       {!loading && error && <ErrorBanner message={error} />}
       {!loading && !error && <RatingTrendChart rows={rows} />}
-    </div>
-  );
-}
-
-function VerificationTab({ businessId }: { businessId: string }) {
-  const { show } = useToast();
-  const [history, setHistory] = useState<NidVerification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [file, setFile] = useState<File | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  function load() {
-    setLoading(true);
-    nidApi.history(businessId).then(setHistory).catch(() => {}).finally(() => setLoading(false));
-  }
-  useEffect(load, [businessId]);
-
-  const pending = history.find((h) => h.status === "PENDING");
-
-  async function submit() {
-    if (!file) return;
-    setSubmitting(true);
-    try {
-      // NOTE: the backend has no dedicated secure NID-image upload endpoint
-      // (SubmitNidRequest expects an already-produced `encryptedImageRef`
-      // pointing into KMS-backed storage). As a working placeholder until
-      // that endpoint exists, we base64-encode the file client-side and
-      // submit it as the ref — this is NOT real encryption-at-rest and
-      // should be replaced with a real upload+KMS flow before production.
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-      await nidApi.submit(businessId, base64.slice(0, 500));
-      show("NID submitted for review", "success");
-      setFile(null);
-      load();
-    } catch (err) {
-      show(errorMessage(err), "error");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  if (loading) return <PageSpinner />;
-
-  return (
-    <div className="max-w-lg">
-      <div className="rounded-md border border-gold-200 bg-gold-50 p-3 text-xs text-gold-800 mb-4">
-        ⚠️ Dev placeholder: this demo encodes the file client-side since the backend doesn't yet
-        expose a dedicated secure NID upload endpoint. Wire this to a real server-side AES-256
-        encrypted upload before production (spec §8).
-      </div>
-
-      {history.length > 0 && (
-        <div className="mb-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink-400 mb-2">History</p>
-          {history.map((h) => (
-            <div key={h.id} className="flex items-center justify-between border-b border-ink-100 py-2 text-sm">
-              <span>{formatDateTime(h.createdAt)}</span>
-              <Badge tone={h.status === "APPROVED" ? "brand" : h.status === "REJECTED" ? "rose" : "gold"}>
-                {h.status}
-              </Badge>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {pending ? (
-        <p className="text-sm text-ink-500">
-          Your submission from {formatDateTime(pending.createdAt)} is pending admin review.
-        </p>
-      ) : (
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink-400 mb-2">
-            Submit NID for verification
-          </p>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="text-sm"
-          />
-          <Button className="mt-3" size="sm" onClick={submit} disabled={!file} loading={submitting}>
-            Submit for review
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
@@ -474,7 +382,6 @@ function DashboardContent() {
   const tabs: { key: Tab; label: string }[] = [
     { key: "reviews", label: "Reviews" },
     { key: "trend", label: "Rating trend" },
-    { key: "verification", label: "NID verification" },
     { key: "gallery", label: "Gallery" },
   ];
 
@@ -539,7 +446,6 @@ function DashboardContent() {
 
       {tab === "reviews" && <ReviewsTab business={business} />}
       {tab === "trend" && <TrendTab businessId={business.id} />}
-      {tab === "verification" && <VerificationTab businessId={business.id} />}
       {tab === "gallery" && <GalleryTab businessId={business.id} />}
     </div>
   );

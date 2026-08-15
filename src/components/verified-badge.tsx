@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * The platform's signature trust mark — a seal-in-shield motif reused
- * anywhere a business's NID-verified status is shown (spec §8). Deliberately
+ * anywhere a business's verified status is shown (spec §8). Deliberately
  * distinct from a generic checkmark-in-circle so it reads as an official
  * verification, not a social-media "blue check".
  */
@@ -13,7 +13,7 @@ export function VerifiedBadge({ className, compact }: { className?: string; comp
         "inline-flex items-center gap-1 rounded-full bg-brand-700 text-white pl-1 pr-2.5 py-0.5 text-[11px] font-semibold tracking-wide",
         className
       )}
-      title="NID-verified business"
+      title="Verified business"
     >
       <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none">
         <path
