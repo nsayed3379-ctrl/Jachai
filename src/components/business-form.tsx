@@ -25,6 +25,8 @@ import { ErrorBanner, Spinner } from "./ui/misc";
 
 interface Props {
   existing?: BusinessResponse;
+  /** Handoff from the duplicate-check pre-step — name/category/city/area already picked, no need to retype. */
+  initialValues?: Pick<CreateBusinessRequest, "name" | "categoryId" | "cityId" | "areaId">;
 }
 
 const emptyForm: CreateBusinessRequest = {
@@ -74,7 +76,7 @@ function SectionCard({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function BusinessForm({ existing }: Props) {
+export function BusinessForm({ existing, initialValues }: Props) {
   const router = useRouter();
   const { show } = useToast();
 
@@ -85,7 +87,7 @@ export function BusinessForm({ existing }: Props) {
   const [loadingRef, setLoadingRef] = useState(true);
 
   const [form, setForm] =
-    useState<CreateBusinessRequest>(emptyForm);
+    useState<CreateBusinessRequest>(() => (initialValues ? { ...emptyForm, ...initialValues } : emptyForm));
 
   const [submitting, setSubmitting] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
