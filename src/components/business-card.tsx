@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { businessApi } from "@/lib/api";
@@ -11,39 +11,98 @@ import { errorMessage, useToast } from "@/lib/toast-context";
 import type { BusinessReactionType, BusinessResponse } from "@/lib/types";
 import { avatarColorClass, cn, distanceKm, formatDistance } from "@/lib/utils";
 import { Card } from "./ui/misc";
-import { StarDisplay } from "./star-rating";
 import { VerifiedBadge } from "./verified-badge";
+
+const PHOTO_ROTATE_INTERVAL_MS = 4000;
+
+function StarIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="h-3 w-3" fill="currentColor">
+      <path d="M10 1.3l2.7 5.5 6 .9-4.3 4.3 1 6-5.4-2.8-5.4 2.8 1-6L1.3 7.7l6-.9L10 1.3Z" />
+    </svg>
+  );
+}
+
+/** Yelp-style rating: five small rounded red squares, each holding a white
+ * star — filled red up to the rounded rating, dim gray after. */
+function SquareRating({ rating }: { rating: number }) {
+  const filled = Math.round(rating);
+  return (
+    <div className="flex gap-1" aria-label={`${rating} out of 5 stars`}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <span
+          key={n}
+          className={cn(
+            "flex h-5 w-5 items-center justify-center rounded",
+            n <= filled ? "bg-crimson-600 text-white" : "bg-ink-100 text-ink-300"
+          )}
+        >
+          <StarIcon />
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function ThumbsUpIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <path
+        d="M7 10.5V20h10.2a2 2 0 0 0 1.98-1.72l.9-6A2 2 0 0 0 18.1 10H14l.7-4.2a1.8 1.8 0 0 0-3.2-1.4L7 10.5Z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M7 10.5H4.5A1.5 1.5 0 0 0 3 12v6.5A1.5 1.5 0 0 0 4.5 20H7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ThumbsDownIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <path
+        d="M17 13.5V4H6.8a2 2 0 0 0-1.98 1.72l-.9 6A2 2 0 0 0 5.9 14H10l-.7 4.2a1.8 1.8 0 0 0 3.2 1.4L17 13.5Z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M17 13.5h2.5A1.5 1.5 0 0 0 21 12V5.5A1.5 1.5 0 0 0 19.5 4H17" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function HeartIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <path
+        d="M12 20.5s-7.5-4.6-9.8-9.3C.7 7.9 2.3 4.8 5.4 4.1c2-.4 3.9.5 5 2.1a5.8 5.8 0 0 1 5-2.1c3.1.7 4.7 3.8 3.2 7.1-2.3 4.7-9.6 9.3-9.6 9.3Z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function WowIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <circle cx="12" cy="12" r="8.5" />
+      <circle cx="9.3" cy="10.5" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="14.7" cy="10.5" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="15" r="1.8" />
+    </svg>
+  );
+}
 
 const REACTIONS: {
   type: BusinessReactionType;
-  emoji: string;
+  icon: ReactNode;
   label: string;
-  activeClass: string;
+  activeColor: string;
 }[] = [
-  {
-    type: "LIKE",
-    emoji: "👍",
-    label: "Like",
-    activeClass: "bg-sky-50 ring-1 ring-sky-300 text-sky-700",
-  },
-  {
-    type: "DISLIKE",
-    emoji: "👎",
-    label: "Dislike",
-    activeClass: "bg-ink-100 ring-1 ring-ink-300 text-ink-700",
-  },
-  {
-    type: "LOVE",
-    emoji: "❤️",
-    label: "Love",
-    activeClass: "bg-rose-50 ring-1 ring-rose-300 text-rose-700",
-  },
-  {
-    type: "WOW",
-    emoji: "😮",
-    label: "Wow",
-    activeClass: "bg-amber-50 ring-1 ring-amber-300 text-amber-700",
-  },
+  { type: "LIKE", icon: <ThumbsUpIcon />, label: "Like", activeColor: "text-sky-600" },
+  { type: "DISLIKE", icon: <ThumbsDownIcon />, label: "Dislike", activeColor: "text-ink-700" },
+  { type: "LOVE", icon: <HeartIcon />, label: "Love", activeColor: "text-rose-600" },
+  { type: "WOW", icon: <WowIcon />, label: "Wow", activeColor: "text-amber-600" },
 ];
 
 export function BusinessCard({
@@ -57,7 +116,7 @@ export function BusinessCard({
   const { openLogin } = useAuthModal();
   const { show } = useToast();
   const [photoIndex, setPhotoIndex] = useState(0);
-  const [photoFailed, setPhotoFailed] = useState(false);
+  const [failedIndices, setFailedIndices] = useState<Set<number>>(new Set());
   const [logoFailed, setLogoFailed] = useState(false);
   const [counts, setCounts] = useState<Record<BusinessReactionType, number>>({
     LIKE: business.totalLikeCount,
@@ -67,19 +126,29 @@ export function BusinessCard({
   });
   const [reacted, setReacted] = useState<Set<BusinessReactionType>>(new Set());
   const [reacting, setReacting] = useState<BusinessReactionType | null>(null);
+  const photoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const distance = userLocation
     ? distanceKm(userLocation, { lat: business.latitude, lng: business.longitude })
     : null;
 
   const photos = business.photoUrls;
-  const currentPhoto = photos[photoIndex] ?? null;
+  const hasPhoto = photos.length > 0 && !failedIndices.has(photoIndex);
 
-  function goToPhoto(e: MouseEvent, index: number) {
-    e.preventDefault();
-    e.stopPropagation();
-    setPhotoFailed(false);
-    setPhotoIndex((index + photos.length) % photos.length);
-  }
+  // Auto-rotates the photo every PHOTO_ROTATE_INTERVAL_MS when there's more
+  // than one — no manual prev/next controls, this is the only way through
+  // the gallery. Clearing any pre-existing timer before starting a new one
+  // keeps this safe under React Strict Mode's dev-only double-invoke.
+  useEffect(() => {
+    if (photos.length <= 1) return;
+    if (photoTimerRef.current) clearInterval(photoTimerRef.current);
+    photoTimerRef.current = setInterval(() => {
+      setPhotoIndex((i) => (i + 1) % photos.length);
+    }, PHOTO_ROTATE_INTERVAL_MS);
+    return () => {
+      if (photoTimerRef.current) clearInterval(photoTimerRef.current);
+      photoTimerRef.current = null;
+    };
+  }, [photos.length]);
 
   // Business-level reaction (business.BusinessReaction) — a direct "react to
   // this business" toggle, distinct from voting on any one specific review.
@@ -118,12 +187,12 @@ export function BusinessCard({
 
   return (
     <Link href={`/business/${business.slug}`} className="group block h-full">
-      <Card className="h-full overflow-hidden flex flex-col rounded-2xl border border-ink-100 transition-all duration-200 group-hover:shadow-lift group-hover:-translate-y-1 group-hover:border-ink-200">
-        {/* Header: identity block sits above the photo, never on top of it —
-            avatar + name + verified badge + category, all on plain white. */}
+      <Card className="h-full overflow-hidden flex flex-col rounded-xl border border-ink-100 bg-white transition-shadow duration-200 group-hover:shadow-lift">
+        {/* Header: avatar + name, category sitting where a timestamp would go —
+            plain white, no gradients, matching a clean activity-feed card. */}
         <div className="p-4 pb-3 flex items-center gap-2.5">
           {business.logoUrl && !logoFailed ? (
-            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full ring-2 ring-white shadow-sm bg-ink-100">
+            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-ink-100">
               <Image
                 src={business.logoUrl}
                 alt=""
@@ -136,7 +205,7 @@ export function BusinessCard({
           ) : (
             <div
               className={cn(
-                "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ring-2 ring-white shadow-sm",
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white",
                 avatarColorClass(business.name)
               )}
             >
@@ -152,18 +221,27 @@ export function BusinessCard({
           </div>
         </div>
 
-        {/* Photo: kept clean like the activity feed's photo — no badges on
-            top of it. Only functional overlays (carousel controls) stay. */}
-        <div className="relative h-44 w-full bg-ink-100">
-          {currentPhoto && !photoFailed ? (
-            <Image
-              src={currentPhoto}
-              alt={business.name}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 320px"
-              onError={() => setPhotoFailed(true)}
-            />
+        {/* Photo: full card width, edge-to-edge, no rounding, no overlay —
+            just the photo, auto-rotating every 4s if there's more than one. */}
+        <div className="relative h-44 w-full bg-ink-100 overflow-hidden">
+          {hasPhoto ? (
+            photos.map((url, i) => (
+              <div
+                key={url}
+                className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
+                  i === photoIndex && !failedIndices.has(i) ? "opacity-100" : "opacity-0"
+                }`}
+              >
+                <Image
+                  src={url}
+                  alt={business.name}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 320px"
+                  onError={() => setFailedIndices((prev) => new Set(prev).add(i))}
+                />
+              </div>
+            ))
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-ink-900 to-ink-800 text-ink-400">
               <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -174,45 +252,14 @@ export function BusinessCard({
               <span className="font-display text-xs text-ink-300">{business.categoryName}</span>
             </div>
           )}
-          {photos.length > 1 && (
-            <>
-              <button
-                type="button"
-                onClick={(e) => goToPhoto(e, photoIndex - 1)}
-                aria-label="Previous photo"
-                className="absolute left-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white shadow backdrop-blur-sm hover:bg-black/60 transition-colors"
-              >
-                <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2">
-                  <path d="M12 15l-5-5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-              <button
-                type="button"
-                onClick={(e) => goToPhoto(e, photoIndex + 1)}
-                aria-label="Next photo"
-                className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white shadow backdrop-blur-sm hover:bg-black/60 transition-colors"
-              >
-                <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2">
-                  <path d="M8 15l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-              <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1">
-                {photos.map((_, i) => (
-                  <span
-                    key={i}
-                    className={cn("h-1.5 rounded-full transition-all", i === photoIndex ? "w-4 bg-white" : "w-1.5 bg-white/60")}
-                  />
-                ))}
-              </div>
-            </>
-          )}
         </div>
 
-        {/* Content: rating + price/location, same plain-white footer treatment as the header. */}
+        {/* Content: business name, star-square rating, a description snippet
+            with a "Read more" cue, then quiet price/location detail. */}
         <div className="p-4 flex flex-col grow">
           {business.flagged && (
             <span
-              className="mb-2 inline-flex w-fit items-center gap-1 rounded-full bg-rose-500/10 border border-rose-500/30 px-2.5 py-1 text-[11px] font-semibold text-rose-600"
+              className="mb-2 inline-flex w-fit items-center gap-1 rounded-full bg-rose-50 border border-rose-200 px-2.5 py-1 text-[11px] font-semibold text-rose-600"
               title={business.flagReason ?? undefined}
             >
               <svg viewBox="0 0 24 24" className="h-3 w-3" fill="currentColor">
@@ -221,19 +268,31 @@ export function BusinessCard({
               Flagged
             </span>
           )}
-          <div className="flex items-center gap-2">
-            <StarDisplay rating={business.averageRating} size="sm" />
-            <span className="text-xs font-semibold text-ink-700">{business.averageRating.toFixed(1)}</span>
+
+          <h4 className="font-display font-bold text-ink-900 text-base leading-snug">{business.name}</h4>
+
+          <div className="mt-1.5 flex items-center gap-2">
+            <SquareRating rating={business.averageRating} />
             <span className="text-xs text-ink-400">({business.reviewCount})</span>
           </div>
+
+          {business.description && (
+            <p className="mt-2 text-sm text-ink-700 leading-snug line-clamp-2">
+              {business.description}{" "}
+              <span className="text-brand-600 font-medium whitespace-nowrap">Read more</span>
+            </p>
+          )}
 
           <p className="mt-2 text-xs text-ink-400 grow">
             {PRICE_TIER_LABELS[business.priceTier]} · {business.areaName}, {business.cityName}
             {distance !== null && <> · {formatDistance(distance)}</>}
           </p>
 
-          <div className="mt-3 pt-3 border-t border-ink-100 flex items-center gap-1.5">
-            {REACTIONS.map(({ type, emoji, label, activeClass }) => {
+          {/* Reaction row: plain outline icons + counts, no pills, no fill —
+              evenly spaced, separated only by a top border, like a
+              minimal activity-card footer. */}
+          <div className="mt-3 pt-3 border-t border-ink-100 grid grid-cols-4">
+            {REACTIONS.map(({ type, icon, label, activeColor }) => {
               const isActive = reacted.has(type);
               return (
                 <button
@@ -244,20 +303,11 @@ export function BusinessCard({
                   aria-label={label}
                   title={label}
                   className={cn(
-                    "flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition-all duration-150 disabled:cursor-default",
-                    isActive
-                      ? activeClass
-                      : "text-ink-400 hover:bg-ink-50 hover:text-ink-600 disabled:hover:bg-transparent disabled:hover:text-ink-400"
+                    "flex flex-col items-center justify-center gap-1 py-1 text-xs font-medium transition-colors duration-150 disabled:cursor-default",
+                    isActive ? activeColor : "text-ink-400 hover:text-ink-600"
                   )}
                 >
-                  <span
-                    className={cn(
-                      "leading-none transition-transform duration-150",
-                      isActive ? "scale-125" : "scale-100"
-                    )}
-                  >
-                    {emoji}
-                  </span>
+                  {icon}
                   <span>{counts[type]}</span>
                 </button>
               );

@@ -1,6 +1,3 @@
-
-
-
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -170,7 +167,7 @@ export default function HomePage() {
           the quieter Price/Rating/Sort refine row, a category quick-nav strip,
           and a clean full-bleed photo with a headline underneath. */}
       <section className="relative w-full min-h-[480px] md:min-h-[640px] lg:min-h-screen overflow-hidden flex flex-col">
-        {/* BackgroundImage — rotates through HERO_IMAGES every 2s. Every photo
+        {/* BackgroundImage — rotates through HERO_IMAGES every 5s. Every photo
             is stacked in the same spot; only the current one is opacity-100,
             and transition-opacity crossfades between them. animate-ken-burns
             restarts on each layer the moment it becomes the visible one. */}
@@ -266,63 +263,72 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* BusinessList: owns its own width-constrained container */}
-      <div ref={resultsRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 scroll-mt-20 border-t border-ink-100">
-        <Reveal>
-          <h2 className="font-display text-2xl md:text-3xl font-bold text-ink-900 text-center pt-2 mb-8">
-            Browse businesses
-          </h2>
-        </Reveal>
+      {/* BusinessList: a distinct, "gorgeous" section — soft gradient wash +
+          blurred color blobs (a subtle mesh-gradient look) behind the grid,
+          instead of a flat white background. overflow-hidden clips the blobs
+          to this section only; ref stays on the scroll-target wrapper. */}
+        <div className="relative overflow-hidden via-crimson-50/40 to-white border-t border-ink-100">
+          <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full blur-3xl" />
+          <div className="pointer-events-none absolute top-1/2 -right-24 h-80 w-80 rounded-full blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-24 left-1/3 h-72 w-72 rounded-full blur-3xl" />
+                <div ref={resultsRef} className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 scroll-mt-20">
+          <Reveal>
+            <div className="text-center pt-2 mb-8">
+              <h2 className="font-display text-2xl md:text-3xl font-bold text-ink-900">Browse businesses</h2>
+              <span className="mt-2.5 mx-auto block h-1 w-16 rounded-full bg-gradient-to-r from-crimson-500 to-amber-400" />
+            </div>
+          </Reveal>
 
-        {loading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
-          </div>
-        )}
-        {!loading && error && <ErrorBanner message={error} />}
+          {loading && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <SkeletonCard key={i} />
+              ))}
+            </div>
+          )}
+          {!loading && error && <ErrorBanner message={error} />}
 
-        {!loading && !error && (
-          <>
-            <p key={totalElements} className="animate-fade-in text-sm font-medium text-ink-500 mb-4">
-              {totalElements} businesses found
-              {!cardLocation && browseLocationStatus !== "denied" && (
-                <>
-                  {" "}
-                  ·{" "}
-                  <button
-                    type="button"
-                    onClick={showDistances}
-                    disabled={browseLocationStatus === "locating"}
-                    className="text-crimson-600 hover:underline disabled:opacity-60 transition-opacity"
-                  >
-                    {browseLocationStatus === "locating" ? "Locating…" : "Show distance from me"}
-                  </button>
-                </>
+          {!loading && !error && (
+            <>
+              <p key={totalElements} className="animate-fade-in text-sm font-medium text-ink-500 mb-4">
+                {totalElements} businesses found
+                {!cardLocation && browseLocationStatus !== "denied" && (
+                  <>
+                    {" "}
+                    ·{" "}
+                    <button
+                      type="button"
+                      onClick={showDistances}
+                      disabled={browseLocationStatus === "locating"}
+                      className="text-crimson-600 hover:underline disabled:opacity-60 transition-opacity"
+                    >
+                      {browseLocationStatus === "locating" ? "Locating…" : "Show distance from me"}
+                    </button>
+                  </>
+                )}
+              </p>
+              {results.length === 0 ? (
+                <EmptyState
+                  title="No businesses match those filters"
+                  description="Try widening your area, dropping the minimum rating, or clearing a filter."
+                />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {results.map((b, i) => (
+                    <Reveal key={b.id} delay={Math.min(i, 8) * 60}>
+                      <BusinessCard business={b} userLocation={cardLocation ?? undefined} />
+                    </Reveal>
+                  ))}
+                </div>
               )}
-            </p>
-            {results.length === 0 ? (
-              <EmptyState
-                title="No businesses match those filters"
-                description="Try widening your area, dropping the minimum rating, or clearing a filter."
+              <Pagination
+                page={params.page ?? 0}
+                totalPages={totalPages}
+                onChange={(page) => setParams({ ...params, page })}
               />
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {results.map((b, i) => (
-                  <Reveal key={b.id} delay={Math.min(i, 8) * 60}>
-                    <BusinessCard business={b} userLocation={cardLocation ?? undefined} />
-                  </Reveal>
-                ))}
-              </div>
-            )}
-            <Pagination
-              page={params.page ?? 0}
-              totalPages={totalPages}
-              onChange={(page) => setParams({ ...params, page })}
-            />
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
 
       <Reveal>
