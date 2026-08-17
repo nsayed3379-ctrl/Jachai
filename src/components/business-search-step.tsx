@@ -30,9 +30,13 @@ function ResultCard({ business, onClaim }: { business: BusinessResponse; onClaim
           </span>
         </div>
       </div>
-      <Button size="sm" variant="outline" onClick={onClaim}>
-        Claim this business
-      </Button>
+      {business.claimed ? (
+        <span className="text-xs text-ink-400">Already claimed</span>
+      ) : (
+        <Button size="sm" variant="outline" onClick={onClaim}>
+          Claim this business
+        </Button>
+      )}
     </div>
   );
 }

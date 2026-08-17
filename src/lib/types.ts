@@ -80,6 +80,8 @@ export interface BusinessResponse {
   priceTier: PriceTier;
   attributes: string[];
   verified: boolean;
+  // True once a real (non-admin) owner has claimed this listing — see the claim flow.
+  claimed: boolean;
   averageRating: number;
   reviewCount: number;
   // Set when a LISTING report against this business is resolved ACTION_TAKEN — a visible,

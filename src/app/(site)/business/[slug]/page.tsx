@@ -243,24 +243,6 @@ export default function BusinessDetailPage() {
             <AiSummaryCard businessId={business.id} />
           </div>
 
-          {user && (
-            <div className="mt-3">
-              <button
-                onClick={() => setClaimModalOpen(true)}
-                className="text-xs text-ink-400 hover:text-crimson-700 hover:underline"
-              >
-                Is this your business? Claim it →
-              </button>
-              <ClaimBusinessModal
-                open={claimModalOpen}
-                onClose={() => setClaimModalOpen(false)}
-                businessId={business.id}
-                businessName={business.name}
-                onClaimed={refreshBusiness}
-              />
-            </div>
-          )}
-
           {/* Reviews */}
           <div id="reviews" className="mt-8 scroll-mt-20 border-t border-ink-100 pt-6">
             <div className="flex items-center justify-between gap-3">
@@ -397,6 +379,25 @@ export default function BusinessDetailPage() {
               <p className="mt-1.5 text-xs text-brand-700/80 leading-relaxed">
                 Jachai has verified this business&apos;s registered contact number.
               </p>
+            </div>
+          )}
+
+          {user && !business.claimed && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <p className="text-sm font-semibold text-amber-900">Unclaimed listing</p>
+              <p className="mt-1.5 text-xs text-amber-800/80 leading-relaxed">
+                This business hasn&apos;t been claimed by its owner yet. Is it yours?
+              </p>
+              <Button size="sm" variant="outline" className="mt-3 w-full" onClick={() => setClaimModalOpen(true)}>
+                Claim this business
+              </Button>
+              <ClaimBusinessModal
+                open={claimModalOpen}
+                onClose={() => setClaimModalOpen(false)}
+                businessId={business.id}
+                businessName={business.name}
+                onClaimed={refreshBusiness}
+              />
             </div>
           )}
 
