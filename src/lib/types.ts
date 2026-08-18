@@ -63,6 +63,7 @@ export type BusinessReactionType = "LIKE" | "DISLIKE" | "LOVE" | "WOW";
 
 export interface BusinessResponse {
   id: string;
+  ownerUserId: string;
   name: string;
   slug: string;
   categoryName: string;
@@ -375,6 +376,7 @@ export interface MessageThread {
   consumerName: string | null;
   businessId: string;
   createdAt: string;
+  unreadCount: number;
 }
 
 export interface Message {

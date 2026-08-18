@@ -102,7 +102,7 @@ function ThreadsSidebar() {
                     <p
                       className={cn(
                         "truncate text-sm font-medium",
-                        active ? "text-crimson-800" : "text-ink-800"
+                        active ? "text-crimson-800" : t.unreadCount > 0 ? "text-ink-900" : "text-ink-800"
                       )}
                     >
                       {name}
@@ -111,6 +111,11 @@ function ThreadsSidebar() {
                       {businessName} · {formatDate(t.createdAt)}
                     </p>
                   </div>
+                  {t.unreadCount > 0 && !active && (
+                    <span className="flex h-4 min-w-[16px] shrink-0 items-center justify-center rounded-full bg-crimson-600 px-1 text-[10px] font-bold leading-none text-white">
+                      {t.unreadCount > 9 ? "9+" : t.unreadCount}
+                    </span>
+                  )}
                   {active && <span className="h-2 w-2 shrink-0 rounded-full bg-crimson-500" />}
                 </Link>
               );

@@ -291,6 +291,9 @@ export const reviewApi = {
   mine: (page = 0, size = 20) =>
     request<PageResponse<ReviewResponse>>("/api/v1/reviews/mine", { query: { page, size } }),
 
+  mineForBusiness: (businessId: string) =>
+    request<ReviewResponse | null>(`/api/v1/reviews/business/${businessId}/mine`),
+
   recent: (page = 0, size = 9) =>
     request<PageResponse<RecentActivityItem>>("/api/v1/reviews/recent", { auth: false, query: { page, size } }),
 };

@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthModal } from "@/lib/auth-modal-context";
 import { useHomeSearch } from "@/lib/home-search-context";
 import { useLanguage } from "@/lib/language-context";
-import { type AccountMode, getStoredAccountMode, setStoredAccountMode } from "@/lib/storage";
+import { useBusinessInboxUnreadCount } from "@/lib/use-business-inbox-unread";
 import { cn } from "@/lib/utils";
 import { PrimarySearchBar } from "./business-filters";
 import { ThemeToggle } from "./theme-toggle";
@@ -64,27 +64,6 @@ function AccountMenuLink({
   );
 }
 
-function AccountModeToggle({ mode, onChange }: { mode: AccountMode; onChange: (mode: AccountMode) => void }) {
-  const { t } = useLanguage();
-  return (
-    <div className="grid grid-cols-2 gap-1 rounded-lg bg-ink-50 p-1 mb-1.5">
-      {(["personal", "business"] as const).map((m) => (
-        <button
-          key={m}
-          type="button"
-          onClick={() => onChange(m)}
-          className={cn(
-            "rounded-md px-2 py-1.5 text-xs font-semibold transition-colors",
-            mode === m ? "bg-surface text-crimson-700 shadow-sm" : "text-ink-500 hover:text-ink-700"
-          )}
-        >
-          {m === "personal" ? t("nav.mode_personal") : t("nav.mode_business")}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function Avatar({ photoUrl, size = 28 }: { photoUrl: string | null | undefined; size?: number }) {
   if (photoUrl) {
     // eslint-disable-next-line @next/next/no-img-element
@@ -112,21 +91,12 @@ export function Navbar() {
   const { t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const [accountMode, setAccountMode] = useState<AccountMode>("personal");
   const pathname = usePathname();
   const isHero = pathname === "/";
   const { params, setParams, locationStatus, useMyLocation, categories, cities, areas, cityId, setCityId } =
     useHomeSearch();
   const [scrolled, setScrolled] = useState(!isHero);
-
-  // Read the persisted mode after mount only, so SSR/first paint always
-  // matches the "personal" default and there's no hydration mismatch.
-  useEffect(() => setAccountMode(getStoredAccountMode()), []);
-
-  function changeAccountMode(mode: AccountMode) {
-    setAccountMode(mode);
-    setStoredAccountMode(mode);
-  }
+  const inboxUnreadCount = useBusinessInboxUnreadCount();
 
   // On the home page the navbar starts transparent, floating over the hero
   // photo; everywhere else (no hero behind it) it's solid from the first paint.
@@ -180,6 +150,14 @@ export function Navbar() {
         )}
 
         <nav className="hidden md:flex items-center gap-1 text-sm font-medium ml-auto">
+          {user && (
+            <Link href="/owner" className={cn(linkClass, "relative")}>
+              {t("nav.for_business")}
+              {inboxUnreadCount > 0 && (
+                <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-crimson-600" aria-hidden />
+              )}
+            </Link>
+          )}
           {user?.role === "ADMIN" && (
             <Link href="/admin" className={linkClass}>
               {t("nav.admin")}
@@ -219,49 +197,27 @@ export function Navbar() {
                 {accountMenuOpen && (
                   <div className="absolute right-0 top-full w-56 pt-2 z-50">
                     <div className="rounded-xl border border-ink-100 bg-surface shadow-pop p-1.5">
-                      <AccountModeToggle mode={accountMode} onChange={changeAccountMode} />
-                      {accountMode === "personal" ? (
-                        <>
-                          <AccountMenuLink
-                            href="/me/reviews"
-                            active={pathname === "/me/reviews"}
-                            onClick={() => setAccountMenuOpen(false)}
-                          >
-                            {t("nav.my_reviews")}
-                          </AccountMenuLink>
-                          <AccountMenuLink
-                            href="/me/bookmarks"
-                            active={pathname === "/me/bookmarks"}
-                            onClick={() => setAccountMenuOpen(false)}
-                          >
-                            {t("nav.bookmarks")}
-                          </AccountMenuLink>
-                          <AccountMenuLink
-                            href="/me/messages"
-                            active={pathname.startsWith("/me/messages")}
-                            onClick={() => setAccountMenuOpen(false)}
-                          >
-                            {t("nav.messages")}
-                          </AccountMenuLink>
-                        </>
-                      ) : (
-                        <>
-                          <AccountMenuLink
-                            href="/owner"
-                            active={pathname === "/owner"}
-                            onClick={() => setAccountMenuOpen(false)}
-                          >
-                            {t("nav.my_businesses")}
-                          </AccountMenuLink>
-                          <AccountMenuLink
-                            href="/owner/inbox"
-                            active={pathname === "/owner/inbox"}
-                            onClick={() => setAccountMenuOpen(false)}
-                          >
-                            {t("nav.inbox")}
-                          </AccountMenuLink>
-                        </>
-                      )}
+                      <AccountMenuLink
+                        href="/me/reviews"
+                        active={pathname === "/me/reviews"}
+                        onClick={() => setAccountMenuOpen(false)}
+                      >
+                        {t("nav.my_reviews")}
+                      </AccountMenuLink>
+                      <AccountMenuLink
+                        href="/me/bookmarks"
+                        active={pathname === "/me/bookmarks"}
+                        onClick={() => setAccountMenuOpen(false)}
+                      >
+                        {t("nav.bookmarks")}
+                      </AccountMenuLink>
+                      <AccountMenuLink
+                        href="/me/messages"
+                        active={pathname.startsWith("/me/messages")}
+                        onClick={() => setAccountMenuOpen(false)}
+                      >
+                        {t("nav.messages")}
+                      </AccountMenuLink>
                       <div className="my-1 h-px bg-ink-100" />
                       <AccountMenuLink
                         href="/account"
@@ -313,29 +269,24 @@ export function Navbar() {
           </div>
           {user && (
             <>
-              <AccountModeToggle mode={accountMode} onChange={changeAccountMode} />
-              {accountMode === "personal" ? (
-                <>
-                  <Link href="/me/reviews" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
-                    {t("nav.my_reviews")}
-                  </Link>
-                  <Link href="/me/bookmarks" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
-                    {t("nav.bookmarks")}
-                  </Link>
-                  <Link href="/me/messages" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
-                    {t("nav.messages")}
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link href="/owner" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
-                    {t("nav.my_businesses")}
-                  </Link>
-                  <Link href="/owner/inbox" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
-                    {t("nav.inbox")}
-                  </Link>
-                </>
-              )}
+              <Link href="/me/reviews" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
+                {t("nav.my_reviews")}
+              </Link>
+              <Link href="/me/bookmarks" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
+                {t("nav.bookmarks")}
+              </Link>
+              <Link href="/me/messages" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
+                {t("nav.messages")}
+              </Link>
+              <div className="my-1 h-px bg-ink-100" />
+              <Link
+                href="/owner"
+                className="px-3 py-2 rounded hover:bg-ink-100 flex items-center gap-2"
+                onClick={() => setMenuOpen(false)}
+              >
+                {t("nav.for_business")}
+                {inboxUnreadCount > 0 && <span className="h-2 w-2 rounded-full bg-crimson-600" aria-hidden />}
+              </Link>
             </>
           )}
           {user?.role === "ADMIN" && (

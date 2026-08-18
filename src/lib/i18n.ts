@@ -8,10 +8,7 @@ import type { PreferredLanguage } from "./types";
 const dictionary: Record<PreferredLanguage, Record<string, string>> = {
   en: {
     // Navbar
-    "nav.mode_personal": "Personal",
-    "nav.mode_business": "Business",
-    "nav.my_businesses": "My businesses",
-    "nav.inbox": "Inbox",
+    "nav.for_business": "For Business",
     "nav.admin": "Admin",
     "nav.account": "Account",
     "nav.account_settings": "Account Settings",
@@ -96,10 +93,7 @@ const dictionary: Record<PreferredLanguage, Record<string, string>> = {
   },
   bn: {
     // Navbar
-    "nav.mode_personal": "ব্যক্তিগত",
-    "nav.mode_business": "ব্যবসা",
-    "nav.my_businesses": "আমার ব্যবসা",
-    "nav.inbox": "ইনবক্স",
+    "nav.for_business": "ব্যবসার জন্য",
     "nav.admin": "অ্যাডমিন",
     "nav.account": "অ্যাকাউন্ট",
     "nav.account_settings": "অ্যাকাউন্ট সেটিংস",

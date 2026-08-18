@@ -44,6 +44,7 @@ export default function BusinessDetailPage() {
   const [reviewsAuthRequired, setReviewsAuthRequired] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [editingReview, setEditingReview] = useState<ReviewResponse | null>(null);
+  const [myReview, setMyReview] = useState<ReviewResponse | null>(null);
 
   const [messageText, setMessageText] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
@@ -55,6 +56,19 @@ export default function BusinessDetailPage() {
   function openReviewForm() {
     setShowReviewForm(true);
     document.getElementById("reviews")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function openEditMyReview() {
+    if (!myReview) return;
+    setEditingReview(myReview);
+    document.getElementById("reviews")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function refreshMyReview(businessId: string) {
+    reviewApi
+      .mineForBusiness(businessId)
+      .then(setMyReview)
+      .catch(() => setMyReview(null));
   }
 
   function showDistanceFromMe() {
@@ -125,6 +139,15 @@ export default function BusinessDetailPage() {
   function refreshReviews() {
     if (business) loadReviews(business.id, reviewPage);
   }
+
+  useEffect(() => {
+    if (!business || !user) {
+      setMyReview(null);
+      return;
+    }
+    refreshMyReview(business.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [business?.id, user]);
 
   const [similarBusinesses, setSimilarBusinesses] = useState<BusinessResponse[]>([]);
 
@@ -208,8 +231,12 @@ export default function BusinessDetailPage() {
           {/* Action row: Yelp-style — a prominent primary CTA, then icon+label utility actions.
               Name/rating/category/hours now live in the hero overlay itself. */}
           <div className="flex flex-wrap items-center gap-2">
-            {user && !showReviewForm && !editingReview && (
-              <Button onClick={openReviewForm}>Write a Review</Button>
+            {user && user.id !== business.ownerUserId && !showReviewForm && !editingReview && (
+              myReview ? (
+                <Button variant="outline" onClick={openEditMyReview}>Edit your review</Button>
+              ) : (
+                <Button onClick={openReviewForm}>Write a Review</Button>
+              )
             )}
             <BookmarkButton businessId={business.id} />
             <ShareButton name={business.name} slug={business.slug} />
@@ -279,6 +306,7 @@ export default function BusinessDetailPage() {
                   onDone={() => {
                     setShowReviewForm(false);
                     refreshReviews();
+                    refreshMyReview(business.id);
                   }}
                 />
               </div>
@@ -292,6 +320,7 @@ export default function BusinessDetailPage() {
                   onDone={() => {
                     setEditingReview(null);
                     refreshReviews();
+                    refreshMyReview(business.id);
                   }}
                 />
               </div>
@@ -326,7 +355,7 @@ export default function BusinessDetailPage() {
                   title="No reviews yet"
                   description="Be the first to share your experience with this business."
                   action={
-                    user && !showReviewForm ? (
+                    user && user.id !== business.ownerUserId && !showReviewForm && !myReview ? (
                       <Button size="sm" onClick={openReviewForm}>
                         Write the first review
                       </Button>
@@ -339,7 +368,15 @@ export default function BusinessDetailPage() {
                 !reviewsAuthRequired &&
                 !reviewsError &&
                 reviews.map((r) => (
-                  <ReviewCard key={r.id} review={r} onChanged={refreshReviews} onEdit={setEditingReview} />
+                  <ReviewCard
+                    key={r.id}
+                    review={r}
+                    onChanged={() => {
+                      refreshReviews();
+                      refreshMyReview(business.id);
+                    }}
+                    onEdit={setEditingReview}
+                  />
                 ))}
               <Pagination
                 page={reviewPage}
