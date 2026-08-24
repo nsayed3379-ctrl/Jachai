@@ -20,6 +20,8 @@ import type {
   PriceTier,
 } from "@/lib/types";
 import { Button } from "./ui/button";
+import { GoogleLocationPicker } from "./google-location-picker";
+import { OperatingHoursPicker } from "./operating-hours-picker";
 import { FieldHint, Input, Label, Select, Textarea } from "./ui/field";
 import { ErrorBanner, Spinner } from "./ui/misc";
 
@@ -310,7 +312,8 @@ export function BusinessForm({ existing, initialValues }: Props) {
           err.message || "Unable to get your location.",
           "error"
         );
-      }
+      },
+      { timeout: 8000, enableHighAccuracy: true }
     );
   }
 
@@ -786,47 +789,14 @@ export function BusinessForm({ existing, initialValues }: Props) {
 
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-
-                <div>
-                  <Label htmlFor="lat">
-                    Latitude
-                  </Label>
-
-                  <Input
-                    id="lat"
-                    type="number"
-                    step="0.000001"
-                    value={form.latitude}
-                    onChange={(e) =>
-                      set(
-                        "latitude",
-                        Number(e.target.value)
-                      )
-                    }
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="lng">
-                    Longitude
-                  </Label>
-
-                  <Input
-                    id="lng"
-                    type="number"
-                    step="0.000001"
-                    value={form.longitude}
-                    onChange={(e) =>
-                      set(
-                        "longitude",
-                        Number(e.target.value)
-                      )
-                    }
-                  />
-                </div>
-
-              </div>
+              <GoogleLocationPicker
+                latitude={form.latitude}
+                longitude={form.longitude}
+                onChange={(lat, lng) => {
+                  set("latitude", lat);
+                  set("longitude", lng);
+                }}
+              />
 
               <Button
                 type="button"
@@ -838,11 +808,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
               </Button>
 
               <FieldHint>
-                Owner-side location entry is precise lat/lng
-                (spec §17a) — an interactive drag-to-pin map
-                can be dropped in here later; for now, enter
-                coordinates directly or use your device's
-                location.
+                Spec §17a: precise lat/lng, set via the map above — click, drag the pin, or search an address.
               </FieldHint>
 
             </div>
@@ -883,20 +849,9 @@ export function BusinessForm({ existing, initialValues }: Props) {
                   Operating hours
                 </Label>
 
-                <Textarea
-                  id="hours"
-                  placeholder={
-                    "Sat–Thu: 10am – 9pm\nFriday: 3pm – 9pm"
-                  }
-                  value={
-                    form.operatingHours ?? ""
-                  }
-                  onChange={(e) =>
-                    set(
-                      "operatingHours",
-                      e.target.value
-                    )
-                  }
+                <OperatingHoursPicker
+                  value={form.operatingHours ?? ""}
+                  onChange={(value) => set("operatingHours", value)}
                 />
               </div>
 
