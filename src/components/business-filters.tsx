@@ -191,91 +191,85 @@ function PinIcon({ filled }: { filled: boolean }) {
   );
 }
 
-// The Navbar's inline search (home page, lg+): flat "Label ▾" controls — no
-// box, no border, no background of their own — for Category/City/Area/Price/
-// Rating, plus a small "Near me" action pill. `light` controls text color
+function SearchIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="11" cy="11" r="7" />
+      <path d="M21 21l-4.3-4.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// The Navbar's inline search (home page, lg+): a plain white rounded search
+// bar — free-text query + a static "current city" location field (this app
+// is Dhaka-only in practice, so the location field is a display, not a real
+// filter) — plus a red submit button, and a separate plain "Near me" text
+// link. Category selection lives in the hero's CategoryQuickNav tab row
+// instead of a dropdown here; Price/Rating moved to a refine row by the
+// results grid (see app/page.tsx). `light` controls the "Near me" text color
 // since the Navbar can be transparent-over-photo (white) or solid (dark).
 export function PrimarySearchBar({
-  value,
-  onChange,
+  query,
+  onQueryChange,
+  onSearch,
   onUseMyLocation,
   locationStatus,
-  categories,
-  cities,
-  areas,
-  cityId,
-  setCityId,
+  cityLabel = "Dhaka, Bangladesh",
   light,
   className,
-}: Omit<FiltersProps, "onSearch"> & LocationData & { light?: boolean; className?: string }) {
-  function set<K extends keyof BusinessSearchParams>(key: K, val: BusinessSearchParams[K]) {
-    onChange({ ...value, [key]: val, page: 0 });
+}: {
+  query: string;
+  onQueryChange: (value: string) => void;
+  onSearch: () => void;
+  onUseMyLocation: () => void;
+  locationStatus: "idle" | "locating" | "granted" | "denied";
+  cityLabel?: string;
+  light?: boolean;
+  className?: string;
+}) {
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    onSearch();
   }
 
-  const categoryOptions: DropdownOption<string>[] = [
-    { value: undefined, label: "All categories" },
-    ...categories.map((c) => ({ value: c.id, label: c.name })),
-  ];
-  const cityOptions: DropdownOption<string>[] = cities.map((c) => ({ value: c.id, label: c.name }));
-  const areaOptions: DropdownOption<string>[] = [
-    { value: undefined, label: "All areas" },
-    ...areas.map((a) => ({ value: a.id, label: a.name })),
-  ];
-
-  const triggerClassName = light ? "text-white hover:bg-white/15" : "text-ink-700 hover:bg-ink-100";
-
   return (
-    <div className={cn("flex items-center gap-0.5", className)}>
-      <FilterDropdown
-        variant="flat"
-        triggerClassName={triggerClassName}
-        label="Category"
-        value={value.categoryId}
-        options={categoryOptions}
-        onChange={(v) => set("categoryId", v)}
-      />
-      <FilterDropdown
-        variant="flat"
-        triggerClassName={triggerClassName}
-        label="City"
-        value={cityId || undefined}
-        options={cityOptions}
-        onChange={(v) => {
-          if (!v) return;
-          setCityId(v);
-          set("areaId", undefined);
-        }}
-      />
-      <FilterDropdown
-        variant="flat"
-        triggerClassName={triggerClassName}
-        label="Area"
-        value={value.areaId}
-        options={areaOptions}
-        onChange={(v) => set("areaId", v)}
-      />
-      <FilterDropdown
-        variant="flat"
-        triggerClassName={triggerClassName}
-        label="Price"
-        value={value.priceTier}
-        options={PRICE_OPTIONS}
-        onChange={(v) => set("priceTier", v)}
-      />
-      <FilterDropdown
-        variant="flat"
-        triggerClassName={triggerClassName}
-        label="Rating"
-        value={value.minRating}
-        options={RATING_OPTIONS}
-        onChange={(v) => set("minRating", v)}
-      />
+    <div className={cn("flex items-center gap-4", className)}>
+      <form
+        onSubmit={handleSubmit}
+        className="flex min-w-0 max-w-[480px] flex-1 items-stretch overflow-hidden rounded-md bg-white shadow-[0_2px_8px_rgba(0,0,0,0.18)]"
+      >
+        <div className="flex min-w-0 flex-1 items-center">
+          <SearchIcon className="ml-3 h-5 w-5 shrink-0 text-ink-400" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            placeholder="restaurants, cafés, shops..."
+            className="w-full min-w-0 bg-transparent px-3 py-3 text-base text-ink-800 outline-none placeholder:text-ink-400"
+          />
+        </div>
+        <span className="my-2 w-px shrink-0 bg-ink-200" />
+        <div className="hidden w-[180px] shrink-0 items-center gap-1.5 px-3 text-ink-500 sm:flex">
+          <PinIcon filled={false} />
+          <span className="truncate text-base">{cityLabel}</span>
+        </div>
+        <button
+          type="submit"
+          className="grid w-14 shrink-0 place-items-center bg-crimson-500 text-white transition-colors hover:bg-crimson-600"
+          aria-label="Search"
+        >
+          <SearchIcon className="h-5 w-5" />
+        </button>
+      </form>
 
       <button
         type="button"
         onClick={onUseMyLocation}
         disabled={locationStatus === "locating"}
-        className="ml-1.5 shrink-0 inline-flex items-center gap-1.5 rounded-full bg-crimson-600 text-white text-sm font-semibold px-4 h-9 transition-colors hover:bg-crimson-500 disabled:opacity-70 disabled:cursor-wait"
+        className={cn(
+          "shrink-0 inline-flex items-center gap-1.5 rounded-md px-3 py-2.5 text-base font-semibold whitespace-nowrap transition-colors disabled:opacity-70 disabled:cursor-wait",
+          light ? "text-white hover:bg-white/15" : "text-ink-700 hover:bg-ink-100"
+        )}
       >
         {locationStatus === "locating" ? (
           <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
@@ -285,7 +279,7 @@ export function PrimarySearchBar({
         ) : (
           <PinIcon filled={locationStatus === "granted"} />
         )}
-        <span className="whitespace-nowrap">{locationStatus === "granted" ? "Using location" : "Near me"}</span>
+        {locationStatus === "granted" ? "Using location" : "Near me"}
       </button>
     </div>
   );

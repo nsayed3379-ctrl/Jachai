@@ -23,6 +23,9 @@ export function ForgotPasswordForm({
   const { t } = useLanguage();
 
   const [step, setStep] = useState<"phone" | "reset">("phone");
+  // Consumer and Business are separate accounts — this picks which one's
+  // password is being reset (same phone number can back both, see AuthService#resetPassword).
+  const [asBusiness, setAsBusiness] = useState(false);
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -84,7 +87,12 @@ export function ForgotPasswordForm({
     }
     setResetting(true);
     try {
-      const tokens = await authApi.resetPassword(normalizeBdPhone(phone), code.trim(), newPassword);
+      const tokens = await authApi.resetPassword(
+        normalizeBdPhone(phone),
+        code.trim(),
+        newPassword,
+        asBusiness ? "BUSINESS_OWNER" : "CONSUMER"
+      );
       login(tokens);
       show(t("auth.toast.password_reset"), "success");
       onSuccess();
@@ -172,6 +180,15 @@ export function ForgotPasswordForm({
           onKeyDown={(e) => e.key === "Enter" && requestOtp()}
         />
       </div>
+
+      <button
+        type="button"
+        onClick={() => setAsBusiness((v) => !v)}
+        className="text-sm text-ink-500 hover:text-ink-800 hover:underline"
+      >
+        {asBusiness ? "Resetting your Business account's password" : "Resetting your personal account's password"} —
+        switch?
+      </button>
 
       <FieldError>{error}</FieldError>
 

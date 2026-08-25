@@ -26,6 +26,8 @@ export interface UserProfile {
   name: string | null;
   profilePhotoUrl: string | null;
   preferredLanguage: PreferredLanguage;
+  /** Whether this account is paired with an opposite-role account (consumer<->business) — drives the switcher in the nav. */
+  hasLinkedAccount: boolean;
 }
 
 // ---------------------------------------------------------------------------

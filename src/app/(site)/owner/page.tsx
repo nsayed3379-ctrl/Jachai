@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { businessApi } from "@/lib/api";
 import { RoleGate } from "@/components/role-gate";
+import { BusinessAccountCta } from "@/components/business-account-cta";
 import { rememberBusinesses } from "@/lib/business-cache";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import type { BusinessResponse } from "@/lib/types";
@@ -113,7 +114,7 @@ function MyBusinessesContent() {
 
 export default function OwnerBusinessesPage() {
   return (
-    <RoleGate>
+    <RoleGate allow={["BUSINESS_OWNER"]} fallback={<BusinessAccountCta />}>
       <MyBusinessesContent />
     </RoleGate>
   );

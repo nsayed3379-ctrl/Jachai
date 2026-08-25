@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { messageApi } from "@/lib/api";
 import { RoleGate } from "@/components/role-gate";
+import { BusinessAccountCta } from "@/components/business-account-cta";
 import { errorMessage } from "@/lib/toast-context";
 import { lookupBusiness } from "@/lib/business-cache";
 import { cn, formatDate } from "@/lib/utils";
@@ -129,7 +130,7 @@ function ThreadsSidebar() {
 
 export default function OwnerInboxLayout({ children }: { children: React.ReactNode }) {
   return (
-    <RoleGate>
+    <RoleGate allow={["BUSINESS_OWNER"]} fallback={<BusinessAccountCta />}>
       <div className="w-full max-w-5xl mx-auto px-4 py-8">
         <div className="flex flex-col sm:flex-row h-[75vh] rounded-2xl border border-ink-200/70 bg-white shadow-xl shadow-ink-900/5 overflow-hidden">
           <ThreadsSidebar />

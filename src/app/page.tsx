@@ -7,7 +7,8 @@ import { useHomeSearch } from "@/lib/home-search-context";
 import { errorMessage } from "@/lib/toast-context";
 import type { Area, BusinessResponse, Category } from "@/lib/types";
 import { BusinessCard } from "@/components/business-card";
-import { BusinessFilters } from "@/components/business-filters";
+import { BusinessFilters, FilterDropdown, PRICE_OPTIONS, RATING_OPTIONS } from "@/components/business-filters";
+import { CategoryQuickNav } from "@/components/category-quick-nav";
 import { CategoriesGrid } from "@/components/categories-grid";
 import { ExploreCities } from "@/components/explore-cities";
 import { Reveal } from "@/components/reveal";
@@ -137,6 +138,16 @@ export default function HomePage() {
     scrollToResults();
   }
 
+  // The hero's Yelp-style category quick-nav (see CategoryQuickNav) is a
+  // curated frontend-only taxonomy, not the backend Category list — a tap
+  // there becomes a free-text query (fuzzy business-name search already
+  // backs `q`) instead of a strict categoryId filter, so it always returns
+  // something reasonable regardless of exact admin-seeded category names.
+  function applyCategoryNavQuery(query: string) {
+    setParams({ ...params, q: query, categoryId: undefined, page: 0 });
+    scrollToResults();
+  }
+
   function applyArea(area: Area) {
     setParams({ ...params, areaId: area.id, page: 0 });
     scrollToResults();
@@ -216,22 +227,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          {categories.length > 0 && (
-            <div className="hidden lg:block backdrop-blur-md">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center gap-1 overflow-x-auto">
-                {categories.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => applyCategory(c)}
-                    className="shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium text-white/85 whitespace-nowrap transition-colors hover:bg-white/10 hover:text-white"
-                  >
-                    {c.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <CategoryQuickNav onSelect={applyCategoryNavQuery} />
         </div>
 
         {/* HeroContent — headline + single CTA, anchored toward the bottom of
@@ -273,11 +269,36 @@ export default function HomePage() {
           <div className="pointer-events-none absolute -bottom-24 left-1/3 h-72 w-72 rounded-full blur-3xl" />
                 <div ref={resultsRef} className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 scroll-mt-20">
           <Reveal>
-            <div className="text-center pt-2 mb-8">
+            <div className="text-center pt-2 mb-6">
               <h2 className="font-display text-2xl md:text-3xl font-bold text-ink-900">Browse businesses</h2>
               <span className="mt-2.5 mx-auto block h-1 w-16 rounded-full bg-gradient-to-r from-crimson-500 to-amber-400" />
             </div>
           </Reveal>
+
+          {/* Refine row — Area/Price/Rating moved down here from the header's
+              search bar (now a plain free-text query, see PrimarySearchBar),
+              so this real filtering isn't lost, just relocated closer to the
+              results it narrows. */}
+          <div className="mb-8 flex flex-wrap items-center justify-center gap-2">
+            <FilterDropdown
+              label="Area"
+              value={params.areaId}
+              options={[{ value: undefined, label: "All areas" }, ...areas.map((a) => ({ value: a.id, label: a.name }))]}
+              onChange={(v) => setParams({ ...params, areaId: v, page: 0 })}
+            />
+            <FilterDropdown
+              label="Price"
+              value={params.priceTier}
+              options={PRICE_OPTIONS}
+              onChange={(v) => setParams({ ...params, priceTier: v, page: 0 })}
+            />
+            <FilterDropdown
+              label="Rating"
+              value={params.minRating}
+              options={RATING_OPTIONS}
+              onChange={(v) => setParams({ ...params, minRating: v, page: 0 })}
+            />
+          </div>
 
           {loading && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

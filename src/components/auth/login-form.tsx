@@ -26,6 +26,10 @@ export function LoginForm({
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Consumer and Business are separate accounts (same phone number can back
+  // both) — this toggle picks which one to log into, mirroring Yelp's
+  // separate yelp.com vs biz.yelp.com login without a second page.
+  const [asBusiness, setAsBusiness] = useState(false);
 
   async function handleLogin() {
     setError(null);
@@ -39,7 +43,11 @@ export function LoginForm({
     }
     setSubmitting(true);
     try {
-      const tokens = await authApi.login(normalizeBdPhone(phone), password);
+      const tokens = await authApi.login(
+        normalizeBdPhone(phone),
+        password,
+        asBusiness ? "BUSINESS_OWNER" : undefined
+      );
       login(tokens);
       show(t("auth.toast.logged_in"), "success");
       onSuccess();
@@ -74,6 +82,16 @@ export function LoginForm({
           onChange={(e) => setPassword(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleLogin()}
         />
+      </div>
+
+      <div className="flex items-center justify-between text-sm">
+        <button
+          type="button"
+          onClick={() => setAsBusiness((v) => !v)}
+          className="text-ink-500 hover:text-ink-800 hover:underline"
+        >
+          {asBusiness ? "Log in to your personal account instead" : "Log in to your Business account instead"}
+        </button>
       </div>
 
       <div className="flex justify-end text-sm">

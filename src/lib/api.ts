@@ -170,21 +170,43 @@ export const authApi = {
       auth: false,
     }),
 
-  login: (phoneNumber: string, password: string) =>
+  // context omitted (or CONSUMER) logs into the personal account; pass
+  // BUSINESS_OWNER to log into a linked business account instead — the two
+  // are separate accounts (see lib/api.ts's ownerApi for the switch/link flow).
+  login: (phoneNumber: string, password: string, context?: UserRole) =>
     request<TokenPairDto>("/api/v1/auth/login", {
       method: "POST",
-      body: { phoneNumber, password },
+      body: { phoneNumber, password, context: context ?? null },
       auth: false,
     }),
 
-  resetPassword: (phoneNumber: string, code: string, newPassword: string) =>
+  resetPassword: (phoneNumber: string, code: string, newPassword: string, role: UserRole) =>
     request<TokenPairDto>("/api/v1/auth/reset-password", {
       method: "POST",
-      body: { phoneNumber, code, newPassword },
+      body: { phoneNumber, code, newPassword, role },
       auth: false,
     }),
 
   logout: () => request<void>("/api/v1/auth/logout", { method: "POST" }),
+
+  // ---------------------------------------------------------------------
+  // Two-account model: consumer + business are separate logins, optionally
+  // linked for a frictionless switch (see components/navbar.tsx).
+  // ---------------------------------------------------------------------
+
+  /** Frictionless switch to the caller's linked counterpart account — no password re-entry. */
+  switchAccount: () => request<TokenPairDto>("/api/v1/auth/switch-account", { method: "POST" }),
+
+  /** Logged-in consumer account creates+links its business-account counterpart in one step. */
+  registerBusiness: (password: string, name: string) =>
+    request<TokenPairDto>("/api/v1/auth/register-business", {
+      method: "POST",
+      body: { password, name },
+    }),
+
+  /** Links the caller's account with an independently-registered opposite-role account under the same phone, via OTP proof. */
+  linkAccounts: (code: string) =>
+    request<void>("/api/v1/auth/link-accounts", { method: "POST", body: { code } }),
 };
 
 // ---------------------------------------------------------------------------

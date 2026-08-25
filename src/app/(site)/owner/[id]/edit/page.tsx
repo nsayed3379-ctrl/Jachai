@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { businessApi } from "@/lib/api";
 import { RoleGate } from "@/components/role-gate";
+import { BusinessAccountCta } from "@/components/business-account-cta";
 import { BusinessForm } from "@/components/business-form";
 import { errorMessage } from "@/lib/toast-context";
 import type { BusinessResponse } from "@/lib/types";
@@ -45,7 +46,7 @@ function EditContent() {
 
 export default function EditBusinessPage() {
   return (
-    <RoleGate>
+    <RoleGate allow={["BUSINESS_OWNER"]} fallback={<BusinessAccountCta />}>
       <EditContent />
     </RoleGate>
   );

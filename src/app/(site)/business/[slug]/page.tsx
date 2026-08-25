@@ -15,6 +15,7 @@ import { MapPreview } from "@/components/map-preview";
 import { ShareButton } from "@/components/share-button";
 import { BookmarkButton } from "@/components/bookmark-button";
 import { ClaimBusinessModal } from "@/components/claim-business-modal";
+import { CreateBusinessAccountModal } from "@/components/create-business-account-modal";
 import { ReportButton } from "@/components/report-button";
 import { BusinessCard } from "@/components/business-card";
 import { BusinessHeroGallery } from "@/components/business-hero-gallery";
@@ -28,7 +29,7 @@ import { Textarea } from "@/components/ui/field";
 
 export default function BusinessDetailPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { user } = useAuth();
+  const { user, profile, switchAccount } = useAuth();
   const { show } = useToast();
 
   const [business, setBusiness] = useState<BusinessResponse | null>(null);
@@ -49,9 +50,24 @@ export default function BusinessDetailPage() {
   const [messageText, setMessageText] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
   const [claimModalOpen, setClaimModalOpen] = useState(false);
+  const [createBizModalOpen, setCreateBizModalOpen] = useState(false);
+  const [switchingForClaim, setSwitchingForClaim] = useState(false);
 
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<"idle" | "locating" | "denied">("idle");
+
+  async function handleSwitchToClaim() {
+    setSwitchingForClaim(true);
+    try {
+      await switchAccount();
+      show("Switched to your Business account", "success");
+      setClaimModalOpen(true);
+    } catch (err) {
+      show(errorMessage(err), "error");
+    } finally {
+      setSwitchingForClaim(false);
+    }
+  }
 
   function openReviewForm() {
     setShowReviewForm(true);
@@ -419,7 +435,7 @@ export default function BusinessDetailPage() {
             </div>
           )}
 
-          {user && !business.claimed && (
+          {!business.claimed && user?.role === "BUSINESS_OWNER" && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
               <p className="text-sm font-semibold text-amber-900">Unclaimed listing</p>
               <p className="mt-1.5 text-xs text-amber-800/80 leading-relaxed">
@@ -428,15 +444,44 @@ export default function BusinessDetailPage() {
               <Button size="sm" variant="outline" className="mt-3 w-full" onClick={() => setClaimModalOpen(true)}>
                 Claim this business
               </Button>
-              <ClaimBusinessModal
-                open={claimModalOpen}
-                onClose={() => setClaimModalOpen(false)}
-                businessId={business.id}
-                businessName={business.name}
-                onClaimed={refreshBusiness}
-              />
             </div>
           )}
+
+          {/* A personal (CONSUMER) account can't claim directly — claiming is a
+              Business-account action (spec update: two-account model). Point
+              them at switching/creating one instead of a late 403 mid-claim. */}
+          {!business.claimed && user && user.role !== "BUSINESS_OWNER" && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <p className="text-sm font-semibold text-amber-900">Unclaimed listing</p>
+              <p className="mt-1.5 text-xs text-amber-800/80 leading-relaxed">
+                Is this your business? Claim it from a Business account.
+              </p>
+              {profile?.hasLinkedAccount ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-3 w-full"
+                  onClick={handleSwitchToClaim}
+                  loading={switchingForClaim}
+                >
+                  Switch to your Business account
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" className="mt-3 w-full" onClick={() => setCreateBizModalOpen(true)}>
+                  Create a Business account
+                </Button>
+              )}
+            </div>
+          )}
+
+          <ClaimBusinessModal
+            open={claimModalOpen}
+            onClose={() => setClaimModalOpen(false)}
+            businessId={business.id}
+            businessName={business.name}
+            onClaimed={refreshBusiness}
+          />
+          <CreateBusinessAccountModal open={createBizModalOpen} onClose={() => setCreateBizModalOpen(false)} />
 
           <div className="rounded-xl border border-ink-100/70 bg-surface p-4 shadow-card space-y-3">
             <a href={`tel:${business.contactNumber}`} className="flex items-center gap-2.5 text-sm text-ink-700 hover:text-crimson-700">

@@ -31,6 +31,8 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   setProfile: (profile: UserProfile) => void;
+  /** Frictionless switch to the linked counterpart account (consumer<->business) — see components/navbar.tsx. */
+  switchAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -100,9 +102,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push("/");
   }, [router]);
 
+  // Reuses login() verbatim — a switch is just "log into the linked account"
+  // without re-entering a password; the new user id automatically triggers
+  // the refreshProfile() effect above.
+  const switchAccount = useCallback(async () => {
+    const tokens = await authApi.switchAccount();
+    login(tokens);
+  }, [login]);
+
   const value = useMemo(
-    () => ({ user, profile, isLoading, login, logout, refreshProfile, setProfile }),
-    [user, profile, isLoading, login, logout, refreshProfile]
+    () => ({ user, profile, isLoading, login, logout, refreshProfile, setProfile, switchAccount }),
+    [user, profile, isLoading, login, logout, refreshProfile, switchAccount]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

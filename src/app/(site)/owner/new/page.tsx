@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { RoleGate } from "@/components/role-gate";
+import { BusinessAccountCta } from "@/components/business-account-cta";
 import { BusinessForm } from "@/components/business-form";
 import { BusinessSearchStep } from "@/components/business-search-step";
 
@@ -30,7 +31,7 @@ function NewBusinessContent() {
 
 export default function NewBusinessPage() {
   return (
-    <RoleGate>
+    <RoleGate allow={["BUSINESS_OWNER"]} fallback={<BusinessAccountCta />}>
       <NewBusinessContent />
     </RoleGate>
   );

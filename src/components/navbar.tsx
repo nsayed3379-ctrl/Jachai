@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthModal } from "@/lib/auth-modal-context";
 import { useHomeSearch } from "@/lib/home-search-context";
 import { useLanguage } from "@/lib/language-context";
 import { useBusinessInboxUnreadCount } from "@/lib/use-business-inbox-unread";
+import { errorMessage, useToast } from "@/lib/toast-context";
 import { cn } from "@/lib/utils";
 import { PrimarySearchBar } from "./business-filters";
 import { ThemeToggle } from "./theme-toggle";
@@ -17,7 +18,7 @@ function Logo({ light }: { light: boolean }) {
     <Link
       href="/"
       className={cn(
-        "flex items-center gap-2 font-display font-extrabold text-xl transition-colors",
+        "flex items-center gap-2 font-display font-extrabold text-2xl transition-colors",
         light ? "text-white" : "text-ink-900"
       )}
     >
@@ -55,7 +56,7 @@ function AccountMenuLink({
       href={href}
       onClick={onClick}
       className={cn(
-        "block rounded-lg px-3 py-2.5 text-sm transition-colors duration-150",
+        "block rounded-lg px-3 py-2.5 text-base transition-colors duration-150",
         active ? "bg-crimson-50 text-crimson-700 font-medium" : "text-ink-700 hover:bg-ink-50 hover:text-crimson-700"
       )}
     >
@@ -86,17 +87,45 @@ function Avatar({ photoUrl, size = 28 }: { photoUrl: string | null | undefined; 
 }
 
 export function Navbar() {
-  const { user, profile, logout } = useAuth();
+  const { user, profile, logout, switchAccount } = useAuth();
   const { openLogin, openSignup } = useAuthModal();
   const { t } = useLanguage();
+  const { show } = useToast();
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [switching, setSwitching] = useState(false);
   const pathname = usePathname();
   const isHero = pathname === "/";
-  const { params, setParams, locationStatus, useMyLocation, categories, cities, areas, cityId, setCityId } =
-    useHomeSearch();
+  const { params, setParams, locationStatus, useMyLocation } = useHomeSearch();
   const [scrolled, setScrolled] = useState(!isHero);
+  // Local, uncontrolled-feeling query text — only pushed into the shared
+  // `params` (and so the live search) on submit, not per keystroke, to avoid
+  // firing a request on every character typed. Re-synced whenever `params.q`
+  // changes from elsewhere (e.g. the hero's CategoryQuickNav tabs).
+  const [query, setQuery] = useState(params.q ?? "");
+  useEffect(() => {
+    setQuery(params.q ?? "");
+  }, [params.q]);
   const inboxUnreadCount = useBusinessInboxUnreadCount();
+
+  // Consumer and Business are two separate accounts (see lib/auth-context.tsx's
+  // switchAccount) — isBusinessAccount reads straight off the JWT-decoded role,
+  // canSwitchAccount off whether this account is paired with the other one.
+  const isBusinessAccount = user?.role === "BUSINESS_OWNER";
+  const canSwitchAccount = Boolean(profile?.hasLinkedAccount);
+
+  async function handleSwitchAccount() {
+    setSwitching(true);
+    try {
+      await switchAccount();
+      router.push(isBusinessAccount ? "/" : "/owner");
+    } catch (err) {
+      show(errorMessage(err), "error");
+    } finally {
+      setSwitching(false);
+    }
+  }
 
   // On the home page the navbar starts transparent, floating over the hero
   // photo; everywhere else (no hero behind it) it's solid from the first paint.
@@ -116,8 +145,8 @@ export function Navbar() {
     ? "px-3 py-2 rounded-full hover:bg-white/15 text-white"
     : "px-3 py-2 rounded-full hover:bg-crimson-50 hover:text-crimson-700 text-ink-700";
   const accountLinkClass = transparent
-    ? "px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-white/15"
-    : "px-3 py-2 rounded-full text-sm font-medium text-ink-600 hover:bg-ink-100";
+    ? "px-3 py-2 rounded-full text-base font-medium text-white hover:bg-white/15"
+    : "px-3 py-2 rounded-full text-base font-medium text-ink-600 hover:bg-ink-100";
 
   return (
     <header
@@ -129,28 +158,42 @@ export function Navbar() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-3">
         <Logo light={transparent} />
 
-        {/* Primary search (Category/City/Area/Price/Rating/Near me) lives right
-            here on the home page — see lib/home-search-context.tsx for the
-            shared state this and page.tsx's results grid both read/write. */}
+        {/* Primary search (free-text query + Near me) lives right here on the
+            home page — see lib/home-search-context.tsx for the shared state
+            this and page.tsx's results grid both read/write. Category
+            selection moved to the hero's CategoryQuickNav tab row; Price/
+            Rating moved to a refine row by the results grid. */}
         {isHero && (
-          <div className="hidden lg:flex items-center min-w-0 mx-2">
+          <div className="hidden lg:flex items-center min-w-0 mx-2 flex-1">
             <PrimarySearchBar
-              value={params}
-              onChange={setParams}
+              query={query}
+              onQueryChange={setQuery}
+              onSearch={() => setParams({ ...params, q: query, page: 0 })}
               onUseMyLocation={useMyLocation}
               locationStatus={locationStatus}
-              categories={categories}
-              cities={cities}
-              areas={areas}
-              cityId={cityId}
-              setCityId={setCityId}
               light={transparent}
             />
           </div>
         )}
 
-        <nav className="hidden md:flex items-center gap-1 text-sm font-medium ml-auto">
-          {user && (
+        <nav className="hidden md:flex items-center gap-1 text-base font-medium ml-auto">
+          {/* Once this account is linked, "Switch to X" replaces "For Business" —
+              same plain nav-link treatment, no separate bordered button, so the
+              nav reads exactly the same whether or not an account is linked. */}
+          {user && canSwitchAccount && (
+            <button
+              type="button"
+              onClick={handleSwitchAccount}
+              disabled={switching}
+              className={cn(linkClass, "relative disabled:opacity-50")}
+            >
+              {isBusinessAccount ? "Switch to Personal" : "Switch to Business"}
+              {!isBusinessAccount && inboxUnreadCount > 0 && (
+                <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-crimson-600" aria-hidden />
+              )}
+            </button>
+          )}
+          {user && !isBusinessAccount && !canSwitchAccount && (
             <Link href="/owner" className={cn(linkClass, "relative")}>
               {t("nav.for_business")}
               {inboxUnreadCount > 0 && (
@@ -197,35 +240,67 @@ export function Navbar() {
                 {accountMenuOpen && (
                   <div className="absolute right-0 top-full w-56 pt-2 z-50">
                     <div className="rounded-xl border border-ink-100 bg-surface shadow-pop p-1.5">
-                      <AccountMenuLink
-                        href="/me/reviews"
-                        active={pathname === "/me/reviews"}
-                        onClick={() => setAccountMenuOpen(false)}
-                      >
-                        {t("nav.my_reviews")}
-                      </AccountMenuLink>
-                      <AccountMenuLink
-                        href="/me/bookmarks"
-                        active={pathname === "/me/bookmarks"}
-                        onClick={() => setAccountMenuOpen(false)}
-                      >
-                        {t("nav.bookmarks")}
-                      </AccountMenuLink>
-                      <AccountMenuLink
-                        href="/me/messages"
-                        active={pathname.startsWith("/me/messages")}
-                        onClick={() => setAccountMenuOpen(false)}
-                      >
-                        {t("nav.messages")}
-                      </AccountMenuLink>
-                      <div className="my-1 h-px bg-ink-100" />
-                      <AccountMenuLink
-                        href="/account"
-                        active={pathname === "/account"}
-                        onClick={() => setAccountMenuOpen(false)}
-                      >
-                        {t("nav.account_settings")}
-                      </AccountMenuLink>
+                      {isBusinessAccount ? (
+                        <>
+                          <AccountMenuLink
+                            href="/owner"
+                            active={pathname === "/owner"}
+                            onClick={() => setAccountMenuOpen(false)}
+                          >
+                            My Businesses
+                          </AccountMenuLink>
+                          <AccountMenuLink
+                            href="/owner/inbox"
+                            active={pathname.startsWith("/owner/inbox")}
+                            onClick={() => setAccountMenuOpen(false)}
+                          >
+                            Inbox
+                            {inboxUnreadCount > 0 && (
+                              <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-crimson-600" aria-hidden />
+                            )}
+                          </AccountMenuLink>
+                          <div className="my-1 h-px bg-ink-100" />
+                          <AccountMenuLink
+                            href="/account"
+                            active={pathname === "/account"}
+                            onClick={() => setAccountMenuOpen(false)}
+                          >
+                            {t("nav.account_settings")}
+                          </AccountMenuLink>
+                        </>
+                      ) : (
+                        <>
+                          <AccountMenuLink
+                            href="/me/reviews"
+                            active={pathname === "/me/reviews"}
+                            onClick={() => setAccountMenuOpen(false)}
+                          >
+                            {t("nav.my_reviews")}
+                          </AccountMenuLink>
+                          <AccountMenuLink
+                            href="/me/bookmarks"
+                            active={pathname === "/me/bookmarks"}
+                            onClick={() => setAccountMenuOpen(false)}
+                          >
+                            {t("nav.bookmarks")}
+                          </AccountMenuLink>
+                          <AccountMenuLink
+                            href="/me/messages"
+                            active={pathname.startsWith("/me/messages")}
+                            onClick={() => setAccountMenuOpen(false)}
+                          >
+                            {t("nav.messages")}
+                          </AccountMenuLink>
+                          <div className="my-1 h-px bg-ink-100" />
+                          <AccountMenuLink
+                            href="/account"
+                            active={pathname === "/account"}
+                            onClick={() => setAccountMenuOpen(false)}
+                          >
+                            {t("nav.account_settings")}
+                          </AccountMenuLink>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
@@ -242,7 +317,7 @@ export function Navbar() {
               <button
                 type="button"
                 onClick={openSignup}
-                className="px-5 py-2 rounded-full bg-crimson-600 text-white text-sm font-semibold shadow-sm hover:bg-crimson-700"
+                className="px-5 py-2 rounded-full bg-crimson-600 text-white text-base font-semibold shadow-sm hover:bg-crimson-700"
               >
                 {t("nav.sign_up")}
               </button>
@@ -262,31 +337,77 @@ export function Navbar() {
       </div>
 
       {menuOpen && (
-        <div className="md:hidden border-t border-ink-100 bg-surface px-4 py-3 flex flex-col gap-1 text-sm">
+        <div className="md:hidden border-t border-ink-100 bg-surface px-4 py-3 flex flex-col gap-1 text-base">
           <div className="flex items-center justify-between px-3 py-2">
             <span className="text-ink-500">{t("nav.theme")}</span>
             <ThemeToggle className="text-ink-600 hover:bg-ink-100" />
           </div>
           {user && (
             <>
-              <Link href="/me/reviews" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
-                {t("nav.my_reviews")}
-              </Link>
-              <Link href="/me/bookmarks" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
-                {t("nav.bookmarks")}
-              </Link>
-              <Link href="/me/messages" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
-                {t("nav.messages")}
-              </Link>
-              <div className="my-1 h-px bg-ink-100" />
-              <Link
-                href="/owner"
-                className="px-3 py-2 rounded hover:bg-ink-100 flex items-center gap-2"
-                onClick={() => setMenuOpen(false)}
-              >
-                {t("nav.for_business")}
-                {inboxUnreadCount > 0 && <span className="h-2 w-2 rounded-full bg-crimson-600" aria-hidden />}
-              </Link>
+              {isBusinessAccount ? (
+                <>
+                  <Link href="/owner" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
+                    My Businesses
+                  </Link>
+                  <Link
+                    href="/owner/inbox"
+                    className="px-3 py-2 rounded hover:bg-ink-100 flex items-center gap-2"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Inbox
+                    {inboxUnreadCount > 0 && <span className="h-2 w-2 rounded-full bg-crimson-600" aria-hidden />}
+                  </Link>
+                  {canSwitchAccount && (
+                    <button
+                      type="button"
+                      disabled={switching}
+                      className="px-3 py-2 rounded hover:bg-ink-100 text-left disabled:opacity-50"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        handleSwitchAccount();
+                      }}
+                    >
+                      Switch to Personal
+                    </button>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Link href="/me/reviews" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
+                    {t("nav.my_reviews")}
+                  </Link>
+                  <Link href="/me/bookmarks" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
+                    {t("nav.bookmarks")}
+                  </Link>
+                  <Link href="/me/messages" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
+                    {t("nav.messages")}
+                  </Link>
+                  <div className="my-1 h-px bg-ink-100" />
+                  {canSwitchAccount ? (
+                    <button
+                      type="button"
+                      disabled={switching}
+                      className="px-3 py-2 rounded hover:bg-ink-100 flex items-center gap-2 text-left disabled:opacity-50"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        handleSwitchAccount();
+                      }}
+                    >
+                      Switch to Business
+                      {inboxUnreadCount > 0 && <span className="h-2 w-2 rounded-full bg-crimson-600" aria-hidden />}
+                    </button>
+                  ) : (
+                    <Link
+                      href="/owner"
+                      className="px-3 py-2 rounded hover:bg-ink-100 flex items-center gap-2"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      {t("nav.for_business")}
+                      {inboxUnreadCount > 0 && <span className="h-2 w-2 rounded-full bg-crimson-600" aria-hidden />}
+                    </Link>
+                  )}
+                </>
+              )}
             </>
           )}
           {user?.role === "ADMIN" && (

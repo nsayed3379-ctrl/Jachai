@@ -8,10 +8,13 @@ import { Button } from "./ui/button";
 
 export function RoleGate({
   allow,
+  fallback,
   children,
 }: {
   /** Omit to just require being logged in, regardless of role — most screens today are usable by any account. */
   allow?: UserRole[];
+  /** Rendered instead of the generic "not available" screen when logged in but `allow` excludes this account's role — e.g. a "create/switch to your Business account" CTA. */
+  fallback?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const { user, isLoading } = useAuth();
@@ -33,6 +36,7 @@ export function RoleGate({
   }
 
   if (allow && !allow.includes(user.role)) {
+    if (fallback) return <>{fallback}</>;
     return (
       <div className="max-w-md mx-auto text-center py-16">
         <h1 className="font-display text-xl text-ink-900">Not available for your account</h1>

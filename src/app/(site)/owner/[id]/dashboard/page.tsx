@@ -12,6 +12,7 @@ import {
   uploadFileToPresignedUrl,
 } from "@/lib/api";
 import { RoleGate } from "@/components/role-gate";
+import { BusinessAccountCta } from "@/components/business-account-cta";
 import { REPORT_REASON_LABELS } from "@/lib/config";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import { cn,formatDateTime, timeAgo, truncateId } from "@/lib/utils";
@@ -453,7 +454,7 @@ function DashboardContent() {
 
 export default function OwnerDashboardPage() {
   return (
-    <RoleGate>
+    <RoleGate allow={["BUSINESS_OWNER"]} fallback={<BusinessAccountCta />}>
       <DashboardContent />
     </RoleGate>
   );
