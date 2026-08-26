@@ -44,9 +44,13 @@ export interface Area {
   city?: City;
 }
 
+/** Phase 2 — canonical driver of category-specific modules. Free-text category name is unchanged. */
+export type CategoryKind = "RESTAURANT" | "CLINIC" | "SALON" | "RETAIL" | "GYM" | "GENERAL";
+
 export interface Category {
   id: string;
   name: string;
+  kind: CategoryKind;
 }
 
 export interface BusinessAttribute {
@@ -76,6 +80,13 @@ export interface BusinessResponse {
   description: string | null;
   coverPhotoUrl: string | null;
   logoUrl: string | null;
+  // "Business presence" (spec Step 4) — optional contact/social links. Null when unset;
+  // an empty value is never rendered on the public page.
+  websiteUrl: string | null;
+  whatsappNumber: string | null;
+  email: string | null;
+  facebookUrl: string | null;
+  instagramUrl: string | null;
   // Cover photo (if any) followed by gallery photos, in display order — card carousel source.
   photoUrls: string[];
   latitude: number;
@@ -98,6 +109,152 @@ export interface BusinessResponse {
   totalDislikeCount: number;
   totalLoveCount: number;
   totalWowCount: number;
+  // Phase 2 — canonical category classification, drives which module tabs appear.
+  categoryKind: CategoryKind;
+  // Which category modules actually have data. Populated only on GET /businesses/{slug}
+  // (the detail view); null on search/list/mine results. Each tab then fetches its own list.
+  categoryModules: CategoryModuleFlags | null;
+  // Phase 3 — true if the listing has ≥1 published update. Detail response only; null on lists.
+  hasUpdates: boolean | null;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2 — category-specific showcase modules
+// ---------------------------------------------------------------------------
+export interface CategoryModuleFlags {
+  hasOfferings: boolean;
+  hasFacilities: boolean;
+  hasTeam: boolean;
+  hasMenu: boolean;
+  hasProducts: boolean;
+}
+
+/** OFFERING = services / gym membership plans; FACILITY = gym amenity names. */
+export type ServiceSection = "OFFERING" | "FACILITY";
+
+export interface ServiceOffering {
+  id: string;
+  businessId: string;
+  section: ServiceSection;
+  name: string;
+  description: string | null;
+  priceText: string | null;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface TeamMember {
+  id: string;
+  businessId: string;
+  name: string;
+  role: string | null;
+  bio: string | null;
+  photoUrl: string | null;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface MenuItem {
+  id: string;
+  businessId: string;
+  menuSection: string | null;
+  name: string;
+  description: string | null;
+  priceText: string | null;
+  photoUrl: string | null;
+  popular: boolean;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface FeaturedProduct {
+  id: string;
+  businessId: string;
+  name: string;
+  description: string | null;
+  priceText: string | null;
+  photoUrl: string | null;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface ServiceOfferingBody {
+  name: string;
+  description?: string | null;
+  priceText?: string | null;
+  section?: ServiceSection;
+}
+export interface TeamMemberBody {
+  name: string;
+  role?: string | null;
+  bio?: string | null;
+  photoUrl?: string | null;
+}
+export interface MenuItemBody {
+  name: string;
+  description?: string | null;
+  priceText?: string | null;
+  photoUrl?: string | null;
+  menuSection?: string | null;
+  popular: boolean;
+}
+export interface FeaturedProductBody {
+  name: string;
+  description?: string | null;
+  priceText?: string | null;
+  photoUrl?: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3 — updates, analytics, profile completeness
+// ---------------------------------------------------------------------------
+export interface BusinessUpdate {
+  id: string;
+  businessId: string;
+  body: string;
+  imageUrl: string | null;
+  published: boolean;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BusinessUpdateBody {
+  body: string;
+  imageUrl?: string | null;
+  published?: boolean | null;
+}
+
+export type BusinessEventType =
+  | "PROFILE_VIEW"
+  | "PHONE_CLICK"
+  | "WHATSAPP_CLICK"
+  | "DIRECTIONS_CLICK"
+  | "WEBSITE_CLICK";
+
+export type AnalyticsRange = "7d" | "30d" | "all";
+
+export interface AnalyticsResponse {
+  range: AnalyticsRange;
+  from: string | null;
+  profileViews: number;
+  phoneClicks: number;
+  whatsappClicks: number;
+  directionsClicks: number;
+  websiteClicks: number;
+}
+
+export interface CompletenessItem {
+  key: string;
+  label: string;
+  /** short call-to-action; null for completed items */
+  action: string | null;
+}
+
+export interface CompletenessResponse {
+  percentage: number;
+  completed: CompletenessItem[];
+  recommended: CompletenessItem[];
 }
 
 export interface CreateBusinessRequest {
@@ -114,6 +271,12 @@ export interface CreateBusinessRequest {
   longitude: number;
   priceTier: PriceTier;
   attributeIds: string[];
+  // "Business presence" (spec Step 4) — all optional; blank is sent as null / treated as absent.
+  websiteUrl?: string | null;
+  whatsappNumber?: string | null;
+  email?: string | null;
+  facebookUrl?: string | null;
+  instagramUrl?: string | null;
 }
 
 export type UpdateBusinessRequest = CreateBusinessRequest;

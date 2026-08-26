@@ -9,6 +9,8 @@ import { REPORT_REASON_LABELS } from "@/lib/config";
 import { useAuth } from "@/lib/auth-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import type { BusinessResponse, ReviewResponse, ReviewSortOption } from "@/lib/types";
+import { modulesForKind, moduleHasData, type ModuleKey } from "@/lib/category-modules";
+import { trackEvent, trackProfileView } from "@/lib/analytics";
 import { StarDisplay } from "@/components/star-rating";
 import { VerifiedBadge } from "@/components/verified-badge";
 import { MapPreview } from "@/components/map-preview";
@@ -19,6 +21,15 @@ import { CreateBusinessAccountModal } from "@/components/create-business-account
 import { ReportButton } from "@/components/report-button";
 import { BusinessCard } from "@/components/business-card";
 import { BusinessHeroGallery } from "@/components/business-hero-gallery";
+import { BusinessTabs, type BusinessTab } from "@/components/business-tabs";
+import { BusinessAbout } from "@/components/business-about";
+import { BusinessUpdates } from "@/components/business-updates";
+import { BusinessMenu } from "@/components/business-menu";
+import { BusinessServiceShowcase } from "@/components/business-service-showcase";
+import { BusinessTeam } from "@/components/business-team";
+import { BusinessProducts } from "@/components/business-products";
+import { PhotoGalleryModal } from "@/components/photo-gallery-modal";
+import { GalleryImage } from "@/components/gallery-image";
 import { ReviewCard } from "@/components/review-card";
 import { ReviewForm } from "@/components/review-form";
 import { AiSummaryCard } from "@/components/ai-summary-card";
@@ -56,6 +67,13 @@ export default function BusinessDetailPage() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<"idle" | "locating" | "denied">("idle");
 
+  // Section nav (spec: Reviews default, tabs only shown when the business has
+  // data for them). Panels stay mounted and toggle via `hidden` so the
+  // #reviews anchor / scroll-into-view keep working from the hero.
+  const [activeTab, setActiveTab] = useState<string>("reviews");
+  const [photosModalOpen, setPhotosModalOpen] = useState(false);
+  const [photosModalIndex, setPhotosModalIndex] = useState<number | null>(null);
+
   async function handleSwitchToClaim() {
     setSwitchingForClaim(true);
     try {
@@ -70,12 +88,14 @@ export default function BusinessDetailPage() {
   }
 
   function openReviewForm() {
+    setActiveTab("reviews");
     setShowReviewForm(true);
     document.getElementById("reviews")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function openEditMyReview() {
     if (!myReview) return;
+    setActiveTab("reviews");
     setEditingReview(myReview);
     document.getElementById("reviews")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -142,6 +162,7 @@ export default function BusinessDetailPage() {
         if (cancelled) return;
         setBusiness(b);
         rememberBusiness(b);
+        trackProfileView(b.id); // deduped in lib/analytics — once per ~30min per tab
         loadReviews(b.id, 0);
       })
       .catch((err) => !cancelled && setError(errorMessage(err)))
@@ -216,6 +237,35 @@ export default function BusinessDetailPage() {
 
   const photos = business.photoUrls;
 
+  // "About" shows only when the business has something beyond the always-present
+  // basics (name/category/location/phone, which the sidebar already covers).
+  const hasAboutData =
+    !!business.description ||
+    !!business.whatsappNumber ||
+    !!business.email ||
+    !!business.websiteUrl ||
+    !!business.facebookUrl ||
+    !!business.instagramUrl ||
+    !!business.operatingHours ||
+    business.attributes.length > 0;
+
+  // Category-specific module tabs (spec Phase 2): driven by category.kind, and
+  // only shown when the module actually has data (categoryModules flags from the
+  // detail response — no module lists are fetched until a tab is opened).
+  const moduleDefs = modulesForKind(business.categoryKind).filter((m) =>
+    moduleHasData(m.key, business.categoryModules)
+  );
+
+  // A tab is only offered when that business actually has content for it.
+  const visibleTabs: BusinessTab[] = [
+    { key: "reviews", label: "Reviews" },
+    ...(hasAboutData ? [{ key: "about", label: "About" }] : []),
+    ...moduleDefs.map((m) => ({ key: m.key as string, label: m.publicLabel })),
+    ...(photos.length > 0 ? [{ key: "photos", label: "Photos" }] : []),
+    ...(business.hasUpdates ? [{ key: "updates", label: "Updates" }] : []),
+    { key: "location", label: "Location" },
+  ];
+
   return (
     <div>
       <BusinessHeroGallery
@@ -259,35 +309,108 @@ export default function BusinessDetailPage() {
             <ReportButton targetType="LISTING" targetId={business.id} />
           </div>
 
-          {business.description && (
-            <div className="mt-5">
-              <h2 className="font-display text-lg font-semibold text-ink-900 mb-2">About the Business</h2>
-              <AboutText text={business.description} />
-            </div>
+          <BusinessTabs tabs={visibleTabs} active={activeTab} onChange={setActiveTab} />
+
+          {/* About — only rendered when the business has any of this data */}
+          {hasAboutData && (
+            <section role="tabpanel" aria-label="About" hidden={activeTab !== "about"}>
+              <BusinessAbout business={business} />
+            </section>
           )}
 
-          {business.attributes.length > 0 && (
-            <div className="mt-5">
-              <h2 className="font-display text-lg font-semibold text-ink-900 mb-3">Amenities and More</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2.5">
-                {business.attributes.map((attr) => (
-                  <div key={attr} className="flex items-center gap-2 text-sm text-ink-700">
-                    <svg viewBox="0 0 20 20" className="h-4 w-4 flex-none text-ink-600" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M4 10.5 8 14l8-8" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    {attr}
-                  </div>
+          {/* Category modules — mounted only while their tab is active, so each
+              module's list is fetched on open and never before (spec Phase 2). */}
+          {moduleDefs.map((m) =>
+            activeTab === m.key ? (
+              <section key={m.key} role="tabpanel" aria-label={m.publicLabel}>
+                <CategoryModulePanel moduleKey={m.key} heading={m.publicLabel} businessId={business.id} />
+              </section>
+            ) : null
+          )}
+
+          {/* Photos — hidden entirely with no photos (empty-state rule) */}
+          {photos.length > 0 && (
+            <section role="tabpanel" aria-label="Photos" hidden={activeTab !== "photos"}>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="font-display text-lg font-semibold text-ink-900">Photos ({photos.length})</h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPhotosModalIndex(null);
+                    setPhotosModalOpen(true);
+                  }}
+                  className="text-sm font-semibold text-crimson-700 hover:underline"
+                >
+                  {photos.length === 1 ? "View photo" : `See all ${photos.length} photos`}
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {photos.slice(0, 8).map((url, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => {
+                      setPhotosModalIndex(i);
+                      setPhotosModalOpen(true);
+                    }}
+                    aria-label={`Open photo ${i + 1} of ${photos.length}`}
+                    className="group relative aspect-square overflow-hidden rounded-lg bg-ink-100"
+                  >
+                    <GalleryImage
+                      src={url}
+                      alt={`${business.name} photo ${i + 1}`}
+                      sizes="(max-width: 640px) 33vw, 25vw"
+                      className="transition-transform duration-200 group-hover:scale-105"
+                    />
+                  </button>
                 ))}
               </div>
-            </div>
+            </section>
           )}
 
-          <div className="mt-4">
-            <AiSummaryCard businessId={business.id} />
-          </div>
+          {/* Updates — mounted only while active; shown only when ≥1 published update */}
+          {business.hasUpdates && activeTab === "updates" && (
+            <section role="tabpanel" aria-label="Updates">
+              <BusinessUpdates businessId={business.id} />
+            </section>
+          )}
 
-          {/* Reviews */}
-          <div id="reviews" className="mt-8 scroll-mt-20 border-t border-ink-100 pt-6">
+          {/* Location */}
+          <section role="tabpanel" aria-label="Location" hidden={activeTab !== "location"}>
+            <h2 className="font-display text-lg font-semibold text-ink-900 mb-3">Location</h2>
+            <MapPreview latitude={business.latitude} longitude={business.longitude} name={business.name} />
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="flex items-start gap-2.5 text-sm text-ink-700">
+                <svg viewBox="0 0 24 24" className="mt-0.5 h-4 w-4 flex-none text-ink-400" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12Z" strokeLinecap="round" strokeLinejoin="round" />
+                  <circle cx="12" cy="9" r="2.5" />
+                </svg>
+                <span>
+                  {business.areaName}, {business.cityName}
+                </span>
+              </p>
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => trackEvent(business.id, "DIRECTIONS_CLICK")}
+                className="inline-flex items-center gap-1.5 rounded-full border border-ink-200 px-3 py-1.5 text-sm font-medium text-ink-700 hover:border-crimson-300 hover:text-crimson-700"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="m22 2-7 20-4-9-9-4Z" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Get directions
+              </a>
+            </div>
+          </section>
+
+          {/* Reviews — the default section; stays visible on first load (spec) */}
+          <section role="tabpanel" aria-label="Reviews" hidden={activeTab !== "reviews"}>
+            <div className="mb-4">
+              <AiSummaryCard businessId={business.id} />
+            </div>
+
+            <div id="reviews" className="scroll-mt-24">
             <div className="flex items-center justify-between gap-3">
               <h2 className="font-display text-xl font-bold text-ink-900">Recommended Reviews</h2>
               {!reviewsAuthRequired && reviews.length > 0 && (
@@ -403,7 +526,8 @@ export default function BusinessDetailPage() {
                 }}
               />
             </div>
-          </div>
+            </div>
+          </section>
 
           {similarBusinesses.length > 0 && (
             <div className="mt-8 border-t border-ink-100 pt-6">
@@ -484,7 +608,11 @@ export default function BusinessDetailPage() {
           <CreateBusinessAccountModal open={createBizModalOpen} onClose={() => setCreateBizModalOpen(false)} />
 
           <div className="rounded-xl border border-ink-100/70 bg-surface p-4 shadow-card space-y-3">
-            <a href={`tel:${business.contactNumber}`} className="flex items-center gap-2.5 text-sm text-ink-700 hover:text-crimson-700">
+            <a
+              href={`tel:${business.contactNumber}`}
+              onClick={() => trackEvent(business.id, "PHONE_CLICK")}
+              className="flex items-center gap-2.5 text-sm text-ink-700 hover:text-crimson-700"
+            >
               <svg viewBox="0 0 24 24" className="h-4 w-4 flex-none text-ink-400" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M4 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L14 13l5 2v4a2 2 0 0 1-2 2C9.5 21 3 14.5 3 6a2 2 0 0 1 1-2Z" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -528,32 +656,39 @@ export default function BusinessDetailPage() {
           )}
         </div>
       </div>
+
+      <PhotoGalleryModal
+        open={photosModalOpen}
+        onClose={() => setPhotosModalOpen(false)}
+        photos={photos}
+        businessName={business.name}
+        initialIndex={photosModalIndex}
+      />
     </div>
   );
 }
 
-const ABOUT_PREVIEW_LENGTH = 280;
-
-function AboutText({ text }: { text: string }) {
-  const [expanded, setExpanded] = useState(false);
-  const isLong = text.length > ABOUT_PREVIEW_LENGTH;
-  const shown = expanded || !isLong ? text : `${text.slice(0, ABOUT_PREVIEW_LENGTH).trimEnd()}…`;
-
-  return (
-    <p className="text-sm text-ink-700 leading-relaxed whitespace-pre-wrap">
-      {shown}
-      {isLong && !expanded && (
-        <>
-          {" "}
-          <button
-            type="button"
-            onClick={() => setExpanded(true)}
-            className="font-semibold text-crimson-700 hover:underline"
-          >
-            Read more
-          </button>
-        </>
-      )}
-    </p>
-  );
+/** Routes a category module key to its public showcase renderer (mounted only while active). */
+function CategoryModulePanel({
+  moduleKey,
+  heading,
+  businessId,
+}: {
+  moduleKey: ModuleKey;
+  heading: string;
+  businessId: string;
+}) {
+  switch (moduleKey) {
+    case "menu":
+      return <BusinessMenu businessId={businessId} />;
+    case "products":
+      return <BusinessProducts businessId={businessId} />;
+    case "team":
+      return <BusinessTeam businessId={businessId} heading={heading} />;
+    case "facilities":
+      return <BusinessServiceShowcase businessId={businessId} section="FACILITY" heading={heading} />;
+    case "services":
+    default:
+      return <BusinessServiceShowcase businessId={businessId} section="OFFERING" heading={heading} />;
+  }
 }

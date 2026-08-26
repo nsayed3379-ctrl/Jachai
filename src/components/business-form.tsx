@@ -19,7 +19,10 @@ import type {
   CreateBusinessRequest,
   PriceTier,
 } from "@/lib/types";
+import { modulesForKind } from "@/lib/category-modules";
 import { Button } from "./ui/button";
+import { BusinessGalleryManager } from "./business-gallery-manager";
+import { CategoryModulesManager } from "./category-modules/category-modules-manager";
 import { GoogleLocationPicker } from "./google-location-picker";
 import { OperatingHoursPicker } from "./operating-hours-picker";
 import { FieldHint, Input, Label, Select, Textarea } from "./ui/field";
@@ -45,6 +48,11 @@ const emptyForm: CreateBusinessRequest = {
   longitude: 90.419559,
   priceTier: "MODERATE",
   attributeIds: [],
+  websiteUrl: "",
+  whatsappNumber: "",
+  email: "",
+  facebookUrl: "",
+  instagramUrl: "",
 };
 
 function SectionHeader({
@@ -159,6 +167,11 @@ export function BusinessForm({ existing, initialValues }: Props) {
       latitude: existing.latitude,
       longitude: existing.longitude,
       priceTier: existing.priceTier,
+      websiteUrl: existing.websiteUrl ?? "",
+      whatsappNumber: existing.whatsappNumber ?? "",
+      email: existing.email ?? "",
+      facebookUrl: existing.facebookUrl ?? "",
+      instagramUrl: existing.instagramUrl ?? "",
     }));
   }, [existing]);
 
@@ -613,7 +626,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
         show("Listing created", "success");
       }
 
-      router.push(`/owner/${created.id}/dashboard`);
+      router.push(`/owner/${created.id}`);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -1053,6 +1066,139 @@ export function BusinessForm({ existing, initialValues }: Props) {
             </div>
           </SectionCard>
         </div>
+
+        {/* =========================
+            Row 3 — Business presence (optional)
+        ========================== */}
+        <SectionCard>
+          <SectionHeader
+            step={4}
+            title="Business presence"
+            description="Help customers connect with your business online. Every field here is optional — anything you leave blank simply won't appear on your public page."
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="websiteUrl">Website</Label>
+              <Input
+                id="websiteUrl"
+                type="url"
+                inputMode="url"
+                placeholder="https://yourbusiness.com"
+                value={form.websiteUrl ?? ""}
+                onChange={(e) => set("websiteUrl", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="whatsapp">WhatsApp number</Label>
+              <Input
+                id="whatsapp"
+                inputMode="tel"
+                placeholder="01712345678"
+                value={form.whatsappNumber ?? ""}
+                onChange={(e) => set("whatsappNumber", e.target.value)}
+              />
+              {form.contactNumber && form.contactNumber !== form.whatsappNumber && (
+                <button
+                  type="button"
+                  onClick={() => set("whatsappNumber", form.contactNumber)}
+                  className="mt-1 text-xs font-medium text-crimson-700 hover:underline"
+                >
+                  Use contact number for WhatsApp
+                </button>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="email">Email address</Label>
+              <Input
+                id="email"
+                type="email"
+                inputMode="email"
+                placeholder="hello@yourbusiness.com"
+                value={form.email ?? ""}
+                onChange={(e) => set("email", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="facebookUrl">Facebook</Label>
+              <Input
+                id="facebookUrl"
+                type="url"
+                placeholder="https://facebook.com/yourpage"
+                value={form.facebookUrl ?? ""}
+                onChange={(e) => set("facebookUrl", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="instagramUrl">Instagram</Label>
+              <Input
+                id="instagramUrl"
+                type="url"
+                placeholder="https://instagram.com/yourhandle"
+                value={form.instagramUrl ?? ""}
+                onChange={(e) => set("instagramUrl", e.target.value)}
+              />
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* =========================
+            Row 4 — Category-specific details (optional, dynamic)
+        ========================== */}
+        {(() => {
+          const selectedCategory = categories.find((c) => c.id === form.categoryId);
+          const moduleLabels = selectedCategory
+            ? modulesForKind(selectedCategory.kind).map((m) => m.ownerLabel.toLowerCase())
+            : [];
+          return (
+            <SectionCard>
+              <SectionHeader
+                step={5}
+                title="Category details"
+                description={
+                  selectedCategory
+                    ? `Optional showcase sections for a ${selectedCategory.name.toLowerCase()} — ${moduleLabels.join(", ")}.`
+                    : "Optional sections tailored to your type of business."
+                }
+              />
+
+              {!selectedCategory ? (
+                <FieldHint>Pick a category in step 1 to see the sections relevant to your business.</FieldHint>
+              ) : existing ? (
+                <CategoryModulesManager businessId={existing.id} kind={selectedCategory.kind} />
+              ) : (
+                <FieldHint>
+                  Save your listing first — you can then add {moduleLabels.join(", ")} from your dashboard
+                  or by editing this listing.
+                </FieldHint>
+              )}
+            </SectionCard>
+          );
+        })()}
+
+        {/* =========================
+            Row 5 — Photos / gallery (optional)
+        ========================== */}
+        <SectionCard>
+          <SectionHeader
+            step={6}
+            title="Photos"
+            description="A gallery of up to 10 photos — storefront, interior, team, or work samples. Cover photo and profile picture are set in step 3."
+          />
+
+          {existing ? (
+            <BusinessGalleryManager businessId={existing.id} />
+          ) : (
+            <FieldHint>
+              Save your listing first — you can add gallery photos straight after, from your
+              dashboard or by editing this listing.
+            </FieldHint>
+          )}
+        </SectionCard>
 
         {/* =========================
             Actions

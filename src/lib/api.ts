@@ -16,12 +16,26 @@ import type {
   BusinessResponse,
   BusinessReviewSummary,
   BusinessSearchParams,
+  AnalyticsRange,
+  AnalyticsResponse,
+  BusinessUpdate,
+  BusinessUpdateBody,
   Category,
   City,
   Area,
   Collection,
+  CompletenessResponse,
   ConfirmUploadRequestT,
   CreateBusinessRequest,
+  FeaturedProduct,
+  FeaturedProductBody,
+  MenuItem,
+  MenuItemBody,
+  ServiceOffering,
+  ServiceOfferingBody,
+  ServiceSection,
+  TeamMember,
+  TeamMemberBody,
   FakeReviewSignal,
   Message,
   MessageThread,
@@ -506,8 +520,114 @@ export const galleryApi = {
   remove: (businessId: string, photoId: string) =>
     request<void>(`/api/v1/businesses/${businessId}/photos/${photoId}`, { method: "DELETE" }),
 
+  /** Persist a new gallery order — `orderedPhotoIds` must list every current photo id exactly once. */
+  reorder: (businessId: string, orderedPhotoIds: string[]) =>
+    request<BusinessPhoto[]>(`/api/v1/businesses/${businessId}/photos/reorder`, {
+      method: "PATCH",
+      body: { orderedPhotoIds },
+    }),
+
   list: (businessId: string) =>
     request<BusinessPhoto[]>(`/api/v1/businesses/${businessId}/photos`, { auth: false }),
+};
+
+// ---------------------------------------------------------------------------
+// Phase 2 — category showcase modules (services / team / menu / products).
+// GET is public; writes are owner-scoped. Each list is fetched on demand
+// (never bundled into GET /businesses/{slug}).
+// ---------------------------------------------------------------------------
+export const catalogApi = {
+  // Services — also gym membership (section OFFERING) and gym facilities (section FACILITY).
+  services: (businessId: string, section?: ServiceSection) =>
+    request<ServiceOffering[]>(`/api/v1/businesses/${businessId}/services`, { auth: false, query: { section } }),
+  addService: (businessId: string, body: ServiceOfferingBody) =>
+    request<ServiceOffering>(`/api/v1/businesses/${businessId}/services`, { method: "POST", body }),
+  updateService: (businessId: string, id: string, body: ServiceOfferingBody) =>
+    request<ServiceOffering>(`/api/v1/businesses/${businessId}/services/${id}`, { method: "PUT", body }),
+  removeService: (businessId: string, id: string) =>
+    request<void>(`/api/v1/businesses/${businessId}/services/${id}`, { method: "DELETE" }),
+  reorderServices: (businessId: string, orderedIds: string[], section?: ServiceSection) =>
+    request<ServiceOffering[]>(`/api/v1/businesses/${businessId}/services/reorder`, {
+      method: "PATCH",
+      body: { orderedIds },
+      query: { section },
+    }),
+
+  // Team — doctors / staff / trainers.
+  team: (businessId: string) =>
+    request<TeamMember[]>(`/api/v1/businesses/${businessId}/team`, { auth: false }),
+  addTeamMember: (businessId: string, body: TeamMemberBody) =>
+    request<TeamMember>(`/api/v1/businesses/${businessId}/team`, { method: "POST", body }),
+  updateTeamMember: (businessId: string, id: string, body: TeamMemberBody) =>
+    request<TeamMember>(`/api/v1/businesses/${businessId}/team/${id}`, { method: "PUT", body }),
+  removeTeamMember: (businessId: string, id: string) =>
+    request<void>(`/api/v1/businesses/${businessId}/team/${id}`, { method: "DELETE" }),
+  reorderTeam: (businessId: string, orderedIds: string[]) =>
+    request<TeamMember[]>(`/api/v1/businesses/${businessId}/team/reorder`, { method: "PATCH", body: { orderedIds } }),
+
+  // Menu — restaurant.
+  menuItems: (businessId: string) =>
+    request<MenuItem[]>(`/api/v1/businesses/${businessId}/menu-items`, { auth: false }),
+  addMenuItem: (businessId: string, body: MenuItemBody) =>
+    request<MenuItem>(`/api/v1/businesses/${businessId}/menu-items`, { method: "POST", body }),
+  updateMenuItem: (businessId: string, id: string, body: MenuItemBody) =>
+    request<MenuItem>(`/api/v1/businesses/${businessId}/menu-items/${id}`, { method: "PUT", body }),
+  removeMenuItem: (businessId: string, id: string) =>
+    request<void>(`/api/v1/businesses/${businessId}/menu-items/${id}`, { method: "DELETE" }),
+  reorderMenuItems: (businessId: string, orderedIds: string[]) =>
+    request<MenuItem[]>(`/api/v1/businesses/${businessId}/menu-items/reorder`, { method: "PATCH", body: { orderedIds } }),
+
+  // Featured products — retail.
+  products: (businessId: string) =>
+    request<FeaturedProduct[]>(`/api/v1/businesses/${businessId}/products`, { auth: false }),
+  addProduct: (businessId: string, body: FeaturedProductBody) =>
+    request<FeaturedProduct>(`/api/v1/businesses/${businessId}/products`, { method: "POST", body }),
+  updateProduct: (businessId: string, id: string, body: FeaturedProductBody) =>
+    request<FeaturedProduct>(`/api/v1/businesses/${businessId}/products/${id}`, { method: "PUT", body }),
+  removeProduct: (businessId: string, id: string) =>
+    request<void>(`/api/v1/businesses/${businessId}/products/${id}`, { method: "DELETE" }),
+  reorderProducts: (businessId: string, orderedIds: string[]) =>
+    request<FeaturedProduct[]>(`/api/v1/businesses/${businessId}/products/reorder`, { method: "PATCH", body: { orderedIds } }),
+};
+
+// ---------------------------------------------------------------------------
+// Phase 3 — business updates (owner CRUD + public list)
+// ---------------------------------------------------------------------------
+export const updatesApi = {
+  publicList: (businessId: string, page = 0, size = 10) =>
+    request<PageResponse<BusinessUpdate>>(`/api/v1/businesses/${businessId}/updates`, {
+      auth: false,
+      query: { page, size },
+    }),
+  manageList: (businessId: string, page = 0, size = 20) =>
+    request<PageResponse<BusinessUpdate>>(`/api/v1/businesses/${businessId}/updates/manage`, { query: { page, size } }),
+  create: (businessId: string, body: BusinessUpdateBody) =>
+    request<BusinessUpdate>(`/api/v1/businesses/${businessId}/updates`, { method: "POST", body }),
+  update: (businessId: string, id: string, body: BusinessUpdateBody) =>
+    request<BusinessUpdate>(`/api/v1/businesses/${businessId}/updates/${id}`, { method: "PUT", body }),
+  setPublished: (businessId: string, id: string, published: boolean) =>
+    request<BusinessUpdate>(`/api/v1/businesses/${businessId}/updates/${id}/publish`, {
+      method: "PATCH",
+      body: { published },
+    }),
+  remove: (businessId: string, id: string) =>
+    request<void>(`/api/v1/businesses/${businessId}/updates/${id}`, { method: "DELETE" }),
+};
+
+// ---------------------------------------------------------------------------
+// Phase 3 — analytics (owner/admin read; the write path is lib/analytics.ts sendBeacon)
+// ---------------------------------------------------------------------------
+export const analyticsApi = {
+  get: (businessId: string, range: AnalyticsRange = "30d") =>
+    request<AnalyticsResponse>(`/api/v1/businesses/${businessId}/analytics`, { query: { range } }),
+};
+
+// ---------------------------------------------------------------------------
+// Phase 3 — profile completeness (owner/admin)
+// ---------------------------------------------------------------------------
+export const completenessApi = {
+  get: (businessId: string) =>
+    request<CompletenessResponse>(`/api/v1/businesses/${businessId}/completeness`),
 };
 
 /**

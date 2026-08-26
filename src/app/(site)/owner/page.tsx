@@ -91,9 +91,9 @@ function MyBusinessesContent() {
               </div>
             </div>
             <div className="mt-3 flex gap-2 flex-wrap">
-              <Link href={`/owner/${b.id}/dashboard`}>
+              <Link href={`/owner/${b.id}`}>
                 <Button size="sm" variant="outline">
-                  Dashboard
+                  Manage
                 </Button>
               </Link>
               <Link href={`/owner/${b.id}/edit`}>
