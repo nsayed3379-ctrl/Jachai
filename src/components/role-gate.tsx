@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthModal } from "@/lib/auth-modal-context";
 import type { UserRole } from "@/lib/types";
 import { PageSpinner } from "./ui/misc";
 import { Button } from "./ui/button";
@@ -18,6 +19,7 @@ export function RoleGate({
   children: React.ReactNode;
 }) {
   const { user, isLoading } = useAuth();
+  const { openLogin } = useAuthModal();
 
   if (isLoading) return <PageSpinner />;
 
@@ -28,9 +30,9 @@ export function RoleGate({
         <p className="mt-2 text-sm text-ink-500">
           You need to log in to view this page.
         </p>
-        <Link href="/login">
-          <Button className="mt-5">Log in</Button>
-        </Link>
+        <Button className="mt-5" onClick={openLogin}>
+          Log in
+        </Button>
       </div>
     );
   }

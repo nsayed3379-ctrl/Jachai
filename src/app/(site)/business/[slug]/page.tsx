@@ -7,6 +7,7 @@ import { businessApi, messageApi, referenceApi, reviewApi } from "@/lib/api";
 import { rememberBusiness } from "@/lib/business-cache";
 import { REPORT_REASON_LABELS } from "@/lib/config";
 import { useAuth } from "@/lib/auth-context";
+import { useAuthModal } from "@/lib/auth-modal-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import type { BusinessResponse, ReviewResponse, ReviewSortOption } from "@/lib/types";
 import { modulesForKind, moduleHasData, type ModuleKey } from "@/lib/category-modules";
@@ -41,6 +42,7 @@ import { Textarea } from "@/components/ui/field";
 export default function BusinessDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const { user, profile, switchAccount } = useAuth();
+  const { openLogin, openSignup } = useAuthModal();
   const { show } = useToast();
 
   const [business, setBusiness] = useState<BusinessResponse | null>(null);
@@ -475,14 +477,12 @@ export default function BusinessDetailPage() {
                     Log in to read what others said and write your own review of {business.name}.
                   </p>
                   <div className="mt-4 flex justify-center gap-2">
-                    <Link href="/login">
-                      <Button size="sm">Log in</Button>
-                    </Link>
-                    <Link href="/signup">
-                      <Button size="sm" variant="outline">
-                        Sign up
-                      </Button>
-                    </Link>
+                    <Button size="sm" onClick={openLogin}>
+                      Log in
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={openSignup}>
+                      Sign up
+                    </Button>
                   </div>
                 </div>
               )}

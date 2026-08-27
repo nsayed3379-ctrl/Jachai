@@ -7,7 +7,7 @@ import { useHomeSearch } from "@/lib/home-search-context";
 import { errorMessage } from "@/lib/toast-context";
 import type { Area, BusinessResponse, Category } from "@/lib/types";
 import { BusinessCard } from "@/components/business-card";
-import { BusinessFilters, FilterDropdown, PRICE_OPTIONS, RATING_OPTIONS } from "@/components/business-filters";
+import { BusinessFilters } from "@/components/business-filters";
 import { CategoryQuickNav } from "@/components/category-quick-nav";
 import { CategoriesGrid } from "@/components/categories-grid";
 import { ExploreCities } from "@/components/explore-cities";
@@ -274,31 +274,6 @@ export default function HomePage() {
               <span className="mt-2.5 mx-auto block h-1 w-16 rounded-full bg-gradient-to-r from-crimson-500 to-amber-400" />
             </div>
           </Reveal>
-
-          {/* Refine row — Area/Price/Rating moved down here from the header's
-              search bar (now a plain free-text query, see PrimarySearchBar),
-              so this real filtering isn't lost, just relocated closer to the
-              results it narrows. */}
-          <div className="mb-8 flex flex-wrap items-center justify-center gap-2">
-            <FilterDropdown
-              label="Area"
-              value={params.areaId}
-              options={[{ value: undefined, label: "All areas" }, ...areas.map((a) => ({ value: a.id, label: a.name }))]}
-              onChange={(v) => setParams({ ...params, areaId: v, page: 0 })}
-            />
-            <FilterDropdown
-              label="Price"
-              value={params.priceTier}
-              options={PRICE_OPTIONS}
-              onChange={(v) => setParams({ ...params, priceTier: v, page: 0 })}
-            />
-            <FilterDropdown
-              label="Rating"
-              value={params.minRating}
-              options={RATING_OPTIONS}
-              onChange={(v) => setParams({ ...params, minRating: v, page: 0 })}
-            />
-          </div>
 
           {loading && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

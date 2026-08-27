@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { referenceApi } from "@/lib/api";
+import { useAuthModal } from "@/lib/auth-modal-context";
 import { useLanguage } from "@/lib/language-context";
 import { cn } from "@/lib/utils";
 import type { Category, City } from "@/lib/types";
@@ -12,6 +13,7 @@ export function SiteFooter() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [cities, setCities] = useState<City[]>([]);
   const { lang, setLanguage } = useLanguage();
+  const { openLogin } = useAuthModal();
 
   useEffect(() => {
     referenceApi.categories().then(setCategories).catch(() => {});
@@ -54,9 +56,13 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
-              <Link href="/login" className="text-ink-500 hover:text-crimson-700">
+              <button
+                type="button"
+                onClick={openLogin}
+                className="text-ink-500 hover:text-crimson-700"
+              >
                 Business owner login
-              </Link>
+              </button>
             </li>
           </ul>
         </div>

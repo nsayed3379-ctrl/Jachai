@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   businessApi,
+  catalogApi,
   galleryApi,
   referenceApi,
   uploadFileToPresignedUrl,
@@ -15,6 +16,7 @@ import type {
   BusinessAttribute,
   BusinessResponse,
   Category,
+  CategoryKind,
   City,
   CreateBusinessRequest,
   PriceTier,
@@ -23,6 +25,11 @@ import { modulesForKind } from "@/lib/category-modules";
 import { Button } from "./ui/button";
 import { BusinessGalleryManager } from "./business-gallery-manager";
 import { CategoryModulesManager } from "./category-modules/category-modules-manager";
+import {
+  CategoryModulesDraft,
+  emptyCatalogDraft,
+  type CatalogDraft,
+} from "./category-modules/category-modules-draft";
 import { GoogleLocationPicker } from "./google-location-picker";
 import { OperatingHoursPicker } from "./operating-hours-picker";
 import { FieldHint, Input, Label, Select, Textarea } from "./ui/field";
@@ -98,6 +105,14 @@ export function BusinessForm({ existing, initialValues }: Props) {
 
   const [form, setForm] =
     useState<CreateBusinessRequest>(() => (initialValues ? { ...emptyForm, ...initialValues } : emptyForm));
+
+  /*
+   * Create-mode only: category-detail rows (menu / services / staff / …) are
+   * buffered here because there's no business id to POST them against yet.
+   * They're flushed to the catalog API right after the business is created.
+   * In edit mode the live <CategoryModulesManager /> is used instead.
+   */
+  const [catalog, setCatalog] = useState<CatalogDraft>(emptyCatalogDraft);
 
   const [submitting, setSubmitting] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
@@ -539,6 +554,66 @@ export function BusinessForm({ existing, initialValues }: Props) {
   /*
    * Submit business
    */
+  /*
+   * Push the buffered category-detail rows to the catalog API for a freshly
+   * created business. Sequential on purpose: the server assigns sort_order
+   * from the current row count, so this keeps the owner's ordering.
+   */
+  async function flushCatalog(businessId: string, kind: CategoryKind, draft: CatalogDraft) {
+    const active = new Set(modulesForKind(kind).map((m) => m.key));
+    const text = (v: string) => (v.trim() ? v.trim() : null);
+
+    if (active.has("services")) {
+      for (const r of draft.services) {
+        await catalogApi.addService(businessId, {
+          name: r.name.trim(),
+          description: text(r.description),
+          priceText: text(r.priceText),
+          section: "OFFERING",
+        });
+      }
+    }
+    if (active.has("facilities")) {
+      for (const r of draft.facilities) {
+        await catalogApi.addService(businessId, {
+          name: r.name.trim(),
+          description: text(r.description),
+          priceText: null,
+          section: "FACILITY",
+        });
+      }
+    }
+    if (active.has("team")) {
+      for (const r of draft.team) {
+        await catalogApi.addTeamMember(businessId, {
+          name: r.name.trim(),
+          role: text(r.role),
+          bio: text(r.bio),
+        });
+      }
+    }
+    if (active.has("menu")) {
+      for (const r of draft.menu) {
+        await catalogApi.addMenuItem(businessId, {
+          name: r.name.trim(),
+          description: text(r.description),
+          priceText: text(r.priceText),
+          menuSection: text(r.menuSection),
+          popular: r.popular,
+        });
+      }
+    }
+    if (active.has("products")) {
+      for (const r of draft.products) {
+        await catalogApi.addProduct(businessId, {
+          name: r.name.trim(),
+          description: text(r.description),
+          priceText: text(r.priceText),
+        });
+      }
+    }
+  }
+
   async function submit() {
     setError(null);
 
@@ -624,6 +699,22 @@ export function BusinessForm({ existing, initialValues }: Props) {
         }
       } else {
         show("Listing created", "success");
+      }
+
+      /*
+       * Flush any category-detail rows entered in step 5. The listing already
+       * exists, so a failure here is non-fatal — just point the owner at Edit.
+       */
+      const selectedCategory = categories.find((c) => c.id === form.categoryId);
+      if (selectedCategory) {
+        try {
+          await flushCatalog(created.id, selectedCategory.kind, catalog);
+        } catch {
+          show(
+            "Listing created, but some category details didn't save. Add them from Edit.",
+            "error"
+          );
+        }
       }
 
       router.push(`/owner/${created.id}`);
@@ -1171,10 +1262,17 @@ export function BusinessForm({ existing, initialValues }: Props) {
               ) : existing ? (
                 <CategoryModulesManager businessId={existing.id} kind={selectedCategory.kind} />
               ) : (
-                <FieldHint>
-                  Save your listing first — you can then add {moduleLabels.join(", ")} from your dashboard
-                  or by editing this listing.
-                </FieldHint>
+                <>
+                  <CategoryModulesDraft
+                    kind={selectedCategory.kind}
+                    value={catalog}
+                    onChange={setCatalog}
+                  />
+                  <FieldHint>
+                    These save when you create the listing. Photos for each item can be added
+                    afterwards from your dashboard.
+                  </FieldHint>
+                </>
               )}
             </SectionCard>
           );

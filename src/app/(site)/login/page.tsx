@@ -1,25 +1,24 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { LoginForm } from "@/components/auth/login-form";
+import { useAuthModal } from "@/lib/auth-modal-context";
+import { PageSpinner } from "@/components/ui/misc";
 
-export default function LoginPage() {
+/**
+ * The standalone /login page is gone — logging in now happens in the global
+ * auth modal (components/auth/auth-modal.tsx). This route only lives on as a
+ * redirect so old links and bookmarks land somewhere sensible: it bounces to
+ * the home page and pops the login modal open.
+ */
+export default function LoginRedirect() {
   const router = useRouter();
+  const { openLogin } = useAuthModal();
 
-  return (
-    <div className="max-w-sm mx-auto">
-      <h1 className="font-display text-2xl font-bold text-ink-900 text-center">Log in</h1>
-      <p className="mt-1.5 text-sm text-ink-500 text-center">
-        Enter your mobile number and password to continue.
-      </p>
+  useEffect(() => {
+    openLogin();
+    router.replace("/");
+  }, [router, openLogin]);
 
-      <div className="mt-6">
-        <LoginForm
-          onSuccess={() => router.push("/")}
-          onSwitchToSignup={() => router.push("/signup")}
-          onSwitchToForgotPassword={() => router.push("/forgot-password")}
-        />
-      </div>
-    </div>
-  );
+  return <PageSpinner />;
 }
