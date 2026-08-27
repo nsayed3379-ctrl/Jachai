@@ -25,22 +25,36 @@ const HERO_ROTATE_INTERVAL_MS = 5000;
 
 function SkeletonCard() {
   return (
-    <div className="rounded-xl border border-ink-100/70 bg-surface shadow-card overflow-hidden">
-      <div className="p-4 pb-3 flex items-center gap-2.5">
-        <div className="skeleton animate-shimmer h-10 w-10 shrink-0 rounded-full" />
-        <div className="min-w-0 flex-1 space-y-2">
+    <div className="overflow-hidden rounded-xl border border-ink-100/70 bg-surface shadow-card">
+      {/* Mobile: horizontal list row */}
+      <div className="flex gap-3 p-3 sm:hidden">
+        <div className="skeleton animate-shimmer h-24 w-24 flex-none rounded-lg" />
+        <div className="min-w-0 flex-1 space-y-2 py-1">
           <div className="skeleton animate-shimmer h-3.5 w-3/4 rounded" />
-          <div className="skeleton animate-shimmer h-2.5 w-1/2 rounded" />
+          <div className="skeleton animate-shimmer h-3 w-1/2 rounded" />
+          <div className="skeleton animate-shimmer h-2.5 w-2/3 rounded" />
+          <div className="skeleton animate-shimmer h-2.5 w-full rounded" />
         </div>
       </div>
-      <div className="skeleton animate-shimmer h-44 w-full" />
-      <div className="p-4 space-y-2.5">
-        <div className="skeleton animate-shimmer h-3.5 w-1/3 rounded" />
-        <div className="skeleton animate-shimmer h-3 w-2/3 rounded" />
-        <div className="pt-3 mt-1 border-t border-ink-100 flex gap-2">
-          <div className="skeleton animate-shimmer h-6 w-14 rounded-full" />
-          <div className="skeleton animate-shimmer h-6 w-14 rounded-full" />
-          <div className="skeleton animate-shimmer h-6 w-14 rounded-full" />
+
+      {/* Desktop: photo tile */}
+      <div className="hidden sm:block">
+        <div className="p-4 pb-3 flex items-center gap-2.5">
+          <div className="skeleton animate-shimmer h-10 w-10 shrink-0 rounded-full" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="skeleton animate-shimmer h-3.5 w-3/4 rounded" />
+            <div className="skeleton animate-shimmer h-2.5 w-1/2 rounded" />
+          </div>
+        </div>
+        <div className="skeleton animate-shimmer h-44 w-full" />
+        <div className="p-4 space-y-2.5">
+          <div className="skeleton animate-shimmer h-3.5 w-1/3 rounded" />
+          <div className="skeleton animate-shimmer h-3 w-2/3 rounded" />
+          <div className="pt-3 mt-1 border-t border-ink-100 flex gap-2">
+            <div className="skeleton animate-shimmer h-6 w-14 rounded-full" />
+            <div className="skeleton animate-shimmer h-6 w-14 rounded-full" />
+            <div className="skeleton animate-shimmer h-6 w-14 rounded-full" />
+          </div>
         </div>
       </div>
     </div>
@@ -276,7 +290,7 @@ export default function HomePage() {
           </Reveal>
 
           {loading && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
               {Array.from({ length: 8 }).map((_, i) => (
                 <SkeletonCard key={i} />
               ))}
@@ -309,7 +323,7 @@ export default function HomePage() {
                   description="Try widening your area, dropping the minimum rating, or clearing a filter."
                 />
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
                   {results.map((b, i) => (
                     <Reveal key={b.id} delay={Math.min(i, 8) * 60}>
                       <BusinessCard business={b} userLocation={cardLocation ?? undefined} />
