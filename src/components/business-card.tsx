@@ -3,17 +3,16 @@
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ApiClientError, businessApi, summaryApi } from "@/lib/api";
+import { businessApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthModal } from "@/lib/auth-modal-context";
 import { PRICE_TIER_LABELS } from "@/lib/config";
 import { errorMessage, useToast } from "@/lib/toast-context";
-import type { BusinessReactionType, BusinessResponse, BusinessReviewSummary } from "@/lib/types";
+import type { BusinessReactionType, BusinessResponse } from "@/lib/types";
 import { cn, distanceKm, formatDistance } from "@/lib/utils";
 import { BookmarkButton } from "./bookmark-button";
 import { ShareButton } from "./share-button";
 import { Card } from "./ui/misc";
-import { Modal } from "./ui/modal";
 
 const PHOTO_ROTATE_INTERVAL_MS = 4000;
 
@@ -85,26 +84,6 @@ function ChevronDownIcon({ up }: { up?: boolean }) {
   return (
     <svg viewBox="0 0 20 20" className={cn("h-3 w-3 transition-transform duration-150", up && "rotate-180")} fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M5 7.5 10 12.5 15 7.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-/** AI "sparkle" glyph — marks the Review Summary trigger as an AI action,
- * distinct from the plain reaction/share icons around it. */
-function SparkleIcon() {
-  return (
-    <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="currentColor">
-      <path d="M10 1.5 11.6 7 17 8.6 11.6 10.2 10 15.7 8.4 10.2 3 8.6 8.4 7 10 1.5Z" />
-      <path d="M16.3 12.2l.55 1.85 1.85.55-1.85.55-.55 1.85-.55-1.85-1.85-.55 1.85-.55.55-1.85Z" />
-    </svg>
-  );
-}
-
-function SpinnerIcon() {
-  return (
-    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
     </svg>
   );
 }
@@ -197,16 +176,10 @@ function WowBadge({ active }: { active: boolean }) {
   );
 }
 
-type ReactionConfigEntry = {
-  label: string;
-  activeColor: string;
-  render: (active: boolean) => ReactNode;
-};
-
-// Written as a mapped type instead of Record<...> — a multi-line Record<>
-// generic here has twice lost its opening angle bracket in copy/paste, so
-// this form avoids angle-bracket syntax entirely.
-const REACTION_CONFIG: { [K in BusinessReactionType]: ReactionConfigEntry } = {
+const REACTION_CONFIG: Record<
+  BusinessReactionType,
+  { label: string; activeColor: string; render: (active: boolean) => ReactNode }
+> = {
   LIKE: {
     label: "Like",
     activeColor: "text-sky-600",
@@ -248,28 +221,12 @@ const REACTION_CONFIG: { [K in BusinessReactionType]: ReactionConfigEntry } = {
 
 const REACTION_TYPES: BusinessReactionType[] = ["LIKE", "DISLIKE", "LOVE", "WOW"];
 
-/** Card description — an AI-generated summary of this business's reviews
- * when one exists, falling back to the owner-written description. Shows the
- * owner text immediately (no fetch wait) and swaps in the review summary if
- * it loads, so the card never sits empty while the network round-trips. */
+/** Card description — the owner-written blurb, clamped to two lines with a
+ * See more / See less toggle. */
 function CardDescription({ business }: { business: BusinessResponse }) {
-  const [summaryText, setSummaryText] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    summaryApi
-      .get(business.id)
-      .then((s) => {
-        if (!cancelled) setSummaryText(s.summaryText);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [business.id]);
-
-  const text = summaryText ?? business.description;
+  const text = business.description;
   if (!text) return null;
 
   return (
@@ -288,95 +245,6 @@ function CardDescription({ business }: { business: BusinessResponse }) {
         <ChevronDownIcon up={expanded} />
       </button>
     </div>
-  );
-}
-
-/** Review Summary popup — reads through this business's reviews (fresh, via
- * the ML pipeline) and shows the result in a modal. Separate from
- * CardDescription above: that one just displays whatever summary is already
- * cached; this one actively asks for a new one and waits for it. */
-function ReviewSummaryModal({
-  businessId,
-  businessName,
-  open,
-  onClose,
-}: {
-  businessId: string;
-  businessName: string;
-  open: boolean;
-  onClose: () => void;
-}) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<BusinessReviewSummary | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    setResult(null);
-
-    (async () => {
-      try {
-        // Kicks off a fresh pass over every review for this business, then
-        // reads back the summary the backend just persisted from it.
-        await summaryApi.regenerate(businessId);
-        const fresh = await summaryApi.get(businessId);
-        if (!cancelled) setResult(fresh);
-      } catch (err) {
-        if (cancelled) return;
-        // 400/404 here almost always means "nothing to summarize yet" (this
-        // business has no reviews) — not a real failure, so skip the scary
-        // red error and let the "not enough reviews" copy render instead.
-        const noReviewsYet = err instanceof ApiClientError && (err.status === 400 || err.status === 404);
-        if (!noReviewsYet) {
-          setError(errorMessage(err));
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open, businessId]);
-
-  return (
-    <Modal open={open} onClose={onClose} labelledBy="review-summary-heading" panelClassName="max-w-md">
-      <div className="p-6">
-        <h2 id="review-summary-heading" className="font-display text-lg font-bold text-ink-900">
-          Review summary
-        </h2>
-        <p className="mt-0.5 text-sm text-ink-400 truncate">{businessName}</p>
-
-        <div className="mt-4 min-h-[96px]">
-          {loading && (
-            <div className="flex flex-col items-center justify-center gap-2 py-8 text-sm text-ink-500">
-              <SpinnerIcon />
-              Reading through the reviews…
-            </div>
-          )}
-
-          {!loading && error && <p className="text-sm text-rose-600">{error}</p>}
-
-          {!loading && !error && result && (
-            <>
-              <p className="text-sm text-ink-700 leading-relaxed whitespace-pre-line">{result.summaryText}</p>
-              <p className="mt-3 text-xs text-ink-400">
-                Based on {result.reviewCountAtGeneration}{" "}
-                {result.reviewCountAtGeneration === 1 ? "review" : "reviews"}
-              </p>
-            </>
-          )}
-
-          {!loading && !error && !result && (
-            <p className="text-sm text-ink-500">Not enough reviews yet to generate a summary.</p>
-          )}
-        </div>
-      </div>
-    </Modal>
   );
 }
 
@@ -400,7 +268,6 @@ export function BusinessCard({
   });
   const [reacted, setReacted] = useState<Set<BusinessReactionType>>(new Set());
   const [reacting, setReacting] = useState<BusinessReactionType | null>(null);
-  const [summaryModalOpen, setSummaryModalOpen] = useState(false);
   const photoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const distance = userLocation
     ? distanceKm(userLocation, { lat: business.latitude, lng: business.longitude })
@@ -471,162 +338,135 @@ export function BusinessCard({
     }
   }
 
-  function openReviewSummary(e: MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    setSummaryModalOpen(true);
-  }
-
   return (
-    <>
-      <Card className="h-full flex flex-col rounded-xl border border-ink-100 bg-white transition-shadow duration-200 hover:shadow-lift">
-        <Link href={`/business/${business.slug}`} className="flex flex-col grow">
-          {/* Photo: rounded top corners, badges overlaid — category + verified
-              top-left, bookmark top-right, price tier bottom-right. */}
-          <div className="relative h-48 w-full shrink-0 overflow-hidden rounded-t-xl bg-ink-100">
-            {hasPhoto ? (
-              photos.map((url, i) => (
-                <div
-                  key={url}
-                  className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
-                    i === photoIndex && !failedIndices.has(i) ? "opacity-100" : "opacity-0"
-                  }`}
-                >
-                  <Image
-                    src={url}
-                    alt={business.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 320px"
-                    onError={() => setFailedIndices((prev) => new Set(prev).add(i))}
-                  />
-                </div>
-              ))
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-ink-900 to-ink-800 text-ink-400">
-                <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <rect x="3" y="5" width="18" height="14" rx="2" />
-                  <circle cx="9" cy="11" r="2" />
-                  <path d="m21 15-4.5-4.5a2 2 0 0 0-2.8 0L5 19" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <span className="font-display text-xs text-ink-300">{business.categoryName}</span>
-              </div>
-            )}
-
-            <div className="absolute left-3 top-3 flex flex-wrap items-center gap-1.5 pr-12">
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-ink-800 shadow-sm">
-                <CategoryIcon />
-                {business.categoryName}
-              </span>
-              {business.verified && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-brand-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
-                  <VerifiedSealIcon />
-                  Verified
-                </span>
-              )}
-            </div>
-
-            <div className="absolute right-3 top-3">
-              <BookmarkButton businessId={business.id} />
-            </div>
-
-            <span className="absolute bottom-3 right-3 rounded-full bg-sand-200 px-2.5 py-1 text-[11px] font-semibold text-ink-800 shadow-sm">
-              {PRICE_TIER_LABELS[business.priceTier]}
-            </span>
-          </div>
-
-          <div className="p-4 pb-0">
-            {business.flagged && (
-              <span
-                className="mb-2 inline-flex w-fit items-center gap-1 rounded-full bg-rose-50 border border-rose-200 px-2.5 py-1 text-[11px] font-semibold text-rose-600"
-                title={business.flagReason ?? undefined}
+    <Card className="h-full flex flex-col rounded-xl border border-ink-100 bg-white transition-shadow duration-200 hover:shadow-lift">
+      <Link href={`/business/${business.slug}`} className="flex flex-col grow">
+        {/* Photo: rounded top corners, badges overlaid — category + verified
+            top-left, bookmark top-right, price tier bottom-right. */}
+        <div className="relative h-48 w-full shrink-0 overflow-hidden rounded-t-xl bg-ink-100">
+          {hasPhoto ? (
+            photos.map((url, i) => (
+              <div
+                key={url}
+                className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
+                  i === photoIndex && !failedIndices.has(i) ? "opacity-100" : "opacity-0"
+                }`}
               >
-                <svg viewBox="0 0 24 24" className="h-3 w-3" fill="currentColor">
-                  <path d="M5 3a1 1 0 0 1 1 1v16a1 1 0 1 1-2 0V4a1 1 0 0 1 1-1Zm2 1h11.5a.5.5 0 0 1 .4.8L16 9l2.9 4.2a.5.5 0 0 1-.4.8H7V4Z" />
-                </svg>
-                Flagged
+                <Image
+                  src={url}
+                  alt={business.name}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 320px"
+                  onError={() => setFailedIndices((prev) => new Set(prev).add(i))}
+                />
+              </div>
+            ))
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-ink-900 to-ink-800 text-ink-400">
+              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <circle cx="9" cy="11" r="2" />
+                <path d="m21 15-4.5-4.5a2 2 0 0 0-2.8 0L5 19" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span className="font-display text-xs text-ink-300">{business.categoryName}</span>
+            </div>
+          )}
+
+          <div className="absolute left-3 top-3 flex flex-wrap items-center gap-1.5 pr-12">
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-ink-800 shadow-sm">
+              <CategoryIcon />
+              {business.categoryName}
+            </span>
+            {business.verified && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-brand-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
+                <VerifiedSealIcon />
+                Verified
               </span>
             )}
-
-            <h3 className="font-display font-bold text-ink-900 text-lg leading-snug">{business.name}</h3>
-
-            <div className="mt-2 flex items-center gap-2">
-              <SquareStarRating rating={business.averageRating} />
-              <span className="text-base font-bold text-ink-900">{business.averageRating.toFixed(1)}</span>
-              <span className="text-sm text-ink-400">
-                ({business.reviewCount} {business.reviewCount === 1 ? "rating" : "ratings"})
-              </span>
-            </div>
-
-            <CardDescription business={business} />
-          </div>
-        </Link>
-
-        {/* Footer: outside the card's Link so Share's WhatsApp/Facebook <a>
-            tags — and now the Review Summary button — never nest inside the
-            card's own anchor. */}
-        <div className="px-4 pb-4">
-          <div className="mt-2 pt-2 border-t border-ink-100 grid grid-cols-5">
-            {REACTION_TYPES.map((type) => {
-              const { label, activeColor, render } = REACTION_CONFIG[type];
-              const isActive = reacted.has(type);
-              return (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={(e) => react(e, type)}
-                  disabled={reacting !== null}
-                  aria-label={label}
-                  title={label}
-                  className={cn(
-                    "flex flex-col items-center justify-center gap-0.5 py-0.5 text-xs font-medium transition-colors duration-150 disabled:cursor-default",
-                    isActive ? activeColor : "text-ink-400"
-                  )}
-                >
-                  {render(isActive)}
-                  <span>{counts[type]}</span>
-                </button>
-              );
-            })}
-            <ShareButton name={business.name} slug={business.slug} />
           </div>
 
-          {/* Review Summary: triggers a fresh ML pass over every review for
-              this business and shows the result in a popup. */}
-          <button
-            type="button"
-            onClick={openReviewSummary}
-            className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-4 py-2 text-xs font-semibold text-brand-700 transition-colors hover:bg-brand-100"
-          >
-            <SparkleIcon />
-            Review summary
-          </button>
-
-          <div className="mt-3 flex items-center justify-between gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-gold-50 px-3 py-1.5 text-xs font-medium text-gold-700 truncate">
-              <PinIcon />
-              <span className="truncate">
-                {business.areaName}, {business.cityName}
-                {distance !== null && <> · {formatDistance(distance)}</>}
-              </span>
-            </span>
-            <Link
-              href={`/business/${business.slug}`}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-ink-900 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-ink-800"
-            >
-              View details
-              <ArrowUpRightIcon />
-            </Link>
+          <div className="absolute right-3 top-3">
+            <BookmarkButton businessId={business.id} iconOnly />
           </div>
+
+          <span className="absolute bottom-3 right-3 rounded-full bg-sand-200 px-2.5 py-1 text-[11px] font-semibold text-ink-800 shadow-sm">
+            {PRICE_TIER_LABELS[business.priceTier]}
+          </span>
         </div>
-      </Card>
 
-      <ReviewSummaryModal
-        businessId={business.id}
-        businessName={business.name}
-        open={summaryModalOpen}
-        onClose={() => setSummaryModalOpen(false)}
-      />
-    </>
+        <div className="p-4 pb-0">
+          {business.flagged && (
+            <span
+              className="mb-2 inline-flex w-fit items-center gap-1 rounded-full bg-rose-50 border border-rose-200 px-2.5 py-1 text-[11px] font-semibold text-rose-600"
+              title={business.flagReason ?? undefined}
+            >
+              <svg viewBox="0 0 24 24" className="h-3 w-3" fill="currentColor">
+                <path d="M5 3a1 1 0 0 1 1 1v16a1 1 0 1 1-2 0V4a1 1 0 0 1 1-1Zm2 1h11.5a.5.5 0 0 1 .4.8L16 9l2.9 4.2a.5.5 0 0 1-.4.8H7V4Z" />
+              </svg>
+              Flagged
+            </span>
+          )}
+
+          <h3 className="font-display font-bold text-ink-900 text-lg leading-snug">{business.name}</h3>
+
+          <div className="mt-2 flex items-center gap-2">
+            <SquareStarRating rating={business.averageRating} />
+            <span className="text-base font-bold text-ink-900">{business.averageRating.toFixed(1)}</span>
+            <span className="text-sm text-ink-400">
+              ({business.reviewCount} {business.reviewCount === 1 ? "rating" : "ratings"})
+            </span>
+          </div>
+
+          <CardDescription business={business} />
+        </div>
+      </Link>
+
+      {/* Footer: outside the card's Link so Share's WhatsApp/Facebook <a>
+          tags never nest inside the card's own anchor. */}
+      <div className="px-4 pb-4">
+        <div className="mt-2 pt-2 border-t border-ink-100 grid grid-cols-5">
+          {REACTION_TYPES.map((type) => {
+            const { label, activeColor, render } = REACTION_CONFIG[type];
+            const isActive = reacted.has(type);
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={(e) => react(e, type)}
+                disabled={reacting !== null}
+                aria-label={label}
+                title={label}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-0.5 py-0.5 text-xs font-medium transition-colors duration-150 disabled:cursor-default",
+                  isActive ? activeColor : "text-ink-400"
+                )}
+              >
+                {render(isActive)}
+                <span>{counts[type]}</span>
+              </button>
+            );
+          })}
+          <ShareButton name={business.name} slug={business.slug} iconOnly />
+        </div>
+
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <span className="inline-flex items-center gap-1 rounded-full bg-gold-50 px-3 py-1.5 text-xs font-medium text-gold-700 truncate">
+            <PinIcon />
+            <span className="truncate">
+              {business.areaName}, {business.cityName}
+              {distance !== null && <> · {formatDistance(distance)}</>}
+            </span>
+          </span>
+          <Link
+            href={`/business/${business.slug}`}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-ink-900 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-ink-800"
+          >
+            View details
+            <ArrowUpRightIcon />
+          </Link>
+        </div>
+      </div>
+    </Card>
   );
 }

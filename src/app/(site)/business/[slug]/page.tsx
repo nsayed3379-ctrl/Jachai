@@ -33,7 +33,6 @@ import { PhotoGalleryModal } from "@/components/photo-gallery-modal";
 import { GalleryImage } from "@/components/gallery-image";
 import { ReviewCard } from "@/components/review-card";
 import { ReviewForm } from "@/components/review-form";
-import { AiSummaryCard } from "@/components/ai-summary-card";
 import { RatingBreakdownChart } from "@/components/rating-breakdown-chart";
 import { EmptyState, ErrorBanner, PageSpinner, Pagination } from "@/components/ui/misc";
 import { Button } from "@/components/ui/button";
@@ -408,10 +407,6 @@ export default function BusinessDetailPage() {
 
           {/* Reviews — the default section; stays visible on first load (spec) */}
           <section role="tabpanel" aria-label="Reviews" hidden={activeTab !== "reviews"}>
-            <div className="mb-4">
-              <AiSummaryCard businessId={business.id} />
-            </div>
-
             <div id="reviews" className="scroll-mt-24">
             <div className="flex items-center justify-between gap-3">
               <h2 className="font-display text-xl font-bold text-ink-900">Recommended Reviews</h2>

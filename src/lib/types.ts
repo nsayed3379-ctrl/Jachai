@@ -386,18 +386,6 @@ export interface UpdateReviewRequest {
 }
 
 // ---------------------------------------------------------------------------
-// Summary
-// ---------------------------------------------------------------------------
-export interface BusinessReviewSummary {
-  id: string;
-  businessId: string;
-  summaryText: string;
-  reviewCountAtGeneration: number;
-  generatedAt: string;
-  version: number;
-}
-
-// ---------------------------------------------------------------------------
 // Business claim
 // ---------------------------------------------------------------------------
 export type ClaimStatus = "PENDING" | "APPROVED" | "REJECTED";

@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { completenessApi, galleryApi, summaryApi } from "@/lib/api";
-import { errorMessage, useToast } from "@/lib/toast-context";
+import { completenessApi, galleryApi } from "@/lib/api";
+import { errorMessage } from "@/lib/toast-context";
 import type { BusinessResponse, CompletenessResponse } from "@/lib/types";
 import { ProfileCompletenessCard } from "@/components/profile-completeness-card";
 import { BusinessPerformance } from "@/components/business-performance";
-import { Button } from "@/components/ui/button";
 import { ErrorBanner } from "@/components/ui/misc";
 
 function MetricCard({ label, value }: { label: string; value: string | number }) {
@@ -28,11 +27,9 @@ const MODULE_ITEM_KEYS = ["menu", "services", "team", "products", "facilities"];
  */
 export function OwnerOverviewPanel({ business }: { business: BusinessResponse }) {
   const router = useRouter();
-  const { show } = useToast();
   const [completeness, setCompleteness] = useState<CompletenessResponse | null>(null);
   const [galleryCount, setGalleryCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [regenerating, setRegenerating] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,26 +52,9 @@ export function OwnerOverviewPanel({ business }: { business: BusinessResponse })
     else router.push(`/owner/${business.id}/edit`); // description, hours, cover, logo, presence
   }
 
-  async function regenerateSummary() {
-    setRegenerating(true);
-    try {
-      await summaryApi.regenerate(business.id);
-      show("Regeneration requested — refresh the public page shortly.", "success");
-    } catch (err) {
-      show(errorMessage(err), "error");
-    } finally {
-      setRegenerating(false);
-    }
-  }
-
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="font-display text-lg font-semibold text-ink-900">Overview</h2>
-        <Button size="sm" variant="outline" onClick={regenerateSummary} loading={regenerating}>
-          Regenerate AI summary
-        </Button>
-      </div>
+      <h2 className="font-display text-lg font-semibold text-ink-900">Overview</h2>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <MetricCard label="Average rating" value={business.averageRating.toFixed(1)} />

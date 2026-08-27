@@ -14,7 +14,6 @@ import type {
   BusinessPhoto,
   BusinessReactionType,
   BusinessResponse,
-  BusinessReviewSummary,
   BusinessSearchParams,
   AnalyticsRange,
   AnalyticsResponse,
@@ -332,17 +331,6 @@ export const reviewApi = {
 
   recent: (page = 0, size = 9) =>
     request<PageResponse<RecentActivityItem>>("/api/v1/reviews/recent", { auth: false, query: { page, size } }),
-};
-
-// ---------------------------------------------------------------------------
-// AI Summary
-// ---------------------------------------------------------------------------
-export const summaryApi = {
-  get: (businessId: string) =>
-    request<BusinessReviewSummary>(`/api/v1/businesses/${businessId}/summary`, { auth: false }),
-
-  regenerate: (businessId: string) =>
-    request<void>(`/api/v1/businesses/${businessId}/summary/regenerate`, { method: "POST" }),
 };
 
 // ---------------------------------------------------------------------------
