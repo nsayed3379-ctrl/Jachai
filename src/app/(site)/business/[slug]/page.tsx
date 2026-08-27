@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { businessApi, messageApi, referenceApi, reviewApi } from "@/lib/api";
+import { businessApi, referenceApi, reviewApi } from "@/lib/api";
 import { rememberBusiness } from "@/lib/business-cache";
 import { REPORT_REASON_LABELS } from "@/lib/config";
 import { useAuth } from "@/lib/auth-context";
@@ -20,7 +20,8 @@ import { BookmarkButton } from "@/components/bookmark-button";
 import { ClaimBusinessModal } from "@/components/claim-business-modal";
 import { CreateBusinessAccountModal } from "@/components/create-business-account-modal";
 import { ReportButton } from "@/components/report-button";
-import { BusinessCard } from "@/components/business-card";
+import { SimilarBusinessCard } from "@/components/similar-business-card";
+import { MessageOwnerCard } from "@/components/message-owner-card";
 import { BusinessHeroGallery } from "@/components/business-hero-gallery";
 import { BusinessTabs, type BusinessTab } from "@/components/business-tabs";
 import { BusinessAbout } from "@/components/business-about";
@@ -36,7 +37,6 @@ import { ReviewForm } from "@/components/review-form";
 import { RatingBreakdownChart } from "@/components/rating-breakdown-chart";
 import { EmptyState, ErrorBanner, PageSpinner, Pagination } from "@/components/ui/misc";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/field";
 
 export default function BusinessDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -59,8 +59,6 @@ export default function BusinessDetailPage() {
   const [editingReview, setEditingReview] = useState<ReviewResponse | null>(null);
   const [myReview, setMyReview] = useState<ReviewResponse | null>(null);
 
-  const [messageText, setMessageText] = useState("");
-  const [sendingMessage, setSendingMessage] = useState(false);
   const [claimModalOpen, setClaimModalOpen] = useState(false);
   const [createBizModalOpen, setCreateBizModalOpen] = useState(false);
   const [switchingForClaim, setSwitchingForClaim] = useState(false);
@@ -210,20 +208,6 @@ export default function BusinessDetailPage() {
       cancelled = true;
     };
   }, [business?.id, business?.categoryName]);
-
-  async function sendMessage() {
-    if (!business || !messageText.trim()) return;
-    setSendingMessage(true);
-    try {
-      await messageApi.send(business.id, messageText.trim());
-      setMessageText("");
-      show("Message sent to the owner", "success");
-    } catch (err) {
-      show(errorMessage(err), "error");
-    } finally {
-      setSendingMessage(false);
-    }
-  }
 
   function refreshBusiness() {
     if (!slug) return;
@@ -526,11 +510,11 @@ export default function BusinessDetailPage() {
 
           {similarBusinesses.length > 0 && (
             <div className="mt-8 border-t border-ink-100 pt-6">
-              <h2 className="font-display text-lg font-semibold text-ink-900 mb-3">Similar businesses nearby</h2>
-              <div className="flex gap-4 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <h2 className="mb-3 font-display text-lg font-semibold text-ink-900">Similar businesses nearby</h2>
+              <div className="-mx-1 flex snap-x gap-4 overflow-x-auto px-1 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {similarBusinesses.map((b) => (
-                  <div key={b.id} className="w-56 shrink-0">
-                    <BusinessCard business={b} userLocation={userLocation ?? undefined} />
+                  <div key={b.id} className="w-56 shrink-0 snap-start sm:w-60">
+                    <SimilarBusinessCard business={b} userLocation={userLocation ?? undefined} />
                   </div>
                 ))}
               </div>
@@ -633,22 +617,14 @@ export default function BusinessDetailPage() {
             </div>
           </div>
 
-          {user && (
-            <div className="rounded-xl border border-ink-100/70 bg-surface p-4 shadow-card">
-              <p className="text-xs font-semibold uppercase tracking-wide text-ink-400 mb-2">
-                Message the owner
-              </p>
-              <Textarea
-                placeholder="Ask about pricing, availability, or booking…"
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-                rows={3}
-              />
-              <Button className="mt-2 w-full" size="sm" onClick={sendMessage} loading={sendingMessage}>
-                Send message
-              </Button>
-            </div>
-          )}
+          <MessageOwnerCard
+            businessId={business.id}
+            businessName={business.name}
+            ownerLogoUrl={business.logoUrl}
+            isLoggedIn={!!user}
+            isOwnBusiness={user?.id === business.ownerUserId}
+            onLogin={openLogin}
+          />
         </div>
       </div>
 
