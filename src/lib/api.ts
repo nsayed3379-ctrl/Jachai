@@ -75,7 +75,14 @@ export class ApiClientError extends Error {
 
 let refreshInFlight: Promise<boolean> | null = null;
 
-async function tryRefresh(): Promise<boolean> {
+/**
+ * Exchanges the stored refresh token for a fresh access/refresh pair and
+ * persists it. Concurrent callers within this tab share one in-flight
+ * request. Returns false (and leaves storage untouched) if there's no
+ * refresh token or the server rejects it. Exported so the auth provider can
+ * refresh proactively (on load and on a timer), not only reactively on 401.
+ */
+export async function tryRefresh(): Promise<boolean> {
   const refreshToken = getStoredRefreshToken();
   if (!refreshToken) return false;
   if (!refreshInFlight) {

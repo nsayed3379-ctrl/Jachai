@@ -2,7 +2,8 @@
 // server render / build) since Next.js App Router renders these client
 // components on the server first.
 
-const ACCESS_TOKEN_KEY = "rp.accessToken";
+/** Exported so other tabs' `storage` events can be matched against it. */
+export const ACCESS_TOKEN_KEY = "rp.accessToken";
 const REFRESH_TOKEN_KEY = "rp.refreshToken";
 
 export function getStoredAccessToken(): string | null {
