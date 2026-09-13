@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { modulesForKind } from "@/lib/category-modules";
+import { canBook, canSellDirect } from "@/lib/commerce";
+import { useNewOrderCount } from "@/lib/use-new-order-count";
+import { useNewBookingCount } from "@/lib/use-new-booking-count";
 import { cn } from "@/lib/utils";
 import type { BusinessResponse } from "@/lib/types";
 
@@ -13,14 +16,37 @@ interface NavItem {
   /** exact-match route for active state; falls back to href */
   match?: string;
   external?: boolean;
+  badge?: number;
 }
 
-function useNavGroups(business: BusinessResponse): { title: string; items: NavItem[] }[] {
+function buildNavGroups(
+  business: BusinessResponse,
+  newOrderCount: number,
+  newBookingCount: number
+): { title: string; items: NavItem[] }[] {
   const base = `/owner/${business.id}`;
   const moduleItems: NavItem[] = modulesForKind(business.categoryKind).map((m) => ({
     label: m.ownerLabel,
     href: `${base}/sections/${m.key}`,
   }));
+
+  const sells = canSellDirect(business.categoryKind);
+  const books = canBook(business.categoryKind);
+  const commerceItems: NavItem[] = [
+    ...(sells
+      ? [
+          { label: "Orders", href: `${base}/orders`, badge: newOrderCount },
+          { label: "Order settings", href: `${base}/commerce` },
+        ]
+      : []),
+    ...(books
+      ? [
+          { label: "Bookings", href: `${base}/bookings`, badge: newBookingCount },
+          { label: "Staff schedules", href: `${base}/staff-schedule` },
+          { label: "Booking settings", href: `${base}/commerce` },
+        ]
+      : []),
+  ];
 
   return [
     {
@@ -38,6 +64,7 @@ function useNavGroups(business: BusinessResponse): { title: string; items: NavIt
         { label: "Business info", href: `${base}/edit` },
         { label: "Photos", href: `${base}/photos` },
         ...moduleItems,
+        ...commerceItems,
         { label: "Updates", href: `${base}/updates` },
       ],
     },
@@ -133,7 +160,9 @@ export function OwnerBusinessSidebar({
   allBusinesses: BusinessResponse[];
 }) {
   const pathname = usePathname();
-  const groups = useNavGroups(business);
+  const newOrderCount = useNewOrderCount(canSellDirect(business.categoryKind) ? business.id : null);
+  const newBookingCount = useNewBookingCount(canBook(business.categoryKind) ? business.id : null);
+  const groups = buildNavGroups(business, newOrderCount, newBookingCount);
 
   function isActive(item: NavItem) {
     if (item.external) return false;
@@ -164,6 +193,11 @@ export function OwnerBusinessSidebar({
               >
                 {item.label}
                 {item.external && <span aria-hidden className="ml-1 text-ink-300">↗</span>}
+                {!!item.badge && item.badge > 0 && (
+                  <span className="ml-1.5 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-crimson-600 px-1 text-[10px] font-bold text-white">
+                    {item.badge}
+                  </span>
+                )}
               </Link>
             ))}
           </div>

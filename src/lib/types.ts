@@ -139,6 +139,10 @@ export interface ServiceOffering {
   name: string;
   description: string | null;
   priceText: string | null;
+  /** Optional — powers slot generation for booking (minutes). */
+  durationMinutes: number | null;
+  /** Optional cleanup/travel time appended after the service (minutes). */
+  bufferMinutes: number | null;
   sortOrder: number;
   createdAt: string;
 }
@@ -150,8 +154,81 @@ export interface TeamMember {
   role: string | null;
   bio: string | null;
   photoUrl: string | null;
+  active: boolean;
   sortOrder: number;
   createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Staff scheduling (booking — Salon & Beauty)
+// ---------------------------------------------------------------------------
+export type DayOfWeek = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
+
+export const DAYS_OF_WEEK: DayOfWeek[] = [
+  "MONDAY",
+  "TUESDAY",
+  "WEDNESDAY",
+  "THURSDAY",
+  "FRIDAY",
+  "SATURDAY",
+  "SUNDAY",
+];
+
+/** "HH:mm" or "HH:mm:ss" (LocalTime). */
+export interface WeeklyScheduleEntry {
+  dayOfWeek: DayOfWeek;
+  startTime: string;
+  endTime: string;
+  breakStart: string | null;
+  breakEnd: string | null;
+}
+
+export interface TimeOff {
+  id: string;
+  teamMemberId: string;
+  startDate: string;
+  endDate: string;
+  reason: string | null;
+  createdAt: string;
+}
+
+export interface TimeOffBody {
+  startDate: string;
+  endDate: string;
+  reason?: string | null;
+}
+
+/** A service a staff member provides, with an optional per-staff duration/buffer override (null = use the service's own default). */
+export interface StaffServiceAssignment {
+  serviceId: string;
+  durationMinutes: number | null;
+  bufferMinutes: number | null;
+}
+
+export interface StaffScheduleResponse {
+  assignments: StaffServiceAssignment[];
+  weeklySchedule: WeeklyScheduleEntry[];
+  timeOff: TimeOff[];
+}
+
+export interface QueueStatus {
+  applicable: boolean;
+  position: number | null;
+  estimatedWaitMinutes: number | null;
+  currentlyServingService: string | null;
+}
+
+export interface AvailabilitySlot {
+  /** "HH:mm:ss" (LocalTime). */
+  time: string;
+  available: boolean;
+}
+
+export interface AvailabilityResponse {
+  date: string;
+  durationMinutes: number;
+  bufferMinutes: number;
+  slots: AvailabilitySlot[];
 }
 
 export interface MenuItem {
@@ -161,6 +238,10 @@ export interface MenuItem {
   name: string;
   description: string | null;
   priceText: string | null;
+  /** Commerce (Phase A): numeric price — required for the item to be orderable. */
+  price: number | null;
+  available: boolean;
+  orderingEnabled: boolean;
   photoUrl: string | null;
   popular: boolean;
   sortOrder: number;
@@ -183,12 +264,15 @@ export interface ServiceOfferingBody {
   description?: string | null;
   priceText?: string | null;
   section?: ServiceSection;
+  durationMinutes?: number | null;
+  bufferMinutes?: number | null;
 }
 export interface TeamMemberBody {
   name: string;
   role?: string | null;
   bio?: string | null;
   photoUrl?: string | null;
+  active?: boolean;
 }
 export interface MenuItemBody {
   name: string;
@@ -197,12 +281,237 @@ export interface MenuItemBody {
   photoUrl?: string | null;
   menuSection?: string | null;
   popular: boolean;
+  /** Commerce (Phase A): numeric price + availability / ordering toggles. */
+  price?: number | null;
+  available?: boolean | null;
+  orderingEnabled?: boolean | null;
 }
 export interface FeaturedProductBody {
   name: string;
   description?: string | null;
   priceText?: string | null;
   photoUrl?: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Commerce & Fulfillment — Phase A: restaurant direct ordering
+// ---------------------------------------------------------------------------
+export type CommerceMode = "SHOWCASE_ONLY" | "DIRECT_ORDER" | "BOOKING" | "SERVICE_REQUEST";
+export type FulfillmentType = "PICKUP" | "OWN_DELIVERY";
+export type PaymentMethod = "CASH_ON_DELIVERY" | "PAY_AT_BUSINESS";
+export type PaymentStatus = "UNPAID" | "PAID";
+export type OrderStatus =
+  | "PENDING"
+  | "ACCEPTED"
+  | "PREPARING"
+  | "READY_FOR_PICKUP"
+  | "OUT_FOR_DELIVERY"
+  | "PICKED_UP"
+  | "DELIVERED"
+  | "COMPLETED"
+  | "REJECTED"
+  | "CANCELLED";
+export type OrderItemSource = "MENU_ITEM" | "PRODUCT";
+
+/** Public-safe subset of a business's commerce config (GET /commerce). */
+export interface PublicCommerceView {
+  mode: CommerceMode;
+  orderingEnabled: boolean;
+  pickupEnabled: boolean;
+  ownDeliveryEnabled: boolean;
+  bookingEnabled: boolean;
+  acceptingOrders: boolean;
+  pauseReason: string | null;
+  paymentCashOnDelivery: boolean;
+  paymentPayAtBusiness: boolean;
+  hasDeliveryZones: boolean;
+}
+
+/** Full owner-facing commerce settings (GET /commerce/manage, PUT /commerce). */
+export interface CommerceSettings {
+  businessId: string;
+  mode: CommerceMode;
+  orderingEnabled: boolean;
+  pickupEnabled: boolean;
+  ownDeliveryEnabled: boolean;
+  bookingEnabled: boolean;
+  autoConfirmBookings: boolean;
+  acceptingOrders: boolean;
+  pauseReason: string | null;
+  defaultPrepMinutes: number | null;
+  paymentCashOnDelivery: boolean;
+  paymentPayAtBusiness: boolean;
+  hasDeliveryZones: boolean;
+}
+
+export interface CommerceSettingsBody {
+  mode: CommerceMode;
+  orderingEnabled: boolean;
+  pickupEnabled: boolean;
+  ownDeliveryEnabled: boolean;
+  paymentCashOnDelivery: boolean;
+  paymentPayAtBusiness: boolean;
+  defaultPrepMinutes?: number | null;
+}
+
+export interface BookingSettingsBody {
+  bookingEnabled: boolean;
+  autoConfirmBookings: boolean;
+}
+
+export interface DeliveryZone {
+  id: string;
+  businessId: string;
+  name: string;
+  minDistanceKm: number;
+  maxDistanceKm: number;
+  deliveryFee: number;
+  minimumOrderAmount: number;
+  estimatedDeliveryMinutes: number | null;
+  active: boolean;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface DeliveryZoneBody {
+  name: string;
+  minDistanceKm: number;
+  maxDistanceKm: number;
+  deliveryFee: number;
+  minimumOrderAmount?: number | null;
+  estimatedDeliveryMinutes?: number | null;
+  active?: boolean | null;
+}
+
+export interface DeliveryQuote {
+  deliverable: boolean;
+  distanceKm: number;
+  zoneId: string | null;
+  zoneName: string | null;
+  deliveryFee: number | null;
+  minimumOrderAmount: number | null;
+  estimatedDeliveryMinutes: number | null;
+  maxDeliveryKm: number | null;
+}
+
+/** One line of the client-side cart (localStorage). */
+export interface CartLine {
+  menuItemId: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
+export interface Cart {
+  businessId: string;
+  businessName: string;
+  businessSlug: string;
+  lines: CartLine[];
+}
+
+export interface PlaceOrderBody {
+  fulfillmentType: FulfillmentType;
+  paymentMethod: PaymentMethod;
+  customerName: string;
+  customerPhone: string;
+  deliveryAddress?: string | null;
+  deliveryLat?: number | null;
+  deliveryLng?: number | null;
+  customerNote?: string | null;
+  items: { menuItemId: string; quantity: number }[];
+}
+
+export interface OrderItem {
+  id: string;
+  sourceType: OrderItemSource;
+  sourceItemId: string | null;
+  itemName: string;
+  unitPrice: number;
+  quantity: number;
+  totalPrice: number;
+}
+
+export interface OrderStatusEvent {
+  fromStatus: OrderStatus | null;
+  toStatus: OrderStatus;
+  note: string | null;
+  at: string;
+}
+
+export interface Order {
+  id: string;
+  orderNumber: string;
+  businessId: string;
+  businessName: string;
+  businessSlug: string;
+  customerUserId: string;
+  status: OrderStatus;
+  fulfillmentType: FulfillmentType;
+  subtotal: number;
+  deliveryFee: number;
+  discountAmount: number;
+  totalAmount: number;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  customerName: string;
+  customerPhone: string;
+  deliveryAddress: string | null;
+  deliveryLatitude: number | null;
+  deliveryLongitude: number | null;
+  deliveryDistanceKm: number | null;
+  customerNote: string | null;
+  rejectionReason: string | null;
+  createdAt: string;
+  items: OrderItem[];
+  timeline: OrderStatusEvent[] | null;
+}
+
+// ---------------------------------------------------------------------------
+// Commerce & Fulfillment — Phase C: appointment booking (Salon & Beauty)
+// ---------------------------------------------------------------------------
+export type BookingStatus = "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED" | "REJECTED" | "NO_SHOW";
+
+export interface PlaceBookingBody {
+  serviceId: string;
+  staffId?: string | null;
+  /** "YYYY-MM-DD" */
+  preferredDate: string;
+  /** "HH:mm" (24h) */
+  preferredTime: string;
+  customerName: string;
+  customerPhone: string;
+  customerNote?: string | null;
+}
+
+export interface BookingStatusEvent {
+  fromStatus: BookingStatus | null;
+  toStatus: BookingStatus;
+  note: string | null;
+  at: string;
+}
+
+export interface Booking {
+  id: string;
+  bookingNumber: string;
+  businessId: string;
+  businessName: string;
+  businessSlug: string;
+  customerUserId: string;
+  status: BookingStatus;
+  serviceId: string | null;
+  serviceName: string;
+  staffId: string | null;
+  staffName: string | null;
+  preferredDate: string;
+  preferredTime: string;
+  customerName: string;
+  customerPhone: string;
+  customerNote: string | null;
+  rejectionReason: string | null;
+  createdAt: string;
+  timeline: BookingStatusEvent[] | null;
+  autoConfirmed: boolean;
+  startedAt: string | null;
 }
 
 // ---------------------------------------------------------------------------

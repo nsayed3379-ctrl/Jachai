@@ -8,6 +8,9 @@ import {
 import type {
   ApiError,
   AuditLog,
+  AvailabilityResponse,
+  Booking,
+  BookingStatus,
   Bookmark,
   BusinessAttribute,
   BusinessClaim,
@@ -23,18 +26,34 @@ import type {
   City,
   Area,
   Collection,
+  CommerceSettings,
+  CommerceSettingsBody,
   CompletenessResponse,
   ConfirmUploadRequestT,
   CreateBusinessRequest,
+  DeliveryQuote,
+  DeliveryZone,
+  DeliveryZoneBody,
   FeaturedProduct,
   FeaturedProductBody,
   MenuItem,
   MenuItemBody,
+  Order,
+  OrderStatus,
+  PlaceBookingBody,
+  PlaceOrderBody,
+  PublicCommerceView,
   ServiceOffering,
   ServiceOfferingBody,
   ServiceSection,
+  StaffScheduleResponse,
+  StaffServiceAssignment,
   TeamMember,
   TeamMemberBody,
+  TimeOff,
+  TimeOffBody,
+  QueueStatus,
+  WeeklyScheduleEntry,
   FakeReviewSignal,
   Message,
   MessageThread,
@@ -560,6 +579,26 @@ export const catalogApi = {
   reorderTeam: (businessId: string, orderedIds: string[]) =>
     request<TeamMember[]>(`/api/v1/businesses/${businessId}/team/reorder`, { method: "PATCH", body: { orderedIds } }),
 
+  // Staff scheduling (booking — Salon & Beauty).
+  staffForService: (businessId: string, serviceId: string) =>
+    request<TeamMember[]>(`/api/v1/businesses/${businessId}/services/${serviceId}/staff`, { auth: false }),
+  staffSchedule: (businessId: string, staffId: string) =>
+    request<StaffScheduleResponse>(`/api/v1/businesses/${businessId}/team/${staffId}/schedule`),
+  updateStaffSchedule: (businessId: string, staffId: string, days: WeeklyScheduleEntry[]) =>
+    request<WeeklyScheduleEntry[]>(`/api/v1/businesses/${businessId}/team/${staffId}/schedule`, {
+      method: "PUT",
+      body: { days },
+    }),
+  updateStaffServices: (businessId: string, staffId: string, assignments: StaffServiceAssignment[]) =>
+    request<StaffServiceAssignment[]>(`/api/v1/businesses/${businessId}/team/${staffId}/services`, {
+      method: "PUT",
+      body: { assignments },
+    }),
+  addStaffTimeOff: (businessId: string, staffId: string, body: TimeOffBody) =>
+    request<TimeOff>(`/api/v1/businesses/${businessId}/team/${staffId}/time-off`, { method: "POST", body }),
+  removeStaffTimeOff: (businessId: string, staffId: string, id: string) =>
+    request<void>(`/api/v1/businesses/${businessId}/team/${staffId}/time-off/${id}`, { method: "DELETE" }),
+
   // Menu — restaurant.
   menuItems: (businessId: string) =>
     request<MenuItem[]>(`/api/v1/businesses/${businessId}/menu-items`, { auth: false }),
@@ -583,6 +622,106 @@ export const catalogApi = {
     request<void>(`/api/v1/businesses/${businessId}/products/${id}`, { method: "DELETE" }),
   reorderProducts: (businessId: string, orderedIds: string[]) =>
     request<FeaturedProduct[]>(`/api/v1/businesses/${businessId}/products/reorder`, { method: "PATCH", body: { orderedIds } }),
+};
+
+// ---------------------------------------------------------------------------
+// Commerce & Fulfillment (Phase A) — commerce settings + delivery zones.
+// GET /commerce and GET /delivery-zones are public; writes + the checkout
+// quote require auth. The business fulfils orders itself — no rider fleet.
+// ---------------------------------------------------------------------------
+export const commerceApi = {
+  /** Public-safe commerce view — used by the menu tab + checkout. */
+  publicSettings: (businessId: string) =>
+    request<PublicCommerceView>(`/api/v1/businesses/${businessId}/commerce`, { auth: false }),
+  ownerSettings: (businessId: string) =>
+    request<CommerceSettings>(`/api/v1/businesses/${businessId}/commerce/manage`),
+  updateSettings: (businessId: string, body: CommerceSettingsBody) =>
+    request<CommerceSettings>(`/api/v1/businesses/${businessId}/commerce`, { method: "PUT", body }),
+  setAccepting: (businessId: string, accepting: boolean, reason?: string) =>
+    request<CommerceSettings>(`/api/v1/businesses/${businessId}/commerce/accepting`, {
+      method: "PUT",
+      body: { accepting, reason: reason ?? null },
+    }),
+
+  zones: (businessId: string) =>
+    request<DeliveryZone[]>(`/api/v1/businesses/${businessId}/delivery-zones`, { auth: false }),
+  addZone: (businessId: string, body: DeliveryZoneBody) =>
+    request<DeliveryZone>(`/api/v1/businesses/${businessId}/delivery-zones`, { method: "POST", body }),
+  updateZone: (businessId: string, id: string, body: DeliveryZoneBody) =>
+    request<DeliveryZone>(`/api/v1/businesses/${businessId}/delivery-zones/${id}`, { method: "PUT", body }),
+  removeZone: (businessId: string, id: string) =>
+    request<void>(`/api/v1/businesses/${businessId}/delivery-zones/${id}`, { method: "DELETE" }),
+  reorderZones: (businessId: string, orderedIds: string[]) =>
+    request<DeliveryZone[]>(`/api/v1/businesses/${businessId}/delivery-zones/reorder`, {
+      method: "PATCH",
+      body: { orderedIds },
+    }),
+
+  /** Checkout distance/fee preview for a candidate delivery location (authed). */
+  deliveryQuote: (businessId: string, lat: number, lng: number) =>
+    request<DeliveryQuote>(`/api/v1/businesses/${businessId}/delivery-quote`, {
+      method: "POST",
+      body: { lat, lng },
+    }),
+
+  /** Phase C — owner on/off switch for online booking (Salon & Beauty). */
+  setBooking: (businessId: string, bookingEnabled: boolean, autoConfirmBookings: boolean) =>
+    request<CommerceSettings>(`/api/v1/businesses/${businessId}/commerce/booking`, {
+      method: "PUT",
+      body: { bookingEnabled, autoConfirmBookings },
+    }),
+};
+
+export const orderApi = {
+  place: (businessId: string, body: PlaceOrderBody) =>
+    request<Order>(`/api/v1/businesses/${businessId}/orders`, { method: "POST", body }),
+  mine: (page = 0, size = 20) =>
+    request<PageResponse<Order>>("/api/v1/orders/mine", { query: { page, size } }),
+  get: (id: string) => request<Order>(`/api/v1/orders/${id}`),
+  cancel: (id: string) => request<Order>(`/api/v1/orders/${id}/cancel`, { method: "POST" }),
+
+  ownerList: (businessId: string, status?: OrderStatus, page = 0, size = 20) =>
+    request<PageResponse<Order>>(`/api/v1/businesses/${businessId}/orders`, {
+      query: { status, page, size },
+    }),
+  pendingCount: (businessId: string) =>
+    request<number>(`/api/v1/businesses/${businessId}/orders/pending-count`),
+  setStatus: (id: string, status: OrderStatus, note?: string) =>
+    request<Order>(`/api/v1/orders/${id}/status`, { method: "PATCH", body: { status, note: note ?? null } }),
+};
+
+// ---------------------------------------------------------------------------
+// Commerce & Fulfillment (Phase C) — appointment booking (Salon & Beauty).
+// Stage 1: a real availability engine generates slots from staff schedules;
+// the backend re-checks at placement — the frontend's availability view is
+// only advisory. Mirrors orderApi's shape.
+// ---------------------------------------------------------------------------
+export const bookingApi = {
+  place: (businessId: string, body: PlaceBookingBody) =>
+    request<Booking>(`/api/v1/businesses/${businessId}/bookings`, { method: "POST", body }),
+  /** Public — staffId omitted means "any available staff". */
+  availability: (businessId: string, serviceId: string, staffId: string | null, date: string) =>
+    request<AvailabilityResponse>(`/api/v1/businesses/${businessId}/bookings/availability`, {
+      auth: false,
+      query: { serviceId, staffId: staffId ?? undefined, date },
+    }),
+  mine: (page = 0, size = 20) =>
+    request<PageResponse<Booking>>("/api/v1/bookings/mine", { query: { page, size } }),
+  get: (id: string) => request<Booking>(`/api/v1/bookings/${id}`),
+  cancel: (id: string) => request<Booking>(`/api/v1/bookings/${id}/cancel`, { method: "POST" }),
+  /** Live queue position/ETA — customer or owner; `applicable: false` for anything not CONFIRMED-today. */
+  queueStatus: (id: string) => request<QueueStatus>(`/api/v1/bookings/${id}/queue-status`),
+
+  ownerList: (businessId: string, status?: BookingStatus, page = 0, size = 20) =>
+    request<PageResponse<Booking>>(`/api/v1/businesses/${businessId}/bookings`, {
+      query: { status, page, size },
+    }),
+  pendingCount: (businessId: string) =>
+    request<number>(`/api/v1/businesses/${businessId}/bookings/pending-count`),
+  setStatus: (id: string, status: BookingStatus, note?: string) =>
+    request<Booking>(`/api/v1/bookings/${id}/status`, { method: "PATCH", body: { status, note: note ?? null } }),
+  /** Owner marks a CONFIRMED booking as actually under way — not a status change. */
+  start: (id: string) => request<Booking>(`/api/v1/bookings/${id}/start`, { method: "POST" }),
 };
 
 // ---------------------------------------------------------------------------

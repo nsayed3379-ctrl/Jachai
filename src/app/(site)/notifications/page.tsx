@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { notificationApi } from "@/lib/api";
 import { RoleGate } from "@/components/role-gate";
 import { errorMessage, useToast } from "@/lib/toast-context";
@@ -89,28 +90,44 @@ function NotificationsContent() {
           !error &&
           items.map((n) => {
             const unread = n.status !== "READ";
-            return (
-              <button
-                key={n.id}
-                type="button"
-                onClick={() => markRead(n)}
-                className={cn(
-                  "w-full text-left px-4 py-3.5 hover:bg-ink-50 transition-colors",
-                  unread && "bg-crimson-50/40"
-                )}
-              >
-                <div className="flex items-start gap-3">
-                  {unread && <span className="mt-1.5 h-2 w-2 rounded-full bg-crimson-600 flex-none" aria-hidden />}
-                  <div className={cn("flex-1 min-w-0", !unread && "pl-5")}>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-semibold text-ink-900">{n.title}</p>
-                      <Badge tone="neutral">{NOTIFICATION_TYPE_LABELS[n.type] ?? n.type}</Badge>
-                      {n.channel === "SMS" && <Badge tone="gold">SMS</Badge>}
-                    </div>
-                    <p className="mt-1 text-sm text-ink-600">{n.body}</p>
-                    <p className="mt-1.5 text-xs text-ink-400">{formatDateTime(n.createdAt)}</p>
+            const rowClass = cn(
+              "block w-full text-left px-4 py-3.5 hover:bg-ink-50 transition-colors",
+              unread && "bg-crimson-50/40"
+            );
+            const inner = (
+              <div className="flex items-start gap-3">
+                {unread && <span className="mt-1.5 h-2 w-2 rounded-full bg-crimson-600 flex-none" aria-hidden />}
+                <div className={cn("flex-1 min-w-0", !unread && "pl-5")}>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold text-ink-900">{n.title}</p>
+                    <Badge tone="neutral">{NOTIFICATION_TYPE_LABELS[n.type] ?? n.type}</Badge>
+                    {n.channel === "SMS" && <Badge tone="gold">SMS</Badge>}
                   </div>
+                  <p className="mt-1 text-sm text-ink-600">{n.body}</p>
+                  <p className="mt-1.5 text-xs text-ink-400">{formatDateTime(n.createdAt)}</p>
                 </div>
+              </div>
+            );
+
+            // Order/booking notifications deep-link to the order/booking (visible to
+            // both the customer and the business owner); everything else marks read.
+            if (n.relatedEntityType === "ORDER" && n.relatedEntityId) {
+              return (
+                <Link key={n.id} href={`/orders/${n.relatedEntityId}`} onClick={() => markRead(n)} className={rowClass}>
+                  {inner}
+                </Link>
+              );
+            }
+            if (n.relatedEntityType === "BOOKING" && n.relatedEntityId) {
+              return (
+                <Link key={n.id} href={`/bookings/${n.relatedEntityId}`} onClick={() => markRead(n)} className={rowClass}>
+                  {inner}
+                </Link>
+              );
+            }
+            return (
+              <button key={n.id} type="button" onClick={() => markRead(n)} className={rowClass}>
+                {inner}
               </button>
             );
           })}

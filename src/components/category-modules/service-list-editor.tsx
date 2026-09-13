@@ -9,6 +9,8 @@ interface Draft {
   name: string;
   description: string;
   priceText: string;
+  durationMinutes: string;
+  bufferMinutes: string;
 }
 
 /**
@@ -42,19 +44,30 @@ export function ServiceListEditor({
       api={api}
       addLabel={addLabel}
       emptyHint={emptyHint}
-      newDraft={() => ({ name: "", description: "", priceText: "" })}
-      fromItem={(s) => ({ name: s.name, description: s.description ?? "", priceText: s.priceText ?? "" })}
+      newDraft={() => ({ name: "", description: "", priceText: "", durationMinutes: "", bufferMinutes: "" })}
+      fromItem={(s) => ({
+        name: s.name,
+        description: s.description ?? "",
+        priceText: s.priceText ?? "",
+        durationMinutes: s.durationMinutes ? String(s.durationMinutes) : "",
+        bufferMinutes: s.bufferMinutes ? String(s.bufferMinutes) : "",
+      })}
       toBody={(d) => ({
         name: d.name,
         description: d.description || null,
         priceText: withPrice ? d.priceText || null : null,
         section,
+        durationMinutes: withPrice && d.durationMinutes.trim() ? Number(d.durationMinutes) : null,
+        bufferMinutes: withPrice && d.bufferMinutes.trim() ? Number(d.bufferMinutes) : null,
       })}
       renderRow={(s) => (
         <div>
           <p className="text-sm font-semibold text-ink-900">{s.name}</p>
           {s.description && <p className="mt-0.5 text-xs text-ink-500">{s.description}</p>}
-          {s.priceText && <p className="mt-0.5 text-xs font-medium text-crimson-700">{s.priceText}</p>}
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            {s.priceText && <p className="text-xs font-medium text-crimson-700">{s.priceText}</p>}
+            {s.durationMinutes != null && <p className="text-xs text-ink-400">~{s.durationMinutes} min</p>}
+          </div>
         </div>
       )}
       renderForm={(d, patch) => (
@@ -83,6 +96,36 @@ export function ServiceListEditor({
                 onChange={(e) => patch({ priceText: e.target.value })}
                 placeholder="e.g. Starting from ৳500"
               />
+            </div>
+          )}
+          {withPrice && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>
+                  Duration (minutes) <span className="text-ink-300">(optional)</span>
+                </Label>
+                <Input
+                  type="number"
+                  min={5}
+                  max={600}
+                  value={d.durationMinutes}
+                  onChange={(e) => patch({ durationMinutes: e.target.value })}
+                  placeholder="e.g. 30"
+                />
+              </div>
+              <div>
+                <Label>
+                  Buffer after (minutes) <span className="text-ink-300">(optional)</span>
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={240}
+                  value={d.bufferMinutes}
+                  onChange={(e) => patch({ bufferMinutes: e.target.value })}
+                  placeholder="e.g. 10"
+                />
+              </div>
             </div>
           )}
         </div>

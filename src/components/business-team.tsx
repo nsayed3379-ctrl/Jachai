@@ -24,13 +24,14 @@ export function BusinessTeam({ businessId, heading }: { businessId: string; head
 
   if (error) return <p className="text-sm text-rose-600">{error}</p>;
   if (!members) return <PageSpinner />;
-  if (members.length === 0) return <EmptyState title="No one listed here yet" />;
+  const visible = members.filter((m) => m.active);
+  if (visible.length === 0) return <EmptyState title="No one listed here yet" />;
 
   return (
     <section>
       <h2 className="mb-3 font-display text-lg font-semibold text-ink-900">{heading}</h2>
       <div className="grid gap-4 sm:grid-cols-2">
-        {members.map((m) => (
+        {visible.map((m) => (
           <div key={m.id} className="flex gap-3 rounded-xl border border-ink-100 bg-white p-3">
             {m.photoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element

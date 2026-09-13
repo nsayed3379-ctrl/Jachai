@@ -45,4 +45,13 @@ export const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
   REPORT_DISMISSED: "Report resolved",
   CONTENT_HIDDEN: "Review removed",
   LISTING_FLAGGED: "Listing flagged",
+  FLAG_REVIEW_REQUESTED: "Flag review requested",
+  NEW_ORDER: "New order",
+  ORDER_ACCEPTED: "Order accepted",
+  ORDER_REJECTED: "Order rejected",
+  ORDER_STATUS_CHANGED: "Order update",
+  NEW_BOOKING: "New booking request",
+  BOOKING_CONFIRMED: "Booking confirmed",
+  BOOKING_REJECTED: "Booking rejected",
+  BOOKING_STATUS_CHANGED: "Booking update",
 };

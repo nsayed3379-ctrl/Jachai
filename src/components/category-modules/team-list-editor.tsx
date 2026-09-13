@@ -11,6 +11,7 @@ interface Draft {
   role: string;
   bio: string;
   photoUrl: string | null;
+  active: boolean;
 }
 
 /** Doctors (CLINIC) / staff (SALON) / trainers (GYM) — one TeamMember table, kind-specific labels. */
@@ -38,13 +39,14 @@ export function TeamListEditor({
       api={api}
       addLabel={addLabel}
       emptyHint={emptyHint}
-      newDraft={() => ({ name: "", role: "", bio: "", photoUrl: null })}
-      fromItem={(t) => ({ name: t.name, role: t.role ?? "", bio: t.bio ?? "", photoUrl: t.photoUrl })}
+      newDraft={() => ({ name: "", role: "", bio: "", photoUrl: null, active: true })}
+      fromItem={(t) => ({ name: t.name, role: t.role ?? "", bio: t.bio ?? "", photoUrl: t.photoUrl, active: t.active })}
       toBody={(d) => ({
         name: d.name,
         role: d.role || null,
         bio: d.bio || null,
         photoUrl: d.photoUrl || null,
+        active: d.active,
       })}
       renderRow={(t) => (
         <div className="flex items-start gap-3">
@@ -53,7 +55,10 @@ export function TeamListEditor({
             <img src={t.photoUrl} alt="" className="h-10 w-10 flex-none rounded-full border border-ink-200 object-cover" />
           )}
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-ink-900">{t.name}</p>
+            <p className="text-sm font-semibold text-ink-900">
+              {t.name}
+              {!t.active && <span className="ml-1.5 rounded-full bg-ink-100 px-1.5 py-0.5 text-[10px] font-bold text-ink-500">Inactive</span>}
+            </p>
             {t.role && <p className="text-xs text-crimson-700">{t.role}</p>}
             {t.bio && <p className="mt-0.5 text-xs text-ink-500">{t.bio}</p>}
           </div>
@@ -84,6 +89,15 @@ export function TeamListEditor({
             label="Photo (optional)"
             shape="circle"
           />
+          <label className="flex items-center gap-2 text-sm text-ink-700">
+            <input
+              type="checkbox"
+              checked={d.active}
+              onChange={(e) => patch({ active: e.target.checked })}
+              className="h-4 w-4 rounded border-ink-300 text-crimson-600"
+            />
+            Active
+          </label>
         </div>
       )}
     />

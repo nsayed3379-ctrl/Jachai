@@ -285,6 +285,20 @@ export function Navbar() {
                             {t("nav.bookmarks")}
                           </AccountMenuLink>
                           <AccountMenuLink
+                            href="/orders"
+                            active={pathname.startsWith("/orders")}
+                            onClick={() => setAccountMenuOpen(false)}
+                          >
+                            My orders
+                          </AccountMenuLink>
+                          <AccountMenuLink
+                            href="/bookings"
+                            active={pathname.startsWith("/bookings")}
+                            onClick={() => setAccountMenuOpen(false)}
+                          >
+                            My bookings
+                          </AccountMenuLink>
+                          <AccountMenuLink
                             href="/me/messages"
                             active={pathname.startsWith("/me/messages")}
                             onClick={() => setAccountMenuOpen(false)}
@@ -378,6 +392,12 @@ export function Navbar() {
                   </Link>
                   <Link href="/me/bookmarks" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
                     {t("nav.bookmarks")}
+                  </Link>
+                  <Link href="/orders" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
+                    My orders
+                  </Link>
+                  <Link href="/bookings" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
+                    My bookings
                   </Link>
                   <Link href="/me/messages" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
                     {t("nav.messages")}

@@ -27,6 +27,7 @@ import { BusinessTabs, type BusinessTab } from "@/components/business-tabs";
 import { BusinessAbout } from "@/components/business-about";
 import { BusinessUpdates } from "@/components/business-updates";
 import { BusinessMenu } from "@/components/business-menu";
+import { CartBar } from "@/components/cart-bar";
 import { BusinessServiceShowcase } from "@/components/business-service-showcase";
 import { BusinessTeam } from "@/components/business-team";
 import { BusinessProducts } from "@/components/business-products";
@@ -308,7 +309,13 @@ export default function BusinessDetailPage() {
           {moduleDefs.map((m) =>
             activeTab === m.key ? (
               <section key={m.key} role="tabpanel" aria-label={m.publicLabel}>
-                <CategoryModulePanel moduleKey={m.key} heading={m.publicLabel} businessId={business.id} />
+                <CategoryModulePanel
+                  moduleKey={m.key}
+                  heading={m.publicLabel}
+                  businessId={business.id}
+                  businessName={business.name}
+                  businessSlug={business.slug}
+                />
               </section>
             ) : null
           )}
@@ -635,6 +642,8 @@ export default function BusinessDetailPage() {
         businessName={business.name}
         initialIndex={photosModalIndex}
       />
+
+      <CartBar businessId={business.id} businessSlug={business.slug} />
     </div>
   );
 }
@@ -644,22 +653,30 @@ function CategoryModulePanel({
   moduleKey,
   heading,
   businessId,
+  businessName,
+  businessSlug,
 }: {
   moduleKey: ModuleKey;
   heading: string;
   businessId: string;
+  businessName: string;
+  businessSlug: string;
 }) {
   switch (moduleKey) {
     case "menu":
-      return <BusinessMenu businessId={businessId} />;
+      return <BusinessMenu businessId={businessId} businessName={businessName} businessSlug={businessSlug} />;
     case "products":
       return <BusinessProducts businessId={businessId} />;
     case "team":
       return <BusinessTeam businessId={businessId} heading={heading} />;
     case "facilities":
-      return <BusinessServiceShowcase businessId={businessId} section="FACILITY" heading={heading} />;
+      return (
+        <BusinessServiceShowcase businessId={businessId} businessName={businessName} section="FACILITY" heading={heading} />
+      );
     case "services":
     default:
-      return <BusinessServiceShowcase businessId={businessId} section="OFFERING" heading={heading} />;
+      return (
+        <BusinessServiceShowcase businessId={businessId} businessName={businessName} section="OFFERING" heading={heading} />
+      );
   }
 }
