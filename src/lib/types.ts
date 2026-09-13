@@ -905,3 +905,62 @@ export interface CachedBusinessSummary {
   areaName: string;
   cityName: string;
 }
+
+// ---------------------------------------------------------------------------
+// "Join Community" — Facebook-style feed (spec: navbar entry point, text +
+// single image post, reactions, comments, business mentions). Mirrors
+// com.bdreview.platform.community's response DTOs.
+// ---------------------------------------------------------------------------
+export type CommunityPostReactionType = "LIKE" | "LOVE" | "HAHA" | "WOW" | "SAD" | "ANGRY";
+
+export interface CommunityAuthorSummary {
+  id: string;
+  name: string | null;
+  profilePhotoUrl: string | null;
+}
+
+export interface CommunityMentionedBusinessSummary {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+  verified: boolean;
+}
+
+export interface CommunityPostResponse {
+  id: string;
+  author: CommunityAuthorSummary;
+  content: string | null;
+  imageUrl: string | null;
+  likeCount: number;
+  loveCount: number;
+  hahaCount: number;
+  wowCount: number;
+  sadCount: number;
+  angryCount: number;
+  totalReactionCount: number;
+  myReaction: CommunityPostReactionType | null;
+  commentCount: number;
+  mentionedBusinesses: CommunityMentionedBusinessSummary[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommunityCommentResponse {
+  id: string;
+  author: CommunityAuthorSummary;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateCommunityPostBody {
+  content: string | null;
+  imageUrl: string | null;
+  mentionedBusinessIds: string[];
+}
+
+export interface UpdateCommunityPostBody {
+  content: string | null;
+  mentionedBusinessIds: string[];
+}

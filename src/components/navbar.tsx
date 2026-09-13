@@ -177,6 +177,9 @@ export function Navbar() {
         )}
 
         <nav className="hidden md:flex items-center gap-1 text-base font-medium ml-auto">
+          <Link href="/community" className={linkClass}>
+            Community
+          </Link>
           {/* Once this account is linked, "Switch to X" replaces "For Business" —
               same plain nav-link treatment, no separate bordered button, so the
               nav reads exactly the same whether or not an account is linked. */}
@@ -352,6 +355,9 @@ export function Navbar() {
 
       {menuOpen && (
         <div className="md:hidden border-t border-ink-100 bg-surface px-4 py-3 flex flex-col gap-1 text-base">
+          <Link href="/community" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
+            Community
+          </Link>
           <div className="flex items-center justify-between px-3 py-2">
             <span className="text-ink-500">{t("nav.theme")}</span>
             <ThemeToggle className="text-ink-600 hover:bg-ink-100" />

@@ -28,9 +28,14 @@ import type {
   Collection,
   CommerceSettings,
   CommerceSettingsBody,
+  CommunityCommentResponse,
+  CommunityMentionedBusinessSummary,
+  CommunityPostReactionType,
+  CommunityPostResponse,
   CompletenessResponse,
   ConfirmUploadRequestT,
   CreateBusinessRequest,
+  CreateCommunityPostBody,
   DeliveryQuote,
   DeliveryZone,
   DeliveryZoneBody,
@@ -74,6 +79,7 @@ import type {
   SubmitReviewRequest,
   TokenPairDto,
   UpdateBusinessRequest,
+  UpdateCommunityPostBody,
   UpdateReviewRequest,
   UserProfile,
   UserRole,
@@ -357,6 +363,63 @@ export const reviewApi = {
 
   recent: (page = 0, size = 9) =>
     request<PageResponse<RecentActivityItem>>("/api/v1/reviews/recent", { auth: false, query: { page, size } }),
+};
+
+// ---------------------------------------------------------------------------
+// "Join Community" — Facebook-style feed: text/image posts, reactions,
+// comments, business mentions. Feed/detail/comment reads are public
+// (auth: false); everything else needs a logged-in user.
+// ---------------------------------------------------------------------------
+export const communityApi = {
+  requestUploadUrl: (filename: string) =>
+    request<PreSignedUploadResponse>("/api/v1/community/posts/upload-url", {
+      method: "POST",
+      query: { filename },
+    }),
+
+  create: (body: CreateCommunityPostBody) =>
+    request<CommunityPostResponse>("/api/v1/community/posts", { method: "POST", body }),
+
+  feed: (page = 0, size = 20) =>
+    request<PageResponse<CommunityPostResponse>>("/api/v1/community/posts", {
+      auth: false,
+      query: { page, size },
+    }),
+
+  get: (postId: string) =>
+    request<CommunityPostResponse>(`/api/v1/community/posts/${postId}`, { auth: false }),
+
+  update: (postId: string, body: UpdateCommunityPostBody) =>
+    request<CommunityPostResponse>(`/api/v1/community/posts/${postId}`, { method: "PATCH", body }),
+
+  remove: (postId: string) => request<void>(`/api/v1/community/posts/${postId}`, { method: "DELETE" }),
+
+  react: (postId: string, reactionType: CommunityPostReactionType) =>
+    request<void>(`/api/v1/community/posts/${postId}/reactions`, {
+      method: "POST",
+      body: { reactionType },
+    }),
+
+  listComments: (postId: string, page = 0, size = 20) =>
+    request<PageResponse<CommunityCommentResponse>>(`/api/v1/community/posts/${postId}/comments`, {
+      auth: false,
+      query: { page, size },
+    }),
+
+  addComment: (postId: string, content: string) =>
+    request<CommunityCommentResponse>(`/api/v1/community/posts/${postId}/comments`, {
+      method: "POST",
+      body: { content },
+    }),
+
+  removeComment: (postId: string, commentId: string) =>
+    request<void>(`/api/v1/community/posts/${postId}/comments/${commentId}`, { method: "DELETE" }),
+
+  searchMentions: (q: string) =>
+    request<CommunityMentionedBusinessSummary[]>("/api/v1/community/mentions/search", {
+      auth: false,
+      query: { q },
+    }),
 };
 
 // ---------------------------------------------------------------------------
