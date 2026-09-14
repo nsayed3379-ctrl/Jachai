@@ -19,6 +19,22 @@ const REACTIONS: { type: CommunityPostReactionType; emoji: string; label: string
   { type: "ANGRY", emoji: "😡", label: "Angry" },
 ];
 
+// Text-only posts (no image) get a colored card, like the target design's
+// "question" post — purely a visual treatment, deterministic per post id so
+// a given post doesn't change color on re-render.
+const TEXT_CARD_GRADIENTS = [
+  "from-crimson-600 to-crimson-800",
+  "from-brand-600 to-brand-800",
+  "from-gold-600 to-gold-800",
+  "from-ink-700 to-ink-900",
+];
+
+function gradientFor(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  return TEXT_CARD_GRADIENTS[hash % TEXT_CARD_GRADIENTS.length];
+}
+
 export function CommunityPostCard({
   post,
   onChanged,
@@ -122,7 +138,35 @@ export function CommunityPostCard({
     }
   }
 
+  async function handleShare() {
+    const url = `${window.location.origin}/community#post-${post.id}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ url, title: "Jachai Community" });
+      } catch {
+        // user cancelled the share sheet — not an error
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      show("Link copied", "success");
+    } catch {
+      show(url, "info");
+    }
+  }
+
   const activeReaction = REACTIONS.find((r) => r.type === post.myReaction);
+  const topReactions = REACTIONS.filter((r) => {
+    const key = `${r.type.toLowerCase()}Count` as
+      | "likeCount"
+      | "loveCount"
+      | "hahaCount"
+      | "wowCount"
+      | "sadCount"
+      | "angryCount";
+    return post[key] > 0;
+  }).slice(0, 3);
 
   return (
     <div className="rounded-xl border border-ink-100 bg-surface p-4 shadow-card">
@@ -152,7 +196,18 @@ export function CommunityPostCard({
         )}
       </div>
 
-      {post.content && <p className="mt-3 whitespace-pre-wrap text-sm text-ink-800">{post.content}</p>}
+      {post.content && !post.imageUrl ? (
+        <div
+          className={cn(
+            "mt-3 rounded-xl bg-gradient-to-br p-5 text-base font-medium text-white shadow-inner",
+            gradientFor(post.id)
+          )}
+        >
+          <p className="whitespace-pre-wrap">{post.content}</p>
+        </div>
+      ) : (
+        post.content && <p className="mt-3 whitespace-pre-wrap text-sm text-ink-800">{post.content}</p>
+      )}
 
       {post.imageUrl && (
         // eslint-disable-next-line @next/next/no-img-element
@@ -175,11 +230,25 @@ export function CommunityPostCard({
       )}
 
       <div className="mt-3 flex items-center justify-between border-t border-ink-100 pt-2 text-xs text-ink-400">
-        <span>{post.totalReactionCount > 0 ? `${post.totalReactionCount} reactions` : ""}</span>
+        <span className="flex items-center gap-1">
+          {topReactions.length > 0 && (
+            <span className="flex items-center -space-x-1">
+              {topReactions.map((r) => (
+                <span
+                  key={r.type}
+                  className="flex h-4 w-4 items-center justify-center rounded-full bg-surface text-[10px] ring-1 ring-surface"
+                >
+                  {r.emoji}
+                </span>
+              ))}
+            </span>
+          )}
+          {post.totalReactionCount > 0 && <span>{post.totalReactionCount}</span>}
+        </span>
         <span>{post.commentCount > 0 ? `${post.commentCount} comments` : ""}</span>
       </div>
 
-      <div className="mt-1 flex items-center gap-1 border-t border-ink-100 pt-1">
+      <div className="mt-1 grid grid-cols-3 gap-1 border-t border-ink-100 pt-1">
         <div
           className="relative"
           onMouseEnter={() => setPickerOpen(true)}
@@ -190,7 +259,7 @@ export function CommunityPostCard({
             onClick={() => react(activeReaction?.type ?? "LIKE")}
             disabled={reacting}
             className={cn(
-              "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium hover:bg-ink-50 disabled:opacity-50",
+              "flex w-full items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium hover:bg-ink-50 disabled:opacity-50",
               activeReaction ? "text-crimson-700" : "text-ink-600"
             )}
           >
@@ -216,9 +285,16 @@ export function CommunityPostCard({
         <button
           type="button"
           onClick={toggleComments}
-          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-ink-600 hover:bg-ink-50"
+          className="flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-ink-600 hover:bg-ink-50"
         >
           💬 Comment
+        </button>
+        <button
+          type="button"
+          onClick={handleShare}
+          className="flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-ink-600 hover:bg-ink-50"
+        >
+          📤 Share
         </button>
       </div>
 

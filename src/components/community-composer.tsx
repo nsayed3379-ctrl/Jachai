@@ -8,7 +8,19 @@ import { errorMessage, useToast } from "@/lib/toast-context";
 import { avatarColorClass, avatarInitials, cn } from "@/lib/utils";
 import type { CommunityMentionedBusinessSummary, CommunityPostResponse } from "@/lib/types";
 import { Button } from "./ui/button";
-import { Textarea } from "./ui/field";
+
+const DEFAULT_PLACEHOLDER = "What's happening around you?";
+
+// "Question" and "Recommend" are tone presets, not a stored post type — the
+// backend has one post shape (text + optional image); these just nudge the
+// placeholder/emoji so the composer reads like the target design. "Poll"
+// has no backend support yet, so it's shown but disabled rather than faked.
+const TONE_PRESETS = [
+  { key: "photo" as const, icon: "📷", label: "Photo" },
+  { key: "question" as const, icon: "❓", label: "Question" },
+  { key: "recommend" as const, icon: "⭐", label: "Recommend" },
+  { key: "poll" as const, icon: "📊", label: "Poll" },
+];
 
 /**
  * "Join Community" post composer — text and/or a single image (never video,
@@ -22,15 +34,17 @@ export function CommunityComposer({ onPosted }: { onPosted: (post: CommunityPost
   const { show } = useToast();
 
   const [content, setContent] = useState("");
+  const [placeholder, setPlaceholder] = useState(DEFAULT_PLACEHOLDER);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionBoxOpen, setMentionBoxOpen] = useState(false);
   const [mentionResults, setMentionResults] = useState<CommunityMentionedBusinessSummary[]>([]);
   const [mentioned, setMentioned] = useState<CommunityMentionedBusinessSummary[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Debounced @mention search — only fires once the person pauses typing.
   useEffect(() => {
     if (!mentionQuery.trim()) {
       setMentionResults([]);
@@ -66,10 +80,28 @@ export function CommunityComposer({ onPosted }: { onPosted: (post: CommunityPost
     setImagePreviewUrl(null);
   }
 
+  function handlePresetClick(key: (typeof TONE_PRESETS)[number]["key"]) {
+    if (!user) {
+      openLogin();
+      return;
+    }
+    if (key === "photo") {
+      fileRef.current?.click();
+      return;
+    }
+    if (key === "poll") {
+      show("Polls are coming soon", "info");
+      return;
+    }
+    setPlaceholder(key === "question" ? "Ask the community a question…" : "What do you recommend, and why?");
+    textareaRef.current?.focus();
+  }
+
   function addMention(business: CommunityMentionedBusinessSummary) {
     setMentioned((prev) => (prev.some((b) => b.id === business.id) ? prev : [...prev, business]));
     setMentionQuery("");
     setMentionResults([]);
+    setMentionBoxOpen(true);
   }
 
   function removeMention(businessId: string) {
@@ -101,8 +133,10 @@ export function CommunityComposer({ onPosted }: { onPosted: (post: CommunityPost
       });
       onPosted(post);
       setContent("");
+      setPlaceholder(DEFAULT_PLACEHOLDER);
       removeImage();
       setMentioned([]);
+      setMentionBoxOpen(false);
       show("Posted", "success");
     } catch (err) {
       show(errorMessage(err), "error");
@@ -113,7 +147,7 @@ export function CommunityComposer({ onPosted }: { onPosted: (post: CommunityPost
 
   if (!user) {
     return (
-      <div className="rounded-xl border border-ink-100 bg-surface p-5 text-center shadow-card">
+      <div className="rounded-2xl border border-ink-100 bg-surface p-5 text-center shadow-card">
         <p className="text-sm text-ink-500">Log in to share something with the community.</p>
         <Button className="mt-3" size="sm" onClick={openLogin}>
           Log in
@@ -123,7 +157,7 @@ export function CommunityComposer({ onPosted }: { onPosted: (post: CommunityPost
   }
 
   return (
-    <div className="rounded-xl border border-ink-100 bg-surface p-4 shadow-card">
+    <div className="rounded-2xl border border-ink-100 bg-surface p-4 shadow-card">
       <div className="flex items-start gap-3">
         <div
           className={cn(
@@ -133,30 +167,34 @@ export function CommunityComposer({ onPosted }: { onPosted: (post: CommunityPost
         >
           {avatarInitials(profile?.name)}
         </div>
-        <div className="flex-1">
-          <Textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Share something with the community…"
-            className="min-h-[64px]"
-          />
+        <textarea
+          ref={textareaRef}
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder={placeholder}
+          rows={content ? 3 : 1}
+          className="w-full resize-none rounded-2xl border-0 bg-ink-50 px-4 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-crimson-500/30"
+        />
+      </div>
 
-          {imagePreviewUrl && (
-            <div className="relative mt-2 inline-block">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={imagePreviewUrl} alt="" className="max-h-64 rounded-lg border border-ink-100 object-cover" />
-              <button
-                type="button"
-                onClick={removeImage}
-                className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-ink-900/80 text-white hover:bg-ink-900"
-                aria-label="Remove image"
-              >
-                ×
-              </button>
-            </div>
-          )}
+      {imagePreviewUrl && (
+        <div className="relative ml-[52px] mt-3 inline-block">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={imagePreviewUrl} alt="" className="max-h-64 rounded-lg border border-ink-100 object-cover" />
+          <button
+            type="button"
+            onClick={removeImage}
+            className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-ink-900/80 text-white hover:bg-ink-900"
+            aria-label="Remove image"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
-          <div className="relative mt-2">
+      {(mentionBoxOpen || mentioned.length > 0) && (
+        <div className="ml-[52px] mt-3">
+          <div className="relative">
             <input
               value={mentionQuery}
               onChange={(e) => setMentionQuery(e.target.value)}
@@ -184,7 +222,6 @@ export function CommunityComposer({ onPosted }: { onPosted: (post: CommunityPost
               </div>
             )}
           </div>
-
           {mentioned.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {mentioned.map((b) => (
@@ -200,27 +237,48 @@ export function CommunityComposer({ onPosted }: { onPosted: (post: CommunityPost
               ))}
             </div>
           )}
-
-          <div className="mt-3 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              className="inline-flex items-center gap-1.5 rounded-full border border-ink-200 px-3 py-1.5 text-xs font-medium text-ink-700 hover:bg-ink-50"
-            >
-              📷 Photo
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              className="hidden"
-              onChange={(e) => handleFileSelected(e.target.files)}
-            />
-            <Button size="sm" onClick={handleSubmit} loading={submitting}>
-              Post
-            </Button>
-          </div>
         </div>
+      )}
+
+      <div className="my-3 h-px bg-ink-100" />
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1">
+          {TONE_PRESETS.map((preset) => (
+            <button
+              key={preset.key}
+              type="button"
+              onClick={() => handlePresetClick(preset.key)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-ink-600 hover:bg-ink-50",
+                preset.key === "poll" && "opacity-50"
+              )}
+              title={preset.key === "poll" ? "Coming soon" : undefined}
+            >
+              <span>{preset.icon}</span>
+              <span className="hidden sm:inline">{preset.label}</span>
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setMentionBoxOpen(true)}
+            className="hidden items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-ink-600 hover:bg-ink-50 sm:inline-flex"
+            title="Mention a business"
+          >
+            <span>📍</span>
+            <span>Mention</span>
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={(e) => handleFileSelected(e.target.files)}
+          />
+        </div>
+        <Button size="sm" onClick={handleSubmit} loading={submitting}>
+          Post
+        </Button>
       </div>
     </div>
   );
