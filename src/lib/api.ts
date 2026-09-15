@@ -48,6 +48,8 @@ import type {
   PlaceBookingBody,
   PlaceOrderBody,
   PublicCommerceView,
+  QrInfo,
+  QrResolveResponse,
   ServiceOffering,
   ServiceOfferingBody,
   ServiceSection,
@@ -817,6 +819,16 @@ export const updatesApi = {
 export const analyticsApi = {
   get: (businessId: string, range: AnalyticsRange = "30d") =>
     request<AnalyticsResponse>(`/api/v1/businesses/${businessId}/analytics`, { query: { range } }),
+};
+
+// ---------------------------------------------------------------------------
+// Business QR V1
+// ---------------------------------------------------------------------------
+export const qrApi = {
+  /** Owner-only, idempotent — first call creates the permanent QR, later calls return the same one. */
+  mine: (businessId: string) => request<QrInfo>(`/api/v1/businesses/${businessId}/qr`),
+  /** Public — resolves a scanned token to the business's current slug. */
+  resolve: (token: string) => request<QrResolveResponse>(`/api/v1/qr/${token}`, { auth: false }),
 };
 
 // ---------------------------------------------------------------------------

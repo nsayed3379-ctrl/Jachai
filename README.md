@@ -158,10 +158,12 @@ method and at least one page/component calling it:
 ## What's intentionally not built
 
 - A drag-to-pin interactive map for the owner-side location picker (spec
-  §17a) — the business form takes lat/lng directly (with a "use my current
+  §17a) — the business form tak
+  s lat/lng directly (with a "use my current
   location" button) rather than embedding Google Maps JS/Leaflet, to avoid
   pulling in a maps SDK and API key requirement for this pass. The
   consumer-side static-map + deep-link handoff (spec §17b) *is* fully built
   (`components/map-preview.tsx`).
 - Android/iOS apps — spec says these come later on the same backend APIs;
   this delivers the web client only.
+0p0

@@ -38,8 +38,8 @@ function Workspace({ children }: { children: React.ReactNode }) {
   return (
     <OwnerBusinessProvider value={{ business, allBusinesses: all, refresh: load }}>
       <div>
-        {/* Compact workspace header — always visible above every section */}
-        <div className="mb-5 flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+        {/* Compact workspace header — always visible above every section (hidden when printing a page's own print-only layout, e.g. Business QR) */}
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-x-3 gap-y-1 print:hidden">
           <div>
             <div className="flex items-center gap-2">
               <h1 className="font-display text-xl font-bold text-ink-900">{business.name}</h1>
@@ -54,10 +54,14 @@ function Workspace({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
 
-        <FlaggedNotice business={business} />
+        <div className="print:hidden">
+          <FlaggedNotice business={business} />
+        </div>
 
         <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
-          <OwnerBusinessSidebar business={business} allBusinesses={all} />
+          <div className="print:hidden">
+            <OwnerBusinessSidebar business={business} allBusinesses={all} />
+          </div>
           <main className="min-w-0 flex-1">{children}</main>
         </div>
       </div>

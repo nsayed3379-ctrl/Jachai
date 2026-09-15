@@ -539,7 +539,8 @@ export type BusinessEventType =
   | "PHONE_CLICK"
   | "WHATSAPP_CLICK"
   | "DIRECTIONS_CLICK"
-  | "WEBSITE_CLICK";
+  | "WEBSITE_CLICK"
+  | "QR_SCAN";
 
 export type AnalyticsRange = "7d" | "30d" | "all";
 
@@ -551,6 +552,23 @@ export interface AnalyticsResponse {
   whatsappClicks: number;
   directionsClicks: number;
   websiteClicks: number;
+}
+
+// ---------------------------------------------------------------------------
+// Business QR V1
+// ---------------------------------------------------------------------------
+export type QrStatus = "ACTIVE" | "INACTIVE";
+
+export interface QrInfo {
+  businessId: string;
+  qrToken: string;
+  status: QrStatus;
+  createdAt: string;
+}
+
+export interface QrResolveResponse {
+  businessId: string;
+  slug: string;
 }
 
 export interface CompletenessItem {

@@ -63,6 +63,7 @@ function buildNavGroups(
       items: [
         { label: "Business info", href: `${base}/edit` },
         { label: "Photos", href: `${base}/photos` },
+        { label: "Business QR", href: `${base}/qr` },
         ...moduleItems,
         ...commerceItems,
         { label: "Updates", href: `${base}/updates` },
