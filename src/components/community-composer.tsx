@@ -1,142 +1,181 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { BarChart3, Clock, ImagePlus, Plus, Store, X } from "lucide-react";
 import { communityApi, uploadFileToPresignedUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthModal } from "@/lib/auth-modal-context";
+import { useCommunityUsernameModal } from "@/lib/community-username-modal-context";
+import {
+  COMMUNITY_COMPOSER_TYPES,
+  COMMUNITY_POLL_DURATIONS,
+  COMMUNITY_POLL_MAX_OPTIONS,
+  COMMUNITY_POLL_MIN_OPTIONS,
+  COMMUNITY_TOPICS,
+} from "@/lib/community-constants";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import { avatarColorClass, avatarInitials, cn } from "@/lib/utils";
-import type { CommunityMentionedBusinessSummary, CommunityPostResponse } from "@/lib/types";
+import type { CommunityMentionedBusinessSummary, CommunityPostResponse, CommunityPostType, CommunityTopic } from "@/lib/types";
+import { CommunityMarkdownToolbar } from "./community-markdown-toolbar";
 import { Button } from "./ui/button";
 
-const DEFAULT_PLACEHOLDER = "What's happening around you?";
-
-// "Question" and "Recommend" are tone presets, not a stored post type — the
-// backend has one post shape (text + optional image); these just nudge the
-// placeholder/emoji so the composer reads like the target design. "Poll"
-// has no backend support yet, so it's shown but disabled rather than faked.
-const TONE_PRESETS = [
-  { key: "photo" as const, icon: "📷", label: "Photo" },
-  { key: "question" as const, icon: "❓", label: "Question" },
-  { key: "recommend" as const, icon: "⭐", label: "Recommend" },
-  { key: "poll" as const, icon: "📊", label: "Poll" },
-];
+const BODY_MAX = 5000;
+const DEFAULT_POLL_DURATION_HOURS = 72;
+const MAX_PHOTO_MB = 5;
+const MAX_POST_PHOTOS = 10;
+const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 /**
- * "Join Community" post composer — text and/or a single image (never video,
- * per spec), plus @mention typeahead for tagging business listings. Image
- * upload reuses the same pre-signed-URL flow as the business gallery
- * (lib/api.ts's uploadFileToPresignedUrl).
+ * "Join Community" V1 post composer — a single text box (no separate title
+ * field or Discussion/Question/Recommendation picker; post type is DISCUSSION
+ * under the hood, or POLL when the optional poll editor below the text box
+ * is active), a topic, at most one optional attached business, and up to
+ * MAX_POST_PHOTOS photo attachments (pre-signed direct-to-storage upload
+ * per file, same flow as ReviewForm — see communityApi.requestUploadUrl).
+ * Gated behind the Community-username setup flow, same as posting/commenting
+ * on the backend (CommunityPostService#requireCommunityUsername).
  */
 export function CommunityComposer({ onPosted }: { onPosted: (post: CommunityPostResponse) => void }) {
   const { user, profile } = useAuth();
   const { openLogin } = useAuthModal();
+  const { openModal: openUsernameModal } = useCommunityUsernameModal();
   const { show } = useToast();
 
-  const [content, setContent] = useState("");
-  const [placeholder, setPlaceholder] = useState(DEFAULT_PLACEHOLDER);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
-  const [mentionQuery, setMentionQuery] = useState("");
-  const [mentionBoxOpen, setMentionBoxOpen] = useState(false);
-  const [mentionResults, setMentionResults] = useState<CommunityMentionedBusinessSummary[]>([]);
-  const [mentioned, setMentioned] = useState<CommunityMentionedBusinessSummary[]>([]);
+  const [expanded, setExpanded] = useState(false);
+  const [body, setBody] = useState("");
+  const [postType, setPostType] = useState<Exclude<CommunityPostType, "POLL">>("DISCUSSION");
+  const [topic, setTopic] = useState<CommunityTopic>("GENERAL");
+  const [businessQuery, setBusinessQuery] = useState("");
+  const [businessResults, setBusinessResults] = useState<CommunityMentionedBusinessSummary[]>([]);
+  const [businessBoxOpen, setBusinessBoxOpen] = useState(false);
+  const [selectedBusiness, setSelectedBusiness] = useState<CommunityMentionedBusinessSummary | null>(null);
+  const [pollActive, setPollActive] = useState(false);
+  const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
+  const [pollDurationHours, setPollDurationHours] = useState(DEFAULT_POLL_DURATION_HOURS);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!mentionQuery.trim()) {
-      setMentionResults([]);
+    if (!businessQuery.trim()) {
+      setBusinessResults([]);
       return;
     }
     const handle = setTimeout(() => {
       communityApi
-        .searchMentions(mentionQuery.trim())
-        .then(setMentionResults)
-        .catch(() => setMentionResults([]));
+        .searchMentions(businessQuery.trim())
+        .then(setBusinessResults)
+        .catch(() => setBusinessResults([]));
     }, 300);
     return () => clearTimeout(handle);
-  }, [mentionQuery]);
+  }, [businessQuery]);
 
-  useEffect(() => {
-    return () => {
-      if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
-    };
-  }, [imagePreviewUrl]);
-
-  function handleFileSelected(files: FileList | null) {
-    const file = files?.[0];
-    if (!file) return;
-    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
-    setImageFile(file);
-    setImagePreviewUrl(URL.createObjectURL(file));
-    if (fileRef.current) fileRef.current.value = "";
+  function reset() {
+    setBody("");
+    setPostType("DISCUSSION");
+    setTopic("GENERAL");
+    setSelectedBusiness(null);
+    setBusinessQuery("");
+    setBusinessBoxOpen(false);
+    setPollActive(false);
+    setPollOptions(["", ""]);
+    setPollDurationHours(DEFAULT_POLL_DURATION_HOURS);
+    setImageUrls([]);
+    setExpanded(false);
   }
 
-  function removeImage() {
-    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
-    setImageFile(null);
-    setImagePreviewUrl(null);
+  async function handlePhotosSelected(files: FileList | null) {
+    if (photoInputRef.current) photoInputRef.current.value = "";
+    if (!files || files.length === 0) return;
+    setUploadingPhoto(true);
+    let count = imageUrls.length;
+    try {
+      for (const file of Array.from(files)) {
+        if (count >= MAX_POST_PHOTOS) {
+          show(`You can attach at most ${MAX_POST_PHOTOS} photos`, "error");
+          break;
+        }
+        if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
+          show(`${file.name || "That file"} isn't an image (jpg, png, webp, gif)`, "error");
+          continue;
+        }
+        if (file.size > MAX_PHOTO_MB * 1024 * 1024) {
+          show(`${file.name || "That photo"} is too large (max ${MAX_PHOTO_MB}MB)`, "error");
+          continue;
+        }
+        const presigned = await communityApi.requestUploadUrl(file.name || "post-photo.jpg");
+        const ok = await uploadFileToPresignedUrl(presigned.uploadUrl, file);
+        if (!ok) throw new Error("Upload failed");
+        setImageUrls((prev) => [...prev, presigned.cdnUrlAfterUpload]);
+        count++;
+      }
+    } catch (err) {
+      show(errorMessage(err), "error");
+    } finally {
+      setUploadingPhoto(false);
+    }
   }
 
-  function handlePresetClick(key: (typeof TONE_PRESETS)[number]["key"]) {
+  function removePhoto(index: number) {
+    setImageUrls((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updatePollOption(index: number, value: string) {
+    setPollOptions((prev) => prev.map((o, i) => (i === index ? value : o)));
+  }
+
+  function addPollOption() {
+    setPollOptions((prev) => (prev.length >= COMMUNITY_POLL_MAX_OPTIONS ? prev : [...prev, ""]));
+  }
+
+  function removePollOption(index: number) {
+    setPollOptions((prev) => (prev.length <= COMMUNITY_POLL_MIN_OPTIONS ? prev : prev.filter((_, i) => i !== index)));
+  }
+
+  function handleStart() {
     if (!user) {
       openLogin();
       return;
     }
-    if (key === "photo") {
-      fileRef.current?.click();
+    if (!profile?.communityUsername) {
+      openUsernameModal(() => {
+        setExpanded(true);
+        setTimeout(() => bodyRef.current?.focus(), 0);
+      });
       return;
     }
-    if (key === "poll") {
-      show("Polls are coming soon", "info");
-      return;
-    }
-    setPlaceholder(key === "question" ? "Ask the community a question…" : "What do you recommend, and why?");
-    textareaRef.current?.focus();
-  }
-
-  function addMention(business: CommunityMentionedBusinessSummary) {
-    setMentioned((prev) => (prev.some((b) => b.id === business.id) ? prev : [...prev, business]));
-    setMentionQuery("");
-    setMentionResults([]);
-    setMentionBoxOpen(true);
-  }
-
-  function removeMention(businessId: string) {
-    setMentioned((prev) => prev.filter((b) => b.id !== businessId));
+    setExpanded(true);
+    setTimeout(() => bodyRef.current?.focus(), 0);
   }
 
   async function handleSubmit() {
-    if (!user) {
-      openLogin();
+    const trimmedBody = body.trim();
+    if (!trimmedBody) {
+      show(pollActive ? "Write your poll question first" : "Write something first", "error");
       return;
     }
-    if (!content.trim() && !imageFile) {
-      show("Write something or add a picture first", "error");
+    const trimmedOptions = pollOptions.map((o) => o.trim()).filter(Boolean);
+    if (pollActive && trimmedOptions.length < COMMUNITY_POLL_MIN_OPTIONS) {
+      show(`Add at least ${COMMUNITY_POLL_MIN_OPTIONS} poll options`, "error");
       return;
     }
     setSubmitting(true);
     try {
-      let imageUrl: string | null = null;
-      if (imageFile) {
-        const presigned = await communityApi.requestUploadUrl(imageFile.name);
-        const uploaded = await uploadFileToPresignedUrl(presigned.uploadUrl, imageFile);
-        if (!uploaded) throw new Error("Image upload failed. Please try again.");
-        imageUrl = presigned.cdnUrlAfterUpload;
-      }
       const post = await communityApi.create({
-        content: content.trim() || null,
-        imageUrl,
-        mentionedBusinessIds: mentioned.map((b) => b.id),
+        title: null,
+        body: trimmedBody,
+        postType: pollActive ? "POLL" : postType,
+        topic,
+        businessId: selectedBusiness?.id ?? null,
+        areaId: null,
+        pollOptions: pollActive ? trimmedOptions : null,
+        pollDurationHours: pollActive ? pollDurationHours : null,
+        imageUrls,
       });
       onPosted(post);
-      setContent("");
-      setPlaceholder(DEFAULT_PLACEHOLDER);
-      removeImage();
-      setMentioned([]);
-      setMentionBoxOpen(false);
+      reset();
       show("Posted", "success");
     } catch (err) {
       show(errorMessage(err), "error");
@@ -148,7 +187,7 @@ export function CommunityComposer({ onPosted }: { onPosted: (post: CommunityPost
   if (!user) {
     return (
       <div className="rounded-2xl border border-ink-100 bg-surface p-5 text-center shadow-card">
-        <p className="text-sm text-ink-500">Log in to share something with the community.</p>
+        <p className="text-sm text-ink-500">Log in to start a discussion.</p>
         <Button className="mt-3" size="sm" onClick={openLogin}>
           Log in
         </Button>
@@ -156,127 +195,305 @@ export function CommunityComposer({ onPosted }: { onPosted: (post: CommunityPost
     );
   }
 
+  if (!expanded) {
+    return (
+      <button
+        type="button"
+        onClick={handleStart}
+        className="group flex w-full items-center gap-3 rounded-2xl border border-ink-100 bg-surface px-4 py-3 text-left shadow-card transition-all duration-200 hover:border-crimson-200 hover:shadow-pop"
+      >
+        {profile?.communityUsername ? (
+          <span
+            className={cn(
+              "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white",
+              avatarColorClass(profile.communityUsername)
+            )}
+          >
+            {avatarInitials(profile.communityUsername)}
+          </span>
+        ) : (
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink-50 text-ink-400 transition-colors group-hover:bg-crimson-50 group-hover:text-crimson-500">
+            <Plus size={18} />
+          </span>
+        )}
+        <span className="text-sm text-ink-400">What's on your mind?</span>
+      </button>
+    );
+  }
+
   return (
     <div className="rounded-2xl border border-ink-100 bg-surface p-4 shadow-card">
-      <div className="flex items-start gap-3">
-        <div
-          className={cn(
-            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white",
-            avatarColorClass(profile?.name ?? user.id)
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          {profile?.communityUsername && (
+            <span
+              className={cn(
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white",
+                avatarColorClass(profile.communityUsername)
+              )}
+            >
+              {avatarInitials(profile.communityUsername)}
+            </span>
           )}
-        >
-          {avatarInitials(profile?.name)}
+          <div className="leading-tight">
+            <h2 className="font-display text-base font-bold text-ink-900">Create a Post</h2>
+            {profile?.communityUsername && <p className="text-xs text-ink-400">Posting as u/{profile.communityUsername}</p>}
+          </div>
         </div>
-        <textarea
-          ref={textareaRef}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder={placeholder}
-          rows={content ? 3 : 1}
-          className="w-full resize-none rounded-2xl border-0 bg-ink-50 px-4 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-crimson-500/30"
-        />
+        <button
+          type="button"
+          onClick={reset}
+          className="rounded-full p-1.5 text-ink-400 transition-colors duration-150 hover:bg-ink-100 hover:text-ink-700"
+          aria-label="Cancel post"
+        >
+          <X size={16} />
+        </button>
       </div>
 
-      {imagePreviewUrl && (
-        <div className="relative ml-[52px] mt-3 inline-block">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={imagePreviewUrl} alt="" className="max-h-64 rounded-lg border border-ink-100 object-cover" />
+      <div className="mt-3 flex gap-1 rounded-full bg-ink-50 p-1">
+        {COMMUNITY_COMPOSER_TYPES.map((t) => (
           <button
+            key={t.value}
             type="button"
-            onClick={removeImage}
-            className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-ink-900/80 text-white hover:bg-ink-900"
-            aria-label="Remove image"
+            disabled={pollActive}
+            onClick={() => setPostType(t.value)}
+            className={cn(
+              "flex-1 rounded-full px-2.5 py-1.5 text-xs font-semibold transition-colors duration-150",
+              pollActive
+                ? "cursor-not-allowed text-ink-300"
+                : postType === t.value
+                  ? "bg-ink-900 text-white"
+                  : "text-ink-500 hover:text-ink-800"
+            )}
           >
-            ×
+            {t.label}
           </button>
+        ))}
+      </div>
+
+      <div className="mt-3 overflow-hidden rounded-lg border border-ink-200 bg-ink-50 transition-colors duration-150 focus-within:border-crimson-300 focus-within:ring-2 focus-within:ring-crimson-500/20">
+        <CommunityMarkdownToolbar textareaRef={bodyRef} onChange={(next) => setBody(next.slice(0, BODY_MAX))} />
+        <div className="h-px bg-ink-200" />
+        <textarea
+          ref={bodyRef}
+          value={body}
+          onChange={(e) => setBody(e.target.value.slice(0, BODY_MAX))}
+          placeholder={
+            pollActive
+              ? "Ask a question for people to vote on…"
+              : postType === "QUESTION"
+                ? "What do you want to ask?"
+                : postType === "RECOMMENDATION"
+                  ? "Share your experience…"
+                  : "What's on your mind?"
+          }
+          rows={5}
+          className="w-full resize-none border-0 bg-transparent px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none focus:ring-0"
+        />
+        <div className="flex justify-end px-3 pb-1.5">
+          <span className={cn("text-[11px] tabular-nums", body.length > BODY_MAX * 0.9 ? "text-crimson-600 font-medium" : "text-ink-300")}>
+            {body.length}/{BODY_MAX}
+          </span>
+        </div>
+      </div>
+
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        multiple
+        onChange={(e) => handlePhotosSelected(e.target.files)}
+        className="hidden"
+      />
+
+      {imageUrls.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {imageUrls.map((url, i) => (
+            <div key={i} className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-ink-200">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt="" className="h-full w-full object-cover" />
+              <button
+                type="button"
+                onClick={() => removePhoto(i)}
+                aria-label="Remove photo"
+                className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white transition-colors duration-150 hover:bg-black/80"
+              >
+                <X size={11} />
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
-      {(mentionBoxOpen || mentioned.length > 0) && (
-        <div className="ml-[52px] mt-3">
-          <div className="relative">
-            <input
-              value={mentionQuery}
-              onChange={(e) => setMentionQuery(e.target.value)}
-              placeholder="Mention a business…"
-              className="w-full rounded-lg border border-ink-200 bg-surface px-3.5 py-2 text-sm placeholder:text-ink-300 focus:outline-none focus:ring-2 focus:ring-crimson-500/30 focus:border-crimson-500"
-            />
-            {mentionResults.length > 0 && (
-              <div className="absolute z-20 mt-1 w-full rounded-lg border border-ink-100 bg-surface shadow-pop">
-                {mentionResults.map((b) => (
+      {pollActive && (
+        <div className="mt-3 rounded-lg border border-ink-200 bg-ink-50 p-3">
+          <div className="flex flex-col gap-1.5">
+            {pollOptions.map((option, index) => (
+              <div key={index} className="flex items-center gap-1.5">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink-100 text-[11px] font-bold text-ink-500">
+                  {index + 1}
+                </span>
+                <input
+                  value={option}
+                  onChange={(e) => updatePollOption(index, e.target.value.slice(0, 80))}
+                  placeholder={`Option ${index + 1}`}
+                  className="w-full rounded-lg border border-ink-200 bg-surface px-3 py-1.5 text-sm placeholder:text-ink-300 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-crimson-500/30 focus:border-crimson-500"
+                />
+                {pollOptions.length > COMMUNITY_POLL_MIN_OPTIONS && (
                   <button
-                    key={b.id}
                     type="button"
-                    onClick={() => addMention(b)}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-ink-50"
+                    onClick={() => removePollOption(index)}
+                    aria-label={`Remove option ${index + 1}`}
+                    className="shrink-0 rounded-full p-1.5 text-ink-400 transition-colors duration-150 hover:bg-ink-100 hover:text-ink-700"
                   >
-                    {b.logoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={b.logoUrl} alt="" className="h-5 w-5 rounded-full object-cover" />
-                    ) : (
-                      <span className="h-5 w-5 rounded-full bg-ink-100" />
-                    )}
-                    {b.name}
+                    <X size={14} />
                   </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            {pollOptions.length < COMMUNITY_POLL_MAX_OPTIONS ? (
+              <button
+                type="button"
+                onClick={addPollOption}
+                className="inline-flex items-center gap-1 rounded-lg border border-dashed border-ink-300 px-2.5 py-1.5 text-xs font-medium text-ink-500 transition-colors duration-150 hover:border-crimson-300 hover:text-crimson-700"
+              >
+                <Plus size={13} /> Add option
+              </button>
+            ) : (
+              <span />
+            )}
+            <div className="relative">
+              <Clock size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-400" />
+              <select
+                value={pollDurationHours}
+                onChange={(e) => setPollDurationHours(Number(e.target.value))}
+                className="appearance-none rounded-lg border border-ink-200 bg-surface py-1 pl-7 pr-2.5 text-xs font-medium text-ink-700 focus:outline-none focus:ring-2 focus:ring-crimson-500/30"
+              >
+                {COMMUNITY_POLL_DURATIONS.map((d) => (
+                  <option key={d.value} value={d.value}>
+                    {d.label}
+                  </option>
                 ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <select
+          value={topic}
+          onChange={(e) => setTopic(e.target.value as CommunityTopic)}
+          className="rounded-lg border border-ink-200 bg-surface px-3 py-1.5 text-xs font-medium text-ink-700 transition-colors duration-150 hover:border-ink-300 focus:outline-none focus:ring-2 focus:ring-crimson-500/30"
+        >
+          {COMMUNITY_TOPICS.map((t) => (
+            <option key={t.value} value={t.value}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+
+        {imageUrls.length < MAX_POST_PHOTOS && (
+          <button
+            type="button"
+            onClick={() => photoInputRef.current?.click()}
+            disabled={uploadingPhoto}
+            className="inline-flex items-center gap-1.5 rounded-full border border-ink-200 px-3 py-1.5 text-xs font-medium text-ink-600 transition-colors duration-150 hover:border-ink-300 hover:bg-ink-50 hover:text-ink-800 disabled:opacity-50"
+          >
+            <ImagePlus size={13} className="shrink-0" />
+            {uploadingPhoto ? "Uploading…" : imageUrls.length > 0 ? "Add more photos" : "Add photos"}
+          </button>
+        )}
+
+        {pollActive ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-crimson-50 px-2.5 py-1 text-xs font-medium text-crimson-700">
+            <BarChart3 size={13} className="shrink-0" /> Poll
+            <button type="button" onClick={() => setPollActive(false)} aria-label="Remove poll" className="text-crimson-500 transition-colors duration-150 hover:text-crimson-700">
+              <X size={13} />
+            </button>
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setPollActive(true)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-ink-200 px-3 py-1.5 text-xs font-medium text-ink-600 transition-colors duration-150 hover:border-ink-300 hover:bg-ink-50 hover:text-ink-800"
+          >
+            <BarChart3 size={13} className="shrink-0" /> Add poll
+          </button>
+        )}
+
+        {selectedBusiness ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-crimson-50 px-2.5 py-1 text-xs font-medium text-crimson-700">
+            <Store size={13} className="shrink-0" /> {selectedBusiness.name}
+            <button type="button" onClick={() => setSelectedBusiness(null)} aria-label="Remove business" className="text-crimson-500 transition-colors duration-150 hover:text-crimson-700">
+              <X size={13} />
+            </button>
+          </span>
+        ) : (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setBusinessBoxOpen((v) => !v)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-ink-200 px-3 py-1.5 text-xs font-medium text-ink-600 transition-colors duration-150 hover:border-ink-300 hover:bg-ink-50 hover:text-ink-800"
+            >
+              <Store size={13} className="shrink-0" /> Attach a business
+            </button>
+            {businessBoxOpen && (
+              <div className="absolute left-0 z-20 mt-1.5 w-64 animate-scale-in">
+                <input
+                  autoFocus
+                  value={businessQuery}
+                  onChange={(e) => setBusinessQuery(e.target.value)}
+                  placeholder="Search businesses…"
+                  className="w-full rounded-lg border border-ink-200 bg-surface px-3 py-2 text-sm shadow-pop placeholder:text-ink-300 focus:outline-none focus:ring-2 focus:ring-crimson-500/30 focus:border-crimson-500"
+                />
+                {businessResults.length > 0 && (
+                  <div className="mt-1 max-h-48 overflow-y-auto rounded-lg border border-ink-100 bg-surface shadow-pop">
+                    {businessResults.map((b) => (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedBusiness(b);
+                          setBusinessBoxOpen(false);
+                          setBusinessQuery("");
+                          setBusinessResults([]);
+                        }}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors duration-150 hover:bg-ink-50"
+                      >
+                        {b.logoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={b.logoUrl} alt="" className="h-5 w-5 shrink-0 rounded-full object-cover" />
+                        ) : (
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ink-100 text-ink-400">
+                            <Store size={11} />
+                          </span>
+                        )}
+                        {b.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
-          {mentioned.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {mentioned.map((b) => (
-                <span
-                  key={b.id}
-                  className="inline-flex items-center gap-1 rounded-full bg-crimson-50 px-2.5 py-1 text-xs font-medium text-crimson-700"
-                >
-                  @{b.name}
-                  <button type="button" onClick={() => removeMention(b.id)} aria-label={`Remove ${b.name}`}>
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+        )}
+      </div>
 
-      <div className="my-3 h-px bg-ink-100" />
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1">
-          {TONE_PRESETS.map((preset) => (
-            <button
-              key={preset.key}
-              type="button"
-              onClick={() => handlePresetClick(preset.key)}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-ink-600 hover:bg-ink-50",
-                preset.key === "poll" && "opacity-50"
-              )}
-              title={preset.key === "poll" ? "Coming soon" : undefined}
-            >
-              <span>{preset.icon}</span>
-              <span className="hidden sm:inline">{preset.label}</span>
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => setMentionBoxOpen(true)}
-            className="hidden items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-ink-600 hover:bg-ink-50 sm:inline-flex"
-            title="Mention a business"
-          >
-            <span>📍</span>
-            <span>Mention</span>
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            className="hidden"
-            onChange={(e) => handleFileSelected(e.target.files)}
-          />
-        </div>
-        <Button size="sm" onClick={handleSubmit} loading={submitting}>
+      <div className="mt-4 flex justify-end border-t border-ink-100 pt-3">
+        <Button
+          size="sm"
+          onClick={handleSubmit}
+          loading={submitting}
+          disabled={
+            !body.trim() ||
+            uploadingPhoto ||
+            (pollActive && pollOptions.map((o) => o.trim()).filter(Boolean).length < COMMUNITY_POLL_MIN_OPTIONS)
+          }
+        >
           Post
         </Button>
       </div>

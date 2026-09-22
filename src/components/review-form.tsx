@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { galleryApi, reviewApi, uploadFileToPresignedUrl } from "@/lib/api";
+import { useLanguage } from "@/lib/language-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import type { ReviewResponse } from "@/lib/types";
 import { StarInput } from "./star-rating";
@@ -46,6 +47,7 @@ export function ReviewForm({
   onCancel?: () => void;
 }) {
   const { show } = useToast();
+  const { t } = useLanguage();
   const [rating, setRating] = useState(editing?.rating ?? 5);
   const [content, setContent] = useState(editing?.content ?? "");
   const [photoUrls, setPhotoUrls] = useState<string[]>(editing?.photoUrls ?? []);
@@ -61,15 +63,15 @@ export function ReviewForm({
     try {
       for (const file of Array.from(files)) {
         if (count >= MAX_PHOTOS) {
-          show(`You can attach up to ${MAX_PHOTOS} photos.`, "error");
+          show(t("review_form.error.max_photos", { max: MAX_PHOTOS }), "error");
           break;
         }
         if (!ALLOWED_TYPES.includes(file.type)) {
-          show(`${file.name || "That photo"}: only JPG, PNG, or WEBP photos are allowed.`, "error");
+          show(t("review_form.error.invalid_type", { name: file.name || t("review_form.that_photo") }), "error");
           continue;
         }
         if (file.size > MAX_PHOTO_MB * 1024 * 1024) {
-          show(`${file.name || "Photo"}: must be under ${MAX_PHOTO_MB}MB.`, "error");
+          show(t("review_form.error.too_large", { name: file.name || t("review_form.photo"), max: MAX_PHOTO_MB }), "error");
           continue;
         }
         // Note: the backend exposes photo upload only under
@@ -99,10 +101,10 @@ export function ReviewForm({
     try {
       if (editing) {
         await reviewApi.edit(editing.id, { rating, content });
-        show("Review updated", "success");
+        show(t("review_form.toast.updated"), "success");
       } else {
         await reviewApi.submit({ businessId, rating, content, photoUrls });
-        show("Review submitted", "success");
+        show(t("review_form.toast.submitted"), "success");
       }
       onDone();
     } catch (err) {
@@ -115,12 +117,12 @@ export function ReviewForm({
   return (
     <div className="rounded-md border border-ink-100 bg-sand-100/60 p-4">
       <p className="text-xs font-medium uppercase tracking-wide text-ink-500 mb-2">
-        {editing ? "Edit your review" : "Write a review"}
+        {editing ? t("review_form.heading_edit") : t("review_form.heading_write")}
       </p>
       <StarInput value={rating} onChange={setRating} />
       <Textarea
         className="mt-3"
-        placeholder="Share details of your experience — what went well, what didn't."
+        placeholder={t("review_form.content_placeholder")}
         value={content}
         onChange={(e) => setContent(e.target.value)}
         maxLength={4000}
@@ -148,7 +150,7 @@ export function ReviewForm({
           />
 
           <div className="flex flex-wrap items-center gap-2 text-xs text-ink-500">
-            <span>Add photos</span>
+            <span>{t("review_form.add_photos")}</span>
             {photoUrls.length < MAX_PHOTOS && (
               <>
                 <button
@@ -158,7 +160,7 @@ export function ReviewForm({
                   className="inline-flex items-center gap-1 rounded-md border border-ink-200 px-2 py-1 font-medium text-ink-600 transition-colors hover:border-crimson-400 hover:text-crimson-600 disabled:opacity-50"
                 >
                   <CameraIcon />
-                  Camera
+                  {t("review_form.camera")}
                 </button>
                 <button
                   type="button"
@@ -167,11 +169,11 @@ export function ReviewForm({
                   className="inline-flex items-center gap-1 rounded-md border border-ink-200 px-2 py-1 font-medium text-ink-600 transition-colors hover:border-crimson-400 hover:text-crimson-600 disabled:opacity-50"
                 >
                   <GalleryIcon />
-                  Gallery
+                  {t("review_form.gallery")}
                 </button>
               </>
             )}
-            {uploading && <span className="text-ink-400">Uploading…</span>}
+            {uploading && <span className="text-ink-400">{t("common.uploading")}</span>}
           </div>
 
           {photoUrls.length > 0 && (
@@ -183,7 +185,7 @@ export function ReviewForm({
                   <button
                     type="button"
                     onClick={() => removePhoto(i)}
-                    aria-label="Remove photo"
+                    aria-label={t("review_form.remove_photo")}
                     className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black/60 text-[10px] font-bold leading-none text-white hover:bg-black/80"
                   >
                     ✕
@@ -198,11 +200,11 @@ export function ReviewForm({
       <div className="mt-4 flex justify-end gap-2">
         {onCancel && (
           <Button variant="ghost" onClick={onCancel}>
-            Cancel
+            {t("common.cancel")}
           </Button>
         )}
         <Button onClick={submit} loading={submitting || uploading}>
-          {editing ? "Save changes" : "Submit review"}
+          {editing ? t("review_form.save_changes") : t("review_form.submit_review")}
         </Button>
       </div>
     </div>

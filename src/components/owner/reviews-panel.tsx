@@ -3,21 +3,29 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { messageApi, reviewApi } from "@/lib/api";
-import { errorMessage } from "@/lib/toast-context";
+import { useLanguage } from "@/lib/language-context";
+import { errorMessage, useToast } from "@/lib/toast-context";
 import { timeAgo, truncateId } from "@/lib/utils";
 import type { BusinessResponse, MessageThread, ReviewResponse } from "@/lib/types";
 import { StarDisplay } from "@/components/star-rating";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/field";
 import { Badge, EmptyState, ErrorBanner, PageSpinner, Pagination } from "@/components/ui/misc";
 
 /** Owner's view of their reviews — includes hidden / under-review ones, with a
  *  jump to the customer's message thread when one exists. (Was the dashboard's Reviews tab.) */
 export function OwnerReviewsPanel({ business }: { business: BusinessResponse }) {
+  const { t } = useLanguage();
+  const { show } = useToast();
   const [reviews, setReviews] = useState<ReviewResponse[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [threads, setThreads] = useState<MessageThread[]>([]);
+  const [replyingId, setReplyingId] = useState<string | null>(null);
+  const [replyDraft, setReplyDraft] = useState("");
+  const [savingReply, setSavingReply] = useState(false);
 
   const load = useCallback(
     (p: number) => {
@@ -42,6 +50,40 @@ export function OwnerReviewsPanel({ business }: { business: BusinessResponse }) 
       .then((all) => setThreads(all.filter((t) => t.businessId === business.id)))
       .catch(() => {});
   }, [load, business.id]);
+
+  function startReply(r: ReviewResponse) {
+    setReplyDraft(r.ownerReply ?? "");
+    setReplyingId(r.id);
+  }
+
+  function cancelReply() {
+    setReplyingId(null);
+    setReplyDraft("");
+  }
+
+  async function saveReply(id: string) {
+    if (!replyDraft.trim()) return;
+    setSavingReply(true);
+    try {
+      const updated = await reviewApi.reply(id, replyDraft.trim());
+      setReviews((prev) => prev.map((r) => (r.id === id ? updated : r)));
+      cancelReply();
+    } catch (err) {
+      show(errorMessage(err), "error");
+    } finally {
+      setSavingReply(false);
+    }
+  }
+
+  async function deleteReply(id: string) {
+    if (!confirm(t("reviews_panel.confirm_delete_reply"))) return;
+    try {
+      const updated = await reviewApi.removeReply(id);
+      setReviews((prev) => prev.map((r) => (r.id === id ? updated : r)));
+    } catch (err) {
+      show(errorMessage(err), "error");
+    }
+  }
 
   if (loading) return <PageSpinner />;
   if (error) return <ErrorBanner message={error} />;
@@ -85,18 +127,58 @@ export function OwnerReviewsPanel({ business }: { business: BusinessResponse }) 
                   {r.userName || `reviewer ${truncateId(r.userId)}`} · {timeAgo(r.createdAt)}
                 </p>
                 {r.content && <p className="mt-1.5 text-sm text-ink-700">{r.content}</p>}
+
                 <div className="mt-2">
-                  {thread ? (
-                    <Link href={`/owner/inbox/${thread.id}`} className="text-xs text-crimson-700 hover:underline">
-                      Reply via message thread →
-                    </Link>
+                  {replyingId === r.id ? (
+                    <div className="space-y-2 rounded-lg border border-dashed border-ink-300 bg-sand-50/40 p-3">
+                      <Textarea
+                        value={replyDraft}
+                        onChange={(e) => setReplyDraft(e.target.value)}
+                        rows={3}
+                        placeholder={t("reviews_panel.reply_placeholder")}
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => saveReply(r.id)} loading={savingReply}>
+                          {t("common.save")}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={cancelReply}>
+                          {t("common.cancel")}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : r.ownerReply ? (
+                    <div className="rounded-lg border border-ink-100 bg-sand-50/70 p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-xs font-bold text-ink-700">
+                          {t("reviews_panel.your_reply")}
+                          {r.ownerRepliedAt && (
+                            <span className="ml-1.5 font-normal text-ink-400">· {timeAgo(r.ownerRepliedAt)}</span>
+                          )}
+                        </p>
+                        <div className="flex shrink-0 gap-2 text-xs">
+                          <button type="button" onClick={() => startReply(r)} className="font-medium text-crimson-700 hover:underline">
+                            {t("common.edit")}
+                          </button>
+                          <button type="button" onClick={() => deleteReply(r.id)} className="font-medium text-rose-600 hover:underline">
+                            {t("common.delete")}
+                          </button>
+                        </div>
+                      </div>
+                      <p className="mt-1 whitespace-pre-wrap text-sm text-ink-700">{r.ownerReply}</p>
+                    </div>
                   ) : (
-                    <span
-                      className="text-xs text-ink-300"
-                      title="The customer hasn't messaged you yet — the reply channel only opens once they start a conversation."
+                    <Button size="sm" variant="outline" onClick={() => startReply(r)}>
+                      {t("reviews_panel.reply_publicly")}
+                    </Button>
+                  )}
+
+                  {thread && (
+                    <Link
+                      href={`/owner/inbox/${thread.id}`}
+                      className="mt-1.5 block text-xs text-ink-400 hover:text-crimson-700 hover:underline"
                     >
-                      Reply unavailable until the customer messages you first
-                    </span>
+                      {t("reviews_panel.continue_by_message")} →
+                    </Link>
                   )}
                 </div>
               </div>

@@ -1,43 +1,68 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { communityApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
+import { useCommunityUsernameModal } from "@/lib/community-username-modal-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import { cn } from "@/lib/utils";
-import type { CommunityPostResponse } from "@/lib/types";
+import { COMMUNITY_FEED_TYPE_FILTERS, COMMUNITY_SORT_OPTIONS, COMMUNITY_TOPICS } from "@/lib/community-constants";
+import type { CommunityPostResponse, CommunityPostType, CommunitySortOrder, CommunityTopic } from "@/lib/types";
 import { CommunityComposer } from "@/components/community-composer";
 import { CommunityPostCard } from "@/components/community-post-card";
 import { EmptyState, ErrorBanner, PageSpinner } from "@/components/ui/misc";
 import { Button } from "@/components/ui/button";
 
-// "Following" and "Nearby" need a follow graph / geo-tagged feed the backend
-// doesn't have yet — shown for the target layout but intentionally inert
-// (a toast, not fake data) rather than pretending they work.
-const FEED_TABS = [
-  { key: "forYou" as const, label: "For You" },
-  { key: "following" as const, label: "Following" },
-  { key: "nearby" as const, label: "Nearby" },
-];
-
-// Category isn't part of the post model yet, so only "All" is real; the
-// rest are shown to match the target design but are disabled with a note.
-const CATEGORY_PILLS = ["All", "Food", "Healthcare", "Beauty", "Shopping", "Fitness"];
-
+/**
+ * The Community "Home" feed — the site nav / sidebar's default destination.
+ * Following/Nearby moved out to their own pages (see app/(site)/community/
+ * {following,followers,explore}) — this page only owns the type/category/
+ * sort filters over the plain recent-or-top feed. `postType` reads its
+ * initial value from the URL so sidebar links like `?postType=QUESTION`
+ * (Questions/Reviews) land pre-filtered.
+ */
 export default function CommunityPage() {
+  return (
+    <Suspense fallback={<PageSpinner />}>
+      <CommunityPageInner />
+    </Suspense>
+  );
+}
+
+function CommunityPageInner() {
   const { show } = useToast();
+  const { user, profile } = useAuth();
+  const { openModal: openUsernameModal } = useCommunityUsernameModal();
+  const searchParams = useSearchParams();
   const [posts, setPosts] = useState<CommunityPostResponse[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<(typeof FEED_TABS)[number]["key"]>("forYou");
+  // Type filtering (Questions/Reviews/Discussions) now lives only in the sidebar (see
+  // CommunitySidebar) — no in-page pill duplicating it. postType still reads from the URL
+  // so a sidebar link like `?postType=QUESTION` lands pre-filtered.
+  const [postType] = useState<CommunityPostType | null>(() => (searchParams.get("postType") as CommunityPostType | null) ?? null);
+  const [topic, setTopic] = useState<CommunityTopic | null>(() => (searchParams.get("topic") as CommunityTopic | null) ?? null);
+  const [sort, setSort] = useState<CommunitySortOrder>("NEW");
+  const promptedForUsername = useRef(false);
+
+  // "When a user first enters Community, if they do not yet have a Community
+  // username" — show the setup modal proactively, not just when they try to post/comment.
+  useEffect(() => {
+    if (!promptedForUsername.current && user && profile && !profile.communityUsername) {
+      promptedForUsername.current = true;
+      openUsernameModal();
+    }
+  }, [user, profile, openUsernameModal]);
 
   const loadFirstPage = useCallback(() => {
     setLoading(true);
     setError(null);
     communityApi
-      .feed(0, 10)
+      .feed({ topic: topic ?? undefined, postType: postType ?? undefined, sort, page: 0 })
       .then((res) => {
         setPosts(res.content);
         setPage(res.page);
@@ -45,14 +70,14 @@ export default function CommunityPage() {
       })
       .catch((err) => setError(errorMessage(err)))
       .finally(() => setLoading(false));
-  }, []);
+  }, [topic, postType, sort]);
 
   useEffect(loadFirstPage, [loadFirstPage]);
 
   async function loadMore() {
     setLoadingMore(true);
     try {
-      const res = await communityApi.feed(page + 1, 10);
+      const res = await communityApi.feed({ topic: topic ?? undefined, postType: postType ?? undefined, sort, page: page + 1 });
       setPosts((prev) => [...prev, ...res.content]);
       setPage(res.page);
       setTotalPages(res.totalPages);
@@ -60,21 +85,6 @@ export default function CommunityPage() {
       setError(errorMessage(err));
     } finally {
       setLoadingMore(false);
-    }
-  }
-
-  function handleTabClick(key: (typeof FEED_TABS)[number]["key"]) {
-    if (key !== "forYou") {
-      show("Coming soon", "info");
-      return;
-    }
-    setActiveTab(key);
-  }
-
-  function handleCategoryClick(label: string) {
-    if (label !== "All") {
-      show("Coming soon", "info");
-      return;
     }
   }
 
@@ -90,70 +100,67 @@ export default function CommunityPage() {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
   }
 
+  const activeTypeLabel = COMMUNITY_FEED_TYPE_FILTERS.find((t) => t.value === postType)?.label;
+
   return (
-    <div className="mx-auto max-w-2xl">
-      <h1 className="font-display text-2xl font-bold text-ink-900">Join Community</h1>
-      <p className="mt-1 text-sm text-ink-500">
-        Share updates, ask for recommendations, and tag the businesses you love.
+    <div className="pb-6 pt-0 lg:pt-6">
+      <h1 className="font-display text-lg font-bold text-ink-900 lg:text-2xl">
+        {activeTypeLabel && activeTypeLabel !== "All" ? activeTypeLabel : "Jachai Community"}
+      </h1>
+      <p className="mt-0.5 hidden text-sm text-ink-500 lg:block">
+        Local discussions, questions, and recommendations — under a Community username, not your account name.
       </p>
 
-      <div className="mt-4 flex gap-1 rounded-full bg-ink-50 p-1">
-        {FEED_TABS.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => handleTabClick(tab.key)}
-            className={cn(
-              "flex-1 rounded-full px-3 py-1.5 text-sm font-semibold transition-colors",
-              activeTab === tab.key ? "bg-ink-900 text-white" : "text-ink-500 hover:text-ink-800"
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="mt-1.5 flex items-center justify-between gap-2 lg:mt-4">
+        <div className="flex gap-1.5">
+          {COMMUNITY_SORT_OPTIONS.map((s) => (
+            <button
+              key={s.value}
+              type="button"
+              onClick={() => setSort(s.value)}
+              className={cn(
+                "rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+                sort === s.value ? "bg-crimson-50 text-crimson-700" : "text-ink-400 hover:text-ink-700"
+              )}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+        <select
+          value={topic ?? ""}
+          onChange={(e) => setTopic(e.target.value === "" ? null : (e.target.value as CommunityTopic))}
+          className="rounded-lg border border-ink-200 bg-surface px-2.5 py-1 text-xs font-medium text-ink-700 focus:outline-none focus:ring-2 focus:ring-crimson-500/30"
+        >
+          <option value="">All categories</option>
+          {COMMUNITY_TOPICS.map((t) => (
+            <option key={t.value} value={t.value}>
+              {t.label}
+            </option>
+          ))}
+        </select>
       </div>
 
-      <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-        {CATEGORY_PILLS.map((label) => (
-          <button
-            key={label}
-            type="button"
-            onClick={() => handleCategoryClick(label)}
-            className={cn(
-              "shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors",
-              label === "All"
-                ? "border-ink-900 bg-ink-900 text-white"
-                : "border-ink-200 text-ink-500 hover:border-ink-300"
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-4">
+      <div className="mt-3">
         <CommunityComposer onPosted={handlePosted} />
       </div>
 
-      <div className="mt-6 space-y-4">
+      <div className="mt-4">
         {loading && <PageSpinner />}
         {!loading && error && <ErrorBanner message={error} />}
         {!loading && !error && posts.length === 0 && (
-          <EmptyState
-            title="No posts yet"
-            description="Be the first to share something with the community."
-          />
+          <EmptyState title="No posts yet" description="Be the first to start a discussion." />
         )}
-        {!loading &&
-          !error &&
-          posts.map((post) => (
-            <div key={post.id} id={`post-${post.id}`}>
-              <CommunityPostCard post={post} onChanged={handleChanged} onDeleted={handleDeleted} />
-            </div>
-          ))}
+        {!loading && !error && posts.length > 0 && (
+          <div className="divide-y divide-ink-100">
+            {posts.map((post) => (
+              <CommunityPostCard key={post.id} post={post} onChanged={handleChanged} onDeleted={handleDeleted} />
+            ))}
+          </div>
+        )}
 
         {!loading && !error && page + 1 < totalPages && (
-          <div className="flex justify-center pt-2">
+          <div className="flex justify-center pt-4">
             <Button variant="outline" size="sm" onClick={loadMore} loading={loadingMore}>
               Load more
             </Button>

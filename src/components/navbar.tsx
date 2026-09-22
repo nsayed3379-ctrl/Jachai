@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthModal } from "@/lib/auth-modal-context";
+import { useCommunityUsernameModal } from "@/lib/community-username-modal-context";
 import { useHomeSearch } from "@/lib/home-search-context";
 import { useLanguage } from "@/lib/language-context";
 import { useBusinessInboxUnreadCount } from "@/lib/use-business-inbox-unread";
@@ -89,6 +90,7 @@ function Avatar({ photoUrl, size = 28 }: { photoUrl: string | null | undefined; 
 export function Navbar() {
   const { user, profile, logout, switchAccount } = useAuth();
   const { openLogin, openSignup } = useAuthModal();
+  const { openModal: openUsernameModal } = useCommunityUsernameModal();
   const { t } = useLanguage();
   const { show } = useToast();
   const router = useRouter();
@@ -262,6 +264,26 @@ export function Navbar() {
                               <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-crimson-600" aria-hidden />
                             )}
                           </AccountMenuLink>
+                          {profile?.communityUsername ? (
+                            <AccountMenuLink
+                              href={`/community/u/${profile.communityUsername}`}
+                              active={pathname.startsWith("/community/u/")}
+                              onClick={() => setAccountMenuOpen(false)}
+                            >
+                              Community profile
+                            </AccountMenuLink>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAccountMenuOpen(false);
+                                openUsernameModal();
+                              }}
+                              className="block w-full rounded-lg px-3 py-2.5 text-left text-base text-ink-700 transition-colors duration-150 hover:bg-ink-50 hover:text-crimson-700"
+                            >
+                              Set up Community username
+                            </button>
+                          )}
                           <div className="my-1 h-px bg-ink-100" />
                           <AccountMenuLink
                             href="/account"
@@ -288,6 +310,13 @@ export function Navbar() {
                             {t("nav.bookmarks")}
                           </AccountMenuLink>
                           <AccountMenuLink
+                            href="/me/offers"
+                            active={pathname === "/me/offers"}
+                            onClick={() => setAccountMenuOpen(false)}
+                          >
+                            My offers
+                          </AccountMenuLink>
+                          <AccountMenuLink
                             href="/orders"
                             active={pathname.startsWith("/orders")}
                             onClick={() => setAccountMenuOpen(false)}
@@ -308,6 +337,26 @@ export function Navbar() {
                           >
                             {t("nav.messages")}
                           </AccountMenuLink>
+                          {profile?.communityUsername ? (
+                            <AccountMenuLink
+                              href={`/community/u/${profile.communityUsername}`}
+                              active={pathname.startsWith("/community/u/")}
+                              onClick={() => setAccountMenuOpen(false)}
+                            >
+                              Community profile
+                            </AccountMenuLink>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAccountMenuOpen(false);
+                                openUsernameModal();
+                              }}
+                              className="block w-full rounded-lg px-3 py-2.5 text-left text-base text-ink-700 transition-colors duration-150 hover:bg-ink-50 hover:text-crimson-700"
+                            >
+                              Set up Community username
+                            </button>
+                          )}
                           <div className="my-1 h-px bg-ink-100" />
                           <AccountMenuLink
                             href="/account"
@@ -377,6 +426,26 @@ export function Navbar() {
                     Inbox
                     {inboxUnreadCount > 0 && <span className="h-2 w-2 rounded-full bg-crimson-600" aria-hidden />}
                   </Link>
+                  {profile?.communityUsername ? (
+                    <Link
+                      href={`/community/u/${profile.communityUsername}`}
+                      className="px-3 py-2 rounded hover:bg-ink-100"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Community profile
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      className="px-3 py-2 rounded hover:bg-ink-100 text-left"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        openUsernameModal();
+                      }}
+                    >
+                      Set up Community username
+                    </button>
+                  )}
                   {canSwitchAccount && (
                     <button
                       type="button"
@@ -399,6 +468,9 @@ export function Navbar() {
                   <Link href="/me/bookmarks" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
                     {t("nav.bookmarks")}
                   </Link>
+                  <Link href="/me/offers" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
+                    My offers
+                  </Link>
                   <Link href="/orders" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
                     My orders
                   </Link>
@@ -408,6 +480,26 @@ export function Navbar() {
                   <Link href="/me/messages" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
                     {t("nav.messages")}
                   </Link>
+                  {profile?.communityUsername ? (
+                    <Link
+                      href={`/community/u/${profile.communityUsername}`}
+                      className="px-3 py-2 rounded hover:bg-ink-100"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Community profile
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      className="px-3 py-2 rounded hover:bg-ink-100 text-left"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        openUsernameModal();
+                      }}
+                    >
+                      Set up Community username
+                    </button>
+                  )}
                   <div className="my-1 h-px bg-ink-100" />
                   {canSwitchAccount ? (
                     <button

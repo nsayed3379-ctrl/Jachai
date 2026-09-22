@@ -66,6 +66,7 @@ function buildNavGroups(
         { label: "Business QR", href: `${base}/qr` },
         ...moduleItems,
         ...commerceItems,
+        { label: "Offers", href: `${base}/offers` },
         { label: "Updates", href: `${base}/updates` },
       ],
     },

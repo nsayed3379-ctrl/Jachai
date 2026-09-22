@@ -7,6 +7,7 @@ import { useHomeSearch } from "@/lib/home-search-context";
 import { errorMessage } from "@/lib/toast-context";
 import type { Area, BusinessResponse, Category } from "@/lib/types";
 import { BusinessCard } from "@/components/business-card";
+import { BusinessCarousel } from "@/components/business-carousel";
 import { BusinessFilters } from "@/components/business-filters";
 import { CategoryQuickNav } from "@/components/category-quick-nav";
 import { CategoriesGrid } from "@/components/categories-grid";
@@ -85,6 +86,8 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [heroIndex, setHeroIndex] = useState(0);
+  const [trending, setTrending] = useState<BusinessResponse[]>([]);
+  const [mostLoved, setMostLoved] = useState<BusinessResponse[]>([]);
   const resultsRef = useRef<HTMLDivElement>(null);
   const heroTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -142,6 +145,19 @@ export default function HomePage() {
       cancelled = true;
     };
   }, [params]);
+
+  // Sitewide, unfiltered by the search params above — a fixed top-10 snapshot
+  // fetched once on mount, not re-fetched as the visitor changes filters.
+  useEffect(() => {
+    businessApi
+      .search({ sort: "trending", size: 10 })
+      .then((page) => setTrending(page.content))
+      .catch(() => {});
+    businessApi
+      .search({ sort: "most_loved", size: 10 })
+      .then((page) => setMostLoved(page.content))
+      .catch(() => {});
+  }, []);
 
   function scrollToResults() {
     resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -222,7 +238,7 @@ export default function HomePage() {
             popover — plus the category quick-nav strip, which stays lg+ only. */}
         <div className="relative z-20 mt-16 animate-hero-in">
           <div className="lg:hidden bg-scrim/90 backdrop-blur-md border-b border-white/10">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
               {/* Full self-contained mobile/tablet filter UI (bottom sheet /
                   popover) — unchanged. Below lg only; lg+ uses the Navbar's
                   inline search instead, so this whole div is lg:hidden above. */}
@@ -272,6 +288,21 @@ export default function HomePage() {
           </button>
         </div>
       </section>
+
+      {(trending.length > 0 || mostLoved.length > 0) && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+          {trending.length > 0 && (
+            <Reveal>
+              <BusinessCarousel title="Trending this week" businesses={trending} badge="trending" />
+            </Reveal>
+          )}
+          {mostLoved.length > 0 && (
+            <Reveal>
+              <BusinessCarousel title="Most loved" businesses={mostLoved} badge="most_loved" />
+            </Reveal>
+          )}
+        </div>
+      )}
 
       {/* BusinessList: a distinct, "gorgeous" section — soft gradient wash +
           blurred color blobs (a subtle mesh-gradient look) behind the grid,

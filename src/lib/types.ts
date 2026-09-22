@@ -28,6 +28,8 @@ export interface UserProfile {
   preferredLanguage: PreferredLanguage;
   /** Whether this account is paired with an opposite-role account (consumer<->business) — drives the switcher in the nav. */
   hasLinkedAccount: boolean;
+  /** Public "Join Community" pseudonymous handle (u/username) — null until the setup flow is completed. */
+  communityUsername: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -78,6 +80,8 @@ export interface BusinessResponse {
   contactNumber: string;
   operatingHours: string | null;
   description: string | null;
+  // Optional trust-building field, "Since {establishedYear}" — null when unset.
+  establishedYear: number | null;
   coverPhotoUrl: string | null;
   logoUrl: string | null;
   // "Business presence" (spec Step 4) — optional contact/social links. Null when unset;
@@ -116,6 +120,52 @@ export interface BusinessResponse {
   categoryModules: CategoryModuleFlags | null;
   // Phase 3 — true if the listing has ≥1 published update. Detail response only; null on lists.
   hasUpdates: boolean | null;
+  // True if the listing has ≥1 FAQ entry. Detail response only; null on lists. Lets the
+  // "About" tab show even when there's no other about-data, as long as FAQ exists.
+  hasFaq: boolean | null;
+  // Structured per-day hours (distinct from the legacy free-text `operatingHours` above) —
+  // detail response only, null on search/list results. Null/empty means the business hasn't
+  // set structured hours yet, so no "open now" badge is shown (see lib/business-hours.ts) —
+  // the legacy free text is never parsed to guess it, it's too unreliable a format.
+  structuredHours: OperatingHoursEntry[] | null;
+  // Holiday / special-hours date-range overrides — detail response only, null on
+  // search/list results, same convention as structuredHours. An active exception
+  // always takes precedence over the recurring weekly entry (see lib/business-hours.ts).
+  hoursExceptions: HoursExceptionEntry[] | null;
+}
+
+/**
+ * One day's structured hours. closeTime <= openTime (when not closed) means the
+ * window crosses midnight (e.g. open "20:00", close "02:00") — inferred from the
+ * times themselves, no separate flag; mirrors the backend's V38 CHECK constraint.
+ * Same shape is used for both reading (BusinessResponse.structuredHours) and
+ * writing (businessApi.updateHours request body).
+ */
+export interface OperatingHoursEntry {
+  dayOfWeek: DayOfWeek;
+  closed: boolean;
+  /** "HH:mm" (LocalTime) — null when closed. */
+  openTime: string | null;
+  closeTime: string | null;
+}
+
+/**
+ * A holiday closure or modified/special hours for a date range (e.g. a 3-day Eid
+ * closure, or shorter hours on a specific date) — takes precedence over the
+ * recurring weekly OperatingHoursEntry for any date(s) it covers. Same
+ * closeTime<=openTime cross-midnight convention. Used for both reading
+ * (BusinessResponse.hoursExceptions) and writing (businessApi add/update calls).
+ */
+export interface HoursExceptionEntry {
+  id: string;
+  /** "YYYY-MM-DD" (LocalDate). */
+  startDate: string;
+  endDate: string;
+  closed: boolean;
+  /** "HH:mm" (LocalTime) — null when closed. */
+  openTime: string | null;
+  closeTime: string | null;
+  reason: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -291,6 +341,20 @@ export interface FeaturedProductBody {
   description?: string | null;
   priceText?: string | null;
   photoUrl?: string | null;
+}
+
+/** Owner-answered common question — business-wide, not category-scoped, unlike the modules above. */
+export interface Faq {
+  id: string;
+  businessId: string;
+  question: string;
+  answer: string;
+  sortOrder: number;
+  createdAt: string;
+}
+export interface FaqBody {
+  question: string;
+  answer: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -592,6 +656,7 @@ export interface CreateBusinessRequest {
   contactNumber: string;
   operatingHours?: string | null;
   description?: string | null;
+  establishedYear?: number | null;
   coverPhotoUrl?: string | null;
   logoUrl?: string | null;
   latitude: number;
@@ -608,7 +673,8 @@ export interface CreateBusinessRequest {
 
 export type UpdateBusinessRequest = CreateBusinessRequest;
 
-export type SortOption = "relevance" | "rating" | "distance" | "newest" | "most_reviewed";
+/** "trending"/"most_loved" are homepage-carousel-only — not in SORT_LABELS, so they never surface in the manual sort dropdown. */
+export type SortOption = "relevance" | "rating" | "distance" | "newest" | "most_reviewed" | "trending" | "most_loved";
 
 export interface BusinessSearchParams {
   categoryId?: string;
@@ -647,6 +713,9 @@ export interface ReviewResponse {
   editable: boolean;
   photoUrls: string[];
   createdAt: string;
+  // Public owner reply ("Response from the owner") — distinct from the private message thread.
+  ownerReply: string | null;
+  ownerRepliedAt: string | null;
 }
 
 // Shape returned by the admin moderation "flagged reviews" endpoint
@@ -750,7 +819,7 @@ export interface Collection {
 // ---------------------------------------------------------------------------
 // Reports
 // ---------------------------------------------------------------------------
-export type ReportTargetType = "REVIEW" | "LISTING";
+export type ReportTargetType = "REVIEW" | "LISTING" | "COMMUNITY_POST" | "COMMUNITY_COMMENT" | "OFFER";
 export type ReportReason = "SPAM" | "FAKE" | "OFFENSIVE" | "OTHER";
 // PENDING is the only non-terminal value; the other three are resolution
 // outcomes an admin chooses on resolve — see ResolveReportRequest below.
@@ -789,7 +858,11 @@ export type NotificationType =
   | "REPORT_ACTION_TAKEN"
   | "REPORT_DISMISSED"
   | "CONTENT_HIDDEN"
-  | "LISTING_FLAGGED";
+  | "LISTING_FLAGGED"
+  | "OFFER_CLAIMED"
+  | "OFFER_REDEEMED"
+  | "OFFER_APPROVED"
+  | "OFFER_REJECTED";
 export type NotificationChannel = "SMS" | "IN_APP";
 export type NotificationStatus = "PENDING" | "SENT" | "FAILED" | "READ";
 
@@ -925,16 +998,36 @@ export interface CachedBusinessSummary {
 }
 
 // ---------------------------------------------------------------------------
-// "Join Community" — Facebook-style feed (spec: navbar entry point, text +
-// single image post, reactions, comments, business mentions). Mirrors
-// com.bdreview.platform.community's response DTOs.
+// "Join Community" V1 — Reddit-style pseudonymous text discussion (formerly
+// a Facebook-style content+image feed). Mirrors com.bdreview.platform
+// .community's response DTOs field-for-field.
 // ---------------------------------------------------------------------------
-export type CommunityPostReactionType = "LIKE" | "LOVE" | "HAHA" | "WOW" | "SAD" | "ANGRY";
+export type CommunityPostVoteType = "UPVOTE" | "DOWNVOTE";
+export type CommunityPostType = "DISCUSSION" | "QUESTION" | "RECOMMENDATION" | "POLL";
+export type CommunityTopic =
+  | "FOOD"
+  | "HEALTHCARE"
+  | "BEAUTY"
+  | "SHOPPING"
+  | "FITNESS"
+  | "LOCAL"
+  | "SERVICES"
+  | "JOBS"
+  | "EDUCATION"
+  | "TRAVEL"
+  | "GENERAL";
+export type CommunityFeedTab = "FOR_YOU" | "FOLLOWING" | "NEARBY";
+export type CommunitySortOrder = "NEW" | "TOP";
+/** Derived server-side, not stored — see CommunityPostService#questionStatus. Only present when postType === "QUESTION". */
+export type CommunityQuestionStatus = "OPEN" | "ANSWERED" | "CLOSED";
 
+/** Never carries the poster's real name/phone/photo — see CommunityPostService#toAuthorSummary. */
 export interface CommunityAuthorSummary {
   id: string;
-  name: string | null;
-  profilePhotoUrl: string | null;
+  communityUsername: string | null;
+  reviewCount: number;
+  memberSince: string | null;
+  verified: boolean;
 }
 
 export interface CommunityMentionedBusinessSummary {
@@ -945,21 +1038,52 @@ export interface CommunityMentionedBusinessSummary {
   verified: boolean;
 }
 
+export interface CommunityAreaSummary {
+  id: string;
+  name: string;
+  cityName: string;
+}
+
+/** voteCount is null until the viewer has voted (or the poll has closed) — see CommunityPoll. */
+export interface CommunityPollOptionResponse {
+  id: string;
+  label: string;
+  voteCount: number | null;
+}
+
+export interface CommunityPollResponse {
+  id: string;
+  options: CommunityPollOptionResponse[];
+  totalVotes: number;
+  /** Null if the current viewer hasn't voted (or is anonymous). */
+  myVoteOptionId: string | null;
+  closesAt: string;
+  closed: boolean;
+}
+
 export interface CommunityPostResponse {
   id: string;
   author: CommunityAuthorSummary;
-  content: string | null;
-  imageUrl: string | null;
-  likeCount: number;
-  loveCount: number;
-  hahaCount: number;
-  wowCount: number;
-  sadCount: number;
-  angryCount: number;
-  totalReactionCount: number;
-  myReaction: CommunityPostReactionType | null;
+  title: string | null;
+  body: string | null;
+  /** The post's photo attachments, in order (or a legacy pre-V1 post's single image as a 1-entry list); empty if none. */
+  imageUrls: string[];
+  postType: CommunityPostType;
+  topic: CommunityTopic;
+  area: CommunityAreaSummary | null;
+  upvoteCount: number;
+  downvoteCount: number;
+  score: number;
+  myVote: CommunityPostVoteType | null;
   commentCount: number;
+  /** 0 or 1 entries for a V1 post (single optional business attach). */
   mentionedBusinesses: CommunityMentionedBusinessSummary[];
+  /** Non-null only when postType === "POLL". */
+  poll: CommunityPollResponse | null;
+  /** Non-null only when postType === "QUESTION". */
+  questionStatus: CommunityQuestionStatus | null;
+  /** Top-level (depth 0) comments only — "Answers" on a QUESTION post. 0 for other post types. */
+  answerCount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -968,17 +1092,147 @@ export interface CommunityCommentResponse {
   id: string;
   author: CommunityAuthorSummary;
   content: string;
+  parentCommentId: string | null;
+  depth: number;
+  /** Only meaningful for a top-level (depth 0) comment on a QUESTION post. */
+  isBestAnswer: boolean;
+  upvoteCount: number;
+  downvoteCount: number;
+  score: number;
+  myVote: CommunityPostVoteType | null;
   createdAt: string;
   updatedAt: string;
 }
 
+export interface CommunityProfileResponse {
+  userId: string;
+  communityUsername: string;
+  memberSince: string;
+  verified: boolean;
+  reviewCount: number;
+  postCount: number;
+  commentCount: number;
+  isFollowing: boolean;
+  followerCount: number;
+  followingCount: number;
+}
+
+/** One row of a Following/Followers list. */
+export interface CommunityFollowListItem {
+  author: CommunityAuthorSummary;
+  /** Whether the current viewer (not the list owner) already follows this person. */
+  isFollowing: boolean;
+}
+
 export interface CreateCommunityPostBody {
-  content: string | null;
-  imageUrl: string | null;
-  mentionedBusinessIds: string[];
+  /** Not surfaced in the composer (single text box, no title field) — always null from the frontend. */
+  title: string | null;
+  body: string;
+  postType: CommunityPostType;
+  topic: CommunityTopic;
+  businessId: string | null;
+  areaId: string | null;
+  /** Only sent when postType === "POLL": 2-6 option labels. */
+  pollOptions: string[] | null;
+  /** Only sent when postType === "POLL": hours, one of 24/72/168 (1/3/7 days). */
+  pollDurationHours: number | null;
+  /** CDN URLs from communityApi.requestUploadUrl, one call per file, after uploadFileToPresignedUrl succeeds. Up to 10. */
+  imageUrls: string[];
 }
 
 export interface UpdateCommunityPostBody {
-  content: string | null;
-  mentionedBusinessIds: string[];
+  title: string | null;
+  body: string;
+  topic: CommunityTopic;
+  businessId: string | null;
+  imageUrls: string[];
 }
+
+// ---------------------------------------------------------------------------
+// Offers / Discounts — mirrors com.bdreview.platform.offer's response DTOs
+// field-for-field. discountValue is only meaningful for the two numeric
+// types (PERCENTAGE_DISCOUNT/FIXED_AMOUNT_DISCOUNT); originalPrice/offerPrice
+// are both optional everywhere (not every offer type has a price to compare).
+// ---------------------------------------------------------------------------
+export type OfferType = "PERCENTAGE_DISCOUNT" | "FIXED_AMOUNT_DISCOUNT" | "BUY_ONE_GET_ONE" | "COMBO_DEAL" | "FREE_ITEM" | "OTHER";
+export type OfferAvailability = "ONLINE" | "IN_STORE" | "BOTH";
+/** EXPIRED is never the stored value from the frontend's point of view — see OfferResponse.effectiveStatus. */
+export type OfferStatus = "DRAFT" | "PENDING_APPROVAL" | "ACTIVE" | "EXPIRED" | "CANCELLED" | "REJECTED";
+export type OfferClaimStatus = "CLAIMED" | "REDEEMED" | "EXPIRED" | "CANCELLED";
+
+export interface OfferResponse {
+  id: string;
+  businessId: string;
+  businessName: string | null;
+  businessSlug: string | null;
+  businessLogoUrl: string | null;
+  businessVerified: boolean;
+  businessAverageRating: number | null;
+  businessReviewCount: number;
+  areaName: string | null;
+  cityName: string | null;
+  title: string;
+  offerType: OfferType;
+  discountValue: number | null;
+  originalPrice: number | null;
+  offerPrice: number | null;
+  description: string | null;
+  termsAndConditions: string | null;
+  imageUrl: string | null;
+  validFrom: string;
+  validUntil: string;
+  availability: OfferAvailability;
+  /** The owner/admin-driven stored value. */
+  status: OfferStatus;
+  /** What the UI should actually show — EXPIRED overrides a stale ACTIVE once past validUntil. */
+  effectiveStatus: OfferStatus;
+  maxTotalRedemptions: number | null;
+  maxRedemptionsPerUser: number | null;
+  viewCount: number;
+  claimCount: number;
+  redemptionCount: number;
+  rejectionReason: string | null;
+  /** Whether the current viewer has saved this offer — false for an anonymous viewer. */
+  saved: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OfferClaimResponse {
+  id: string;
+  offerId: string;
+  offerTitle: string | null;
+  businessName: string | null;
+  redemptionCode: string;
+  status: OfferClaimStatus;
+  claimedAt: string;
+  redeemedAt: string | null;
+}
+
+export interface OfferAnalyticsResponse {
+  views: number;
+  claims: number;
+  redemptions: number;
+}
+
+export interface CreateOfferBody {
+  businessId: string;
+  title: string;
+  offerType: OfferType;
+  discountValue?: number | null;
+  originalPrice?: number | null;
+  offerPrice?: number | null;
+  description?: string | null;
+  termsAndConditions?: string | null;
+  imageUrl?: string | null;
+  /** ISO instant */
+  validFrom: string;
+  /** ISO instant */
+  validUntil: string;
+  availability: OfferAvailability;
+  maxTotalRedemptions?: number | null;
+  maxRedemptionsPerUser?: number | null;
+}
+
+/** Same field set as CreateOfferBody minus businessId, which never changes after creation. */
+export type UpdateOfferBody = Omit<CreateOfferBody, "businessId">;

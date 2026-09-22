@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import Image from "next/image";
 import { reviewApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { useLanguage } from "@/lib/language-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import { avatarColorClass, avatarInitials, cn, timeAgo, truncateId } from "@/lib/utils";
 import type { ReviewResponse, VoteType } from "@/lib/types";
@@ -24,6 +25,7 @@ export function ReviewCard({
 }) {
   const { user } = useAuth();
   const { show } = useToast();
+  const { t } = useLanguage();
   const [voting, setVoting] = useState<VoteType | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -56,11 +58,11 @@ export function ReviewCard({
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this review? This cannot be undone after the 72-hour window closes.")) return;
+    if (!confirm(t("review_card.confirm_delete"))) return;
     setDeleting(true);
     try {
       await reviewApi.remove(review.id);
-      show("Review deleted", "success");
+      show(t("review_card.toast.deleted"), "success");
       onChanged?.();
     } catch (err) {
       show(errorMessage(err), "error");
@@ -69,7 +71,7 @@ export function ReviewCard({
     }
   }
 
-  const displayName = review.userName || `reviewer ${truncateId(review.userId)}`;
+  const displayName = review.userName || t("review_card.anonymous_reviewer", { id: truncateId(review.userId) });
 
   return (
     <div className="border-b border-ink-100 py-5 last:border-0">
@@ -89,7 +91,7 @@ export function ReviewCard({
             <div className="mt-1 flex items-center gap-2">
               <StarDisplay rating={review.rating} size="sm" />
               {review.visibilityStatus === "NOT_RECOMMENDED" && (
-                <Badge tone="gold">Not currently recommended</Badge>
+                <Badge tone="gold">{t("review_card.not_recommended")}</Badge>
               )}
             </div>
           </div>
@@ -108,7 +110,7 @@ export function ReviewCard({
                 onClick={() => setExpanded(true)}
                 className="font-semibold text-crimson-700 hover:underline"
               >
-                Read more
+                {t("review_card.read_more")}
               </button>
             </>
           )}
@@ -134,6 +136,18 @@ export function ReviewCard({
         </div>
       )}
 
+      {review.ownerReply && (
+        <div className="mt-3 rounded-lg border border-ink-100 bg-sand-50/70 p-3">
+          <p className="text-xs font-bold text-ink-700">
+            {t("review_card.owner_response")}
+            {review.ownerRepliedAt && (
+              <span className="ml-1.5 font-normal text-ink-400">· {timeAgo(review.ownerRepliedAt)}</span>
+            )}
+          </p>
+          <p className="mt-1 text-sm text-ink-700 whitespace-pre-wrap leading-relaxed">{review.ownerReply}</p>
+        </div>
+      )}
+
       <div className="mt-3 pt-3 border-t border-ink-100 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <ReactionButton
@@ -141,7 +155,7 @@ export function ReviewCard({
             count={counts.USEFUL}
             active={reacted.has("USEFUL")}
             disabled={!user || voting !== null}
-            label="Mark useful"
+            label={t("review_card.mark_useful")}
             onClick={() => vote("USEFUL")}
           />
           <ReactionButton
@@ -149,7 +163,7 @@ export function ReviewCard({
             count={counts.FUNNY}
             active={reacted.has("FUNNY")}
             disabled={!user || voting !== null}
-            label="Mark funny"
+            label={t("review_card.mark_funny")}
             onClick={() => vote("FUNNY")}
           />
           <ReactionButton
@@ -157,7 +171,7 @@ export function ReviewCard({
             count={counts.COOL}
             active={reacted.has("COOL")}
             disabled={!user || voting !== null}
-            label="Mark cool"
+            label={t("review_card.mark_cool")}
             onClick={() => vote("COOL")}
           />
         </div>
@@ -165,15 +179,15 @@ export function ReviewCard({
         {isOwnReview && review.editable && (
           <div className="flex gap-3 text-xs">
             <button onClick={() => onEdit?.(review)} className="text-crimson-700 hover:underline font-medium">
-              Edit
+              {t("common.edit")}
             </button>
             <button onClick={handleDelete} disabled={deleting} className="text-rose-600 hover:underline font-medium">
-              Delete
+              {t("common.delete")}
             </button>
           </div>
         )}
         {isOwnReview && !review.editable && (
-          <span className="text-xs text-ink-300">72h edit window closed</span>
+          <span className="text-xs text-ink-300">{t("review_card.edit_window_closed")}</span>
         )}
       </div>
     </div>

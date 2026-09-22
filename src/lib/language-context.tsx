@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useAuth } from "./auth-context";
-import { translate } from "./i18n";
+import { translate, translateCount } from "./i18n";
 import type { PreferredLanguage } from "./types";
 
 const STORAGE_KEY = "language";
@@ -11,6 +11,8 @@ interface LanguageContextValue {
   lang: PreferredLanguage;
   setLanguage: (lang: PreferredLanguage) => void;
   t: (key: string, params?: Record<string, string | number>) => string;
+  /** Pluralized lookup — see translateCount() in lib/i18n.ts for why this isn't a plain ternary. */
+  tn: (key: string, count: number, params?: Record<string, string | number>) => string;
 }
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
@@ -48,7 +50,12 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     [lang]
   );
 
-  const value = useMemo(() => ({ lang, setLanguage, t }), [lang, setLanguage, t]);
+  const tn = useCallback(
+    (key: string, count: number, params?: Record<string, string | number>) => translateCount(lang, key, count, params),
+    [lang]
+  );
+
+  const value = useMemo(() => ({ lang, setLanguage, t, tn }), [lang, setLanguage, t, tn]);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }

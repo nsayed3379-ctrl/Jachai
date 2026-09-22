@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type TouchEvent } from "react";
+import { getOpenStatus } from "@/lib/business-hours";
 import { PRICE_TIER_LABELS } from "@/lib/config";
 import type { BusinessResponse } from "@/lib/types";
 import { cn, distanceKm, formatDistance } from "@/lib/utils";
@@ -81,6 +82,8 @@ export function BusinessHeroGallery({
   // Business identity block, overlaid on the gradient — headingClass differs between the
   // full-width single-photo hero (room to scale up to 6xl) and a photo-strip's narrower
   // first tile (capped smaller so the name doesn't overflow it).
+  const openStatus = getOpenStatus(business.structuredHours, business.hoursExceptions);
+
   function renderIdentity(headingClass: string) {
     return (
       <div className="max-w-[900px]">
@@ -100,9 +103,38 @@ export function BusinessHeroGallery({
         </div>
 
         <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-base sm:text-lg text-white/90 drop-shadow-sm">
+          {openStatus && (
+            <>
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-semibold shadow-sm",
+                  openStatus.open ? "bg-emerald-500 text-white" : "bg-ink-700/90 text-white"
+                )}
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                {openStatus.open ? "Open now" : "Closed"}
+                {openStatus.changesAt && (
+                  <span className="font-normal opacity-90">
+                    {openStatus.open ? `until ${openStatus.changesAt}` : `opens ${openStatus.changesAt}`}
+                  </span>
+                )}
+              </span>
+              <span aria-hidden className="text-white/50">
+                ·
+              </span>
+            </>
+          )}
           {business.verified && (
             <>
               <VerifiedBadge />
+              <span aria-hidden className="text-white/50">
+                ·
+              </span>
+            </>
+          )}
+          {business.establishedYear && (
+            <>
+              <span>Since {business.establishedYear}</span>
               <span aria-hidden className="text-white/50">
                 ·
               </span>

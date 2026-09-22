@@ -166,4 +166,4 @@ method and at least one page/component calling it:
   (`components/map-preview.tsx`).
 - Android/iOS apps — spec says these come later on the same backend APIs;
   this delivers the web client only.
-0p0
+npm run dev

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getOpenStatus } from "@/lib/business-hours";
 import type { BusinessResponse } from "@/lib/types";
 import { trackEvent } from "@/lib/analytics";
 
@@ -65,8 +66,12 @@ export function BusinessAbout({ business }: { business: BusinessResponse }) {
     facebookUrl,
     instagramUrl,
     operatingHours,
+    structuredHours,
+    hoursExceptions,
     attributes,
   } = business;
+
+  const openStatus = getOpenStatus(structuredHours, hoursExceptions);
 
   const hasContact =
     !!contactNumber || !!whatsappNumber || !!email || !!websiteUrl || !!facebookUrl || !!instagramUrl;
@@ -193,7 +198,21 @@ export function BusinessAbout({ business }: { business: BusinessResponse }) {
 
       {operatingHours && (
         <section>
-          <h2 className="font-display text-lg font-semibold text-ink-900 mb-2">Hours</h2>
+          <h2 className="font-display text-lg font-semibold text-ink-900 mb-2 flex items-center gap-2">
+            Hours
+            {openStatus && (
+              <span
+                className={
+                  "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold " +
+                  (openStatus.open ? "bg-emerald-50 text-emerald-700" : "bg-ink-100 text-ink-600")
+                }
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                {openStatus.open ? "Open now" : "Closed"}
+                {openStatus.changesAt && ` · ${openStatus.open ? "until" : "opens"} ${openStatus.changesAt}`}
+              </span>
+            )}
+          </h2>
           <div className="flex items-start gap-2.5 text-sm text-ink-700">
             <svg viewBox="0 0 24 24" className="mt-0.5 h-4 w-4 flex-none text-ink-400" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="9" />

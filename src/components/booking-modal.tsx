@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ApiClientError, bookingApi, catalogApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthModal } from "@/lib/auth-modal-context";
+import { useLanguage } from "@/lib/language-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import type { AvailabilityResponse, Booking, ServiceOffering, TeamMember } from "@/lib/types";
 import { Modal } from "./ui/modal";
@@ -50,6 +51,7 @@ export function BookingModal({
   const { user, profile } = useAuth();
   const { openLogin } = useAuthModal();
   const { show } = useToast();
+  const { t } = useLanguage();
 
   const [staff, setStaff] = useState<TeamMember[] | null>(null);
   const [staffId, setStaffId] = useState(ANY_STAFF);
@@ -112,7 +114,7 @@ export function BookingModal({
         customerNote: note.trim() || null,
       });
       setBooked(b);
-      show(b.autoConfirmed ? "Appointment confirmed" : "Booking requested", "success");
+      show(b.autoConfirmed ? t("booking.appointment_confirmed") : t("booking.booking_requested"), "success");
     } catch (e) {
       if (e instanceof ApiClientError && e.status === 409) {
         setSlotError(`⚠️ ${e.message}`);
@@ -138,13 +140,13 @@ export function BookingModal({
         {!user ? (
           <div className="text-center">
             <h2 id="booking-modal-heading" className="font-display text-lg font-bold text-ink-900">
-              Log in to book
+              {t("booking.log_in_to_book")}
             </h2>
             <p className="mt-1.5 text-sm text-ink-500">
-              Sign in to request an appointment with {businessName}.
+              {t("booking.sign_in_prompt", { business: businessName })}
             </p>
             <Button className="mt-4 w-full" onClick={openLogin}>
-              Log in
+              {t("nav.log_in")}
             </Button>
           </div>
         ) : booked ? (
@@ -155,31 +157,31 @@ export function BookingModal({
               </svg>
             </div>
             <h2 className="mt-2 font-display text-lg font-bold text-ink-900">
-              {booked.autoConfirmed ? "Appointment confirmed" : "Booking requested"}
+              {booked.autoConfirmed ? t("booking.appointment_confirmed") : t("booking.booking_requested")}
             </h2>
             <p className="mt-1 text-sm text-ink-500">
               {booked.autoConfirmed
-                ? `${booked.bookingNumber} is confirmed with ${businessName}.`
-                : `${businessName} will confirm ${booked.bookingNumber} soon.`}{" "}
-              You can track it from My bookings.
+                ? t("booking.confirmed_with", { number: booked.bookingNumber, business: businessName })
+                : t("booking.will_confirm_soon", { business: businessName, number: booked.bookingNumber })}{" "}
+              {t("booking.track_hint")}
             </p>
             <div className="mt-4 flex gap-2">
               <Button variant="outline" className="flex-1" onClick={onClose}>
-                Close
+                {t("common.close")}
               </Button>
               <Link href={`/bookings/${booked.id}`} className="flex-1">
-                <Button className="w-full">View booking</Button>
+                <Button className="w-full">{t("booking.view_booking")}</Button>
               </Link>
             </div>
           </div>
         ) : (
           <>
             <h2 id="booking-modal-heading" className="font-display text-lg font-bold text-ink-900">
-              Book {service?.name}
+              {t("booking.heading_book", { service: service?.name ?? "" })}
             </h2>
             <p className="mt-0.5 text-sm text-ink-400">
               {businessName}
-              {service?.durationMinutes ? ` · Approximately ${service.durationMinutes} minutes` : ""}
+              {service?.durationMinutes ? ` · ${t("booking.approx_duration", { minutes: service.durationMinutes })}` : ""}
             </p>
 
             {staff === null ? (
@@ -188,14 +190,14 @@ export function BookingModal({
               </div>
             ) : noStaffAtAll ? (
               <p className="mt-4 rounded-lg bg-sand-50 px-3 py-2.5 text-sm text-ink-600">
-                No staff are currently available for this service.
+                {t("booking.no_staff")}
               </p>
             ) : (
               <div className="mt-4 space-y-3">
                 <div>
-                  <Label htmlFor="staff">Staff</Label>
+                  <Label htmlFor="staff">{t("booking.field.staff")}</Label>
                   <Select id="staff" value={staffId} onChange={(e) => setStaffId(e.target.value)}>
-                    <option value={ANY_STAFF}>Any available staff</option>
+                    <option value={ANY_STAFF}>{t("booking.any_staff")}</option>
                     {staff.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name}
@@ -206,17 +208,17 @@ export function BookingModal({
                 </div>
 
                 <div>
-                  <Label htmlFor="date">Date</Label>
+                  <Label htmlFor="date">{t("booking.field.date")}</Label>
                   <Input id="date" type="date" min={todayIso()} value={date} onChange={(e) => setDate(e.target.value)} />
                 </div>
 
                 <div>
-                  <Label>Available time</Label>
+                  <Label>{t("booking.field.available_time")}</Label>
                   {loadingSlots ? (
                     <PageSpinner />
                   ) : !availability || availability.slots.length === 0 ? (
                     <p className="rounded-lg bg-sand-50 px-3 py-2.5 text-sm text-ink-600">
-                      No available times for this staff member on this date.
+                      {t("booking.no_slots")}
                     </p>
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
@@ -239,7 +241,7 @@ export function BookingModal({
                           }
                         >
                           {formatSlotTime(slot.time)}
-                          {!slot.available && <span className="ml-1 text-[10px]">Booked</span>}
+                          {!slot.available && <span className="ml-1 text-[10px]">{t("booking.slot_booked")}</span>}
                         </button>
                       ))}
                     </div>
@@ -249,30 +251,30 @@ export function BookingModal({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label htmlFor="bname">Name</Label>
+                    <Label htmlFor="bname">{t("booking.field.name")}</Label>
                     <Input id="bname" value={name} onChange={(e) => setName(e.target.value)} />
                   </div>
                   <div>
-                    <Label htmlFor="bphone">Phone</Label>
+                    <Label htmlFor="bphone">{t("booking.field.phone")}</Label>
                     <Input id="bphone" value={phone} onChange={(e) => setPhone(e.target.value)} />
                   </div>
                 </div>
 
                 <div>
                   <Label htmlFor="bnote">
-                    Note <span className="text-ink-300">(optional)</span>
+                    {t("booking.field.note")} <span className="text-ink-300">({t("common.optional")})</span>
                   </Label>
                   <Textarea
                     id="bnote"
                     rows={2}
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
-                    placeholder="Anything the business should know…"
+                    placeholder={t("booking.note_placeholder")}
                   />
                 </div>
 
                 <Button className="w-full" onClick={submit} loading={submitting} disabled={!canSubmit}>
-                  {time ? `Book ${formatSlotTime(time)}` : "Select a time"}
+                  {time ? t("booking.book_at_time", { time: formatSlotTime(time) }) : t("booking.select_time")}
                 </Button>
               </div>
             )}

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { PRICE_TIER_LABELS } from "@/lib/config";
+import { priceTierLabel } from "@/lib/config";
+import { useLanguage } from "@/lib/language-context";
 import { distanceKm, formatDistance } from "@/lib/utils";
 import type { BusinessResponse } from "@/lib/types";
 import { StarDisplay } from "./star-rating";
@@ -19,6 +20,7 @@ export function SimilarBusinessCard({
   business: BusinessResponse;
   userLocation?: { lat: number; lng: number };
 }) {
+  const { t, lang } = useLanguage();
   const photo = business.photoUrls[0] ?? business.coverPhotoUrl ?? null;
   const distance = userLocation
     ? distanceKm(userLocation, { lat: business.latitude, lng: business.longitude })
@@ -59,7 +61,7 @@ export function SimilarBusinessCard({
               <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" fill="none" stroke="currentColor" strokeWidth="3">
                 <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              Verified
+              {t("common.verified")}
             </span>
           )}
         </div>
@@ -87,10 +89,10 @@ export function SimilarBusinessCard({
 
         <div className="mt-auto flex items-center justify-between gap-2 border-t border-ink-100 pt-2">
           <span className="rounded-full bg-sand-200 px-2 py-0.5 text-[10px] font-semibold text-ink-700">
-            {PRICE_TIER_LABELS[business.priceTier]}
+            {priceTierLabel(business.priceTier, lang)}
           </span>
           <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-crimson-700 transition-transform duration-200 group-hover:translate-x-0.5">
-            View details
+            {t("common.view_details")}
             <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M7 17 17 7M9 7h8v8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>

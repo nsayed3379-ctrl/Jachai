@@ -11,6 +11,23 @@ export const PRICE_TIER_LABELS: Record<string, string> = {
   VERY_EXPENSIVE: "৳৳৳৳ Very expensive",
 };
 
+const PRICE_TIER_LABELS_BN: Record<string, string> = {
+  BUDGET: "৳ সাশ্রয়ী",
+  MODERATE: "৳৳ মাঝারি",
+  EXPENSIVE: "৳৳৳ ব্যয়বহুল",
+  VERY_EXPENSIVE: "৳৳৳৳ অতি ব্যয়বহুল",
+};
+
+/**
+ * Language-aware price tier label — PRICE_TIER_LABELS above stays English-only
+ * and unchanged (business-filters.tsx's manual sort/filter dropdown still uses
+ * it directly), so this is additive for call sites that display the tier as
+ * badge/description text rather than a filter option.
+ */
+export function priceTierLabel(tier: string, lang: "en" | "bn"): string {
+  return (lang === "bn" ? PRICE_TIER_LABELS_BN[tier] : PRICE_TIER_LABELS[tier]) ?? PRICE_TIER_LABELS[tier] ?? tier;
+}
+
 export const SORT_LABELS: Record<string, string> = {
   relevance: "Relevance",
   newest: "Newest",
@@ -54,4 +71,8 @@ export const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
   BOOKING_CONFIRMED: "Booking confirmed",
   BOOKING_REJECTED: "Booking rejected",
   BOOKING_STATUS_CHANGED: "Booking update",
+  OFFER_CLAIMED: "Offer claimed",
+  OFFER_REDEEMED: "Offer redeemed",
+  OFFER_APPROVED: "Offer approved",
+  OFFER_REJECTED: "Offer rejected",
 };

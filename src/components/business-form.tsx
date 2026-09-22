@@ -9,7 +9,8 @@ import {
   referenceApi,
   uploadFileToPresignedUrl,
 } from "@/lib/api";
-import { PRICE_TIER_LABELS } from "@/lib/config";
+import { PRICE_TIER_LABELS, priceTierLabel } from "@/lib/config";
+import { useLanguage } from "@/lib/language-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import type {
   Area,
@@ -23,6 +24,7 @@ import type {
 } from "@/lib/types";
 import { modulesForKind } from "@/lib/category-modules";
 import { Button } from "./ui/button";
+import { BusinessFaqManager } from "./business-faq-manager";
 import { BusinessGalleryManager } from "./business-gallery-manager";
 import { CategoryModulesManager } from "./category-modules/category-modules-manager";
 import {
@@ -31,7 +33,17 @@ import {
   type CatalogDraft,
 } from "./category-modules/category-modules-draft";
 import { GoogleLocationPicker } from "./google-location-picker";
-import { OperatingHoursPicker } from "./operating-hours-picker";
+import { HoursExceptionsManager } from "./hours-exceptions-manager";
+import {
+  buildSummary,
+  DEFAULT_DAY,
+  hoursFromApiEntries,
+  hoursToApiEntries,
+  makeWeek,
+  OperatingHoursPicker,
+  type DayHours,
+  type DayKey,
+} from "./operating-hours-picker";
 import { FieldHint, Input, Label, Select, Textarea } from "./ui/field";
 import { ErrorBanner, Spinner } from "./ui/misc";
 
@@ -49,6 +61,7 @@ const emptyForm: CreateBusinessRequest = {
   contactNumber: "",
   operatingHours: "",
   description: "",
+  establishedYear: null,
   coverPhotoUrl: "",
   logoUrl: "",
   latitude: 23.780636,
@@ -96,6 +109,7 @@ function SectionCard({ children }: { children: React.ReactNode }) {
 export function BusinessForm({ existing, initialValues }: Props) {
   const router = useRouter();
   const { show } = useToast();
+  const { t, lang } = useLanguage();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [cities, setCities] = useState<City[]>([]);
@@ -105,6 +119,21 @@ export function BusinessForm({ existing, initialValues }: Props) {
 
   const [form, setForm] =
     useState<CreateBusinessRequest>(() => (initialValues ? { ...emptyForm, ...initialValues } : emptyForm));
+
+  // Structured weekly hours (separate from form.operatingHours, the legacy free-text
+  // summary derived from this on every edit) — starts blank/untouched for a new
+  // listing, hydrated from existing.structuredHours below when editing one that
+  // already has it. Only sent to businessApi.updateHours on submit if touched,
+  // so editing a legacy-only listing without touching the picker never forces
+  // structured hours into existence.
+  const [hoursState, setHoursState] = useState<Record<DayKey, DayHours>>(() => makeWeek(() => ({ ...DEFAULT_DAY })));
+  const [hoursTouched, setHoursTouched] = useState(false);
+
+  function updateHours(next: Record<DayKey, DayHours>) {
+    setHoursState(next);
+    setHoursTouched(true);
+    set("operatingHours", buildSummary(next));
+  }
 
   /*
    * Create-mode only: category-detail rows (menu / services / staff / …) are
@@ -177,6 +206,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
       contactNumber: existing.contactNumber,
       operatingHours: existing.operatingHours ?? "",
       description: existing.description ?? "",
+      establishedYear: existing.establishedYear ?? null,
       coverPhotoUrl: existing.coverPhotoUrl ?? "",
       logoUrl: existing.logoUrl ?? "",
       latitude: existing.latitude,
@@ -188,6 +218,15 @@ export function BusinessForm({ existing, initialValues }: Props) {
       facebookUrl: existing.facebookUrl ?? "",
       instagramUrl: existing.instagramUrl ?? "",
     }));
+
+    // Hydrate from real structured data only (never guessed from the legacy free-text
+    // string above) — if the listing already has hours set via this picker, edit mode
+    // shows them pre-filled instead of blank, and re-saving is a no-op full-replace.
+    const structured = hoursFromApiEntries(existing.structuredHours);
+    if (structured) {
+      setHoursState(structured);
+      setHoursTouched(true);
+    }
   }, [existing]);
 
   /*
@@ -319,7 +358,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
    */
   function useMyLocationForPin() {
     if (!("geolocation" in navigator)) {
-      show("Geolocation is not supported by this browser.", "error");
+      show(t("business_form.error.geolocation_unsupported"), "error");
       return;
     }
 
@@ -337,7 +376,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
       },
       (err) => {
         show(
-          err.message || "Unable to get your location.",
+          err.message || t("business_form.error.location_unavailable"),
           "error"
         );
       },
@@ -372,7 +411,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
         presigned.cdnUrlAfterUpload
       );
 
-      show("Cover photo uploaded successfully.", "success");
+      show(t("business_form.toast.cover_uploaded"), "success");
     } catch (err) {
       show(errorMessage(err), "error");
     } finally {
@@ -403,7 +442,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
 
     if (!allowedTypes.includes(file.type)) {
       show(
-        "Please select a JPG, PNG, or WebP image.",
+        t("business_form.error.invalid_image_type"),
         "error"
       );
 
@@ -475,7 +514,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
         presigned.cdnUrlAfterUpload
       );
 
-      show("Profile picture uploaded successfully.", "success");
+      show(t("business_form.toast.logo_uploaded"), "success");
     } catch (err) {
       show(errorMessage(err), "error");
     } finally {
@@ -506,7 +545,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
 
     if (!allowedTypes.includes(file.type)) {
       show(
-        "Please select a JPG, PNG, or WebP image.",
+        t("business_form.error.invalid_image_type"),
         "error"
       );
 
@@ -627,9 +666,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
       !form.areaId ||
       !form.contactNumber
     ) {
-      setError(
-        "Please fill in name, category, city, area, and contact number."
-      );
+      setError(t("business_form.error.required_fields"));
 
       return;
     }
@@ -646,7 +683,15 @@ export function BusinessForm({ existing, initialValues }: Props) {
           form
         );
 
-        show("Listing updated", "success");
+        if (hoursTouched) {
+          try {
+            await businessApi.updateHours(existing.id, hoursToApiEntries(hoursState));
+          } catch {
+            show(t("business_form.toast.updated_hours_failed"), "error");
+          }
+        }
+
+        show(t("business_form.toast.updated"), "success");
 
         router.push(`/business/${updated.slug}`);
 
@@ -657,6 +702,14 @@ export function BusinessForm({ existing, initialValues }: Props) {
        * CREATE NEW BUSINESS
        */
       const created = await businessApi.create(form);
+
+      if (hoursTouched) {
+        try {
+          await businessApi.updateHours(created.id, hoursToApiEntries(hoursState));
+        } catch {
+          show(t("business_form.toast.created_hours_failed"), "error");
+        }
+      }
 
       /*
        * If a cover photo and/or profile picture were selected before
@@ -684,7 +737,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
           if (logoUrl) set("logoUrl", logoUrl);
 
           show(
-            "Listing and photos created successfully.",
+            t("business_form.toast.created_with_photos"),
             "success"
           );
         } catch (uploadError) {
@@ -693,12 +746,12 @@ export function BusinessForm({ existing, initialValues }: Props) {
            * Only the image upload failed.
            */
           show(
-            "Listing created, but a photo failed to upload. You can add it from Edit.",
+            t("business_form.toast.created_photo_failed"),
             "error"
           );
         }
       } else {
-        show("Listing created", "success");
+        show(t("business_form.toast.created"), "success");
       }
 
       /*
@@ -711,7 +764,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
           await flushCatalog(created.id, selectedCategory.kind, catalog);
         } catch {
           show(
-            "Listing created, but some category details didn't save. Add them from Edit.",
+            t("business_form.toast.created_category_details_failed"),
             "error"
           );
         }
@@ -752,20 +805,20 @@ export function BusinessForm({ existing, initialValues }: Props) {
         <SectionCard>
           <SectionHeader
             step={1}
-            title="Basic information"
-            description="Tell customers what this business is called and does."
+            title={t("business_form.section.basic_info.title")}
+            description={t("business_form.section.basic_info.description")}
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
             <div className="lg:col-span-1">
               <Label htmlFor="name">
-                Business name
+                {t("business_form.field.business_name")}
               </Label>
 
               <Input
                 id="name"
-                placeholder="e.g. Dhanmondi Hair Salon"
+                placeholder={t("business_form.field.business_name_placeholder")}
                 value={form.name}
                 onChange={(e) =>
                   set("name", e.target.value)
@@ -774,7 +827,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
             </div>
 
             <div>
-              <Label>Category</Label>
+              <Label>{t("business_form.field.category")}</Label>
 
               <Select
                 value={form.categoryId}
@@ -783,7 +836,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
                 }
               >
                 <option value="">
-                  Select category
+                  {t("business_form.field.select_category")}
                 </option>
 
                 {categories.map((c) => (
@@ -798,7 +851,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
             </div>
 
             <div>
-              <Label>Price tier</Label>
+              <Label>{t("business_form.field.price_tier")}</Label>
 
               <Select
                 value={form.priceTier}
@@ -809,14 +862,14 @@ export function BusinessForm({ existing, initialValues }: Props) {
                   )
                 }
               >
-                {Object.entries(
+                {Object.keys(
                   PRICE_TIER_LABELS
-                ).map(([v, label]) => (
+                ).map((v) => (
                   <option
                     key={v}
                     value={v}
                   >
-                    {label}
+                    {priceTierLabel(v, lang)}
                   </option>
                 ))}
               </Select>
@@ -834,8 +887,8 @@ export function BusinessForm({ existing, initialValues }: Props) {
           <SectionCard>
             <SectionHeader
               step={2}
-              title="Location"
-              description="Where customers can find you, plus a map pin for search & directions."
+              title={t("business_form.section.location.title")}
+              description={t("business_form.section.location.description")}
             />
 
             <div className="space-y-4">
@@ -843,7 +896,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
               <div className="grid grid-cols-2 gap-4">
 
                 <div>
-                  <Label>City</Label>
+                  <Label>{t("business_form.field.city")}</Label>
 
                   <Select
                     value={form.cityId}
@@ -852,7 +905,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
                     }
                   >
                     <option value="">
-                      Select city
+                      {t("business_form.field.select_city")}
                     </option>
 
                     {cities.map((c) => (
@@ -867,7 +920,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
                 </div>
 
                 <div>
-                  <Label>Area</Label>
+                  <Label>{t("business_form.field.area")}</Label>
 
                   <Select
                     value={form.areaId}
@@ -877,7 +930,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
                     disabled={!form.cityId}
                   >
                     <option value="">
-                      Select area
+                      {t("business_form.field.select_area")}
                     </option>
 
                     {areas.map((a) => (
@@ -908,11 +961,11 @@ export function BusinessForm({ existing, initialValues }: Props) {
                 size="sm"
                 onClick={useMyLocationForPin}
               >
-                📍 Use my current location as the pin
+                📍 {t("business_form.field.use_my_location")}
               </Button>
 
               <FieldHint>
-                Spec §17a: precise lat/lng, set via the map above — click, drag the pin, or search an address.
+                {t("business_form.field.location_hint")}
               </FieldHint>
 
             </div>
@@ -922,8 +975,8 @@ export function BusinessForm({ existing, initialValues }: Props) {
           <SectionCard>
             <SectionHeader
               step={3}
-              title="Contact & details"
-              description="How to reach you and what to expect when customers visit."
+              title={t("business_form.section.contact_details.title")}
+              description={t("business_form.section.contact_details.description")}
             />
 
             <div className="space-y-4">
@@ -931,7 +984,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
               {/* Contact */}
               <div>
                 <Label htmlFor="contact">
-                  Contact number
+                  {t("business_form.field.contact_number")}
                 </Label>
 
                 <Input
@@ -950,24 +1003,34 @@ export function BusinessForm({ existing, initialValues }: Props) {
               {/* Operating hours */}
               <div>
                 <Label htmlFor="hours">
-                  Operating hours
+                  {t("business_form.field.operating_hours")}
                 </Label>
 
                 <OperatingHoursPicker
-                  value={form.operatingHours ?? ""}
-                  onChange={(value) => set("operatingHours", value)}
+                  hours={hoursState}
+                  touched={hoursTouched}
+                  onChange={updateHours}
+                  legacyValue={form.operatingHours ?? ""}
                 />
               </div>
+
+              {/* Holiday / exception hours — existing listings only, saved immediately per-action */}
+              {existing && (
+                <div>
+                  <Label>{t("hours_exceptions.section_title")}</Label>
+                  <HoursExceptionsManager businessId={existing.id} initial={existing.hoursExceptions ?? []} />
+                </div>
+              )}
 
               {/* Description */}
               <div>
                 <Label htmlFor="desc">
-                  Description
+                  {t("business_form.field.description")}
                 </Label>
 
                 <Textarea
                   id="desc"
-                  placeholder="What makes this business worth visiting?"
+                  placeholder={t("business_form.field.description_placeholder")}
                   value={
                     form.description ?? ""
                   }
@@ -980,10 +1043,27 @@ export function BusinessForm({ existing, initialValues }: Props) {
                 />
               </div>
 
+              {/* Established year */}
+              <div>
+                <Label htmlFor="establishedYear">
+                  {t("business_form.field.established_year")}
+                </Label>
+                <Input
+                  id="establishedYear"
+                  type="number"
+                  inputMode="numeric"
+                  placeholder={t("business_form.field.established_year_placeholder")}
+                  value={form.establishedYear ?? ""}
+                  onChange={(e) =>
+                    set("establishedYear", e.target.value ? Number(e.target.value) : null)
+                  }
+                />
+              </div>
+
               {/* Cover Photo */}
               <div>
                 <Label>
-                  Cover photo
+                  {t("business_form.field.cover_photo")}
                 </Label>
 
                 {existing ? (
@@ -1003,7 +1083,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
 
                     {uploadingCover && (
                       <span className="ml-2 text-xs text-ink-400">
-                        Uploading…
+                        {t("common.uploading")}
                       </span>
                     )}
                   </>
@@ -1024,8 +1104,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
 
                     {pendingCoverFile && (
                       <p className="mt-1 text-xs text-ink-500">
-                        Selected:{" "}
-                        {pendingCoverFile.name}
+                        {t("common.selected_file", { name: pendingCoverFile.name })}
                       </p>
                     )}
                   </>
@@ -1053,12 +1132,10 @@ export function BusinessForm({ existing, initialValues }: Props) {
               {/* Profile picture */}
               <div>
                 <Label>
-                  Profile picture
+                  {t("business_form.field.profile_picture")}
                 </Label>
                 <FieldHint>
-                  Shown as a circular badge on your listing's
-                  card — a headshot or logo, separate from the
-                  cover/gallery photos.
+                  {t("business_form.field.profile_picture_hint")}
                 </FieldHint>
 
                 <div className="mt-2 flex items-center gap-3">
@@ -1090,7 +1167,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
 
                         {uploadingLogo && (
                           <span className="ml-2 text-xs text-ink-400">
-                            Uploading…
+                            {t("common.uploading")}
                           </span>
                         )}
                       </>
@@ -1111,8 +1188,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
 
                         {pendingLogoFile && (
                           <p className="mt-1 text-xs text-ink-500">
-                            Selected:{" "}
-                            {pendingLogoFile.name}
+                            {t("common.selected_file", { name: pendingLogoFile.name })}
                           </p>
                         )}
                       </>
@@ -1124,7 +1200,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
               {/* Attributes */}
               <div>
                 <Label>
-                  Attributes
+                  {t("business_form.field.attributes")}
                 </Label>
 
                 <div className="flex flex-wrap gap-2">
@@ -1164,13 +1240,13 @@ export function BusinessForm({ existing, initialValues }: Props) {
         <SectionCard>
           <SectionHeader
             step={4}
-            title="Business presence"
-            description="Help customers connect with your business online. Every field here is optional — anything you leave blank simply won't appear on your public page."
+            title={t("business_form.section.presence.title")}
+            description={t("business_form.section.presence.description")}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="websiteUrl">Website</Label>
+              <Label htmlFor="websiteUrl">{t("business_form.field.website")}</Label>
               <Input
                 id="websiteUrl"
                 type="url"
@@ -1182,7 +1258,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
             </div>
 
             <div>
-              <Label htmlFor="whatsapp">WhatsApp number</Label>
+              <Label htmlFor="whatsapp">{t("business_form.field.whatsapp")}</Label>
               <Input
                 id="whatsapp"
                 inputMode="tel"
@@ -1196,13 +1272,13 @@ export function BusinessForm({ existing, initialValues }: Props) {
                   onClick={() => set("whatsappNumber", form.contactNumber)}
                   className="mt-1 text-xs font-medium text-crimson-700 hover:underline"
                 >
-                  Use contact number for WhatsApp
+                  {t("business_form.field.use_contact_for_whatsapp")}
                 </button>
               )}
             </div>
 
             <div>
-              <Label htmlFor="email">Email address</Label>
+              <Label htmlFor="email">{t("business_form.field.email")}</Label>
               <Input
                 id="email"
                 type="email"
@@ -1214,7 +1290,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
             </div>
 
             <div>
-              <Label htmlFor="facebookUrl">Facebook</Label>
+              <Label htmlFor="facebookUrl">{t("business_form.field.facebook")}</Label>
               <Input
                 id="facebookUrl"
                 type="url"
@@ -1225,7 +1301,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
             </div>
 
             <div>
-              <Label htmlFor="instagramUrl">Instagram</Label>
+              <Label htmlFor="instagramUrl">{t("business_form.field.instagram")}</Label>
               <Input
                 id="instagramUrl"
                 type="url"
@@ -1249,16 +1325,19 @@ export function BusinessForm({ existing, initialValues }: Props) {
             <SectionCard>
               <SectionHeader
                 step={5}
-                title="Category details"
+                title={t("business_form.section.category_details.title")}
                 description={
                   selectedCategory
-                    ? `Optional showcase sections for a ${selectedCategory.name.toLowerCase()} — ${moduleLabels.join(", ")}.`
-                    : "Optional sections tailored to your type of business."
+                    ? t("business_form.section.category_details.description_with_category", {
+                        category: selectedCategory.name.toLowerCase(),
+                        modules: moduleLabels.join(", "),
+                      })
+                    : t("business_form.section.category_details.description")
                 }
               />
 
               {!selectedCategory ? (
-                <FieldHint>Pick a category in step 1 to see the sections relevant to your business.</FieldHint>
+                <FieldHint>{t("business_form.field.pick_category_hint")}</FieldHint>
               ) : existing ? (
                 <CategoryModulesManager businessId={existing.id} kind={selectedCategory.kind} />
               ) : (
@@ -1269,8 +1348,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
                     onChange={setCatalog}
                   />
                   <FieldHint>
-                    These save when you create the listing. Photos for each item can be added
-                    afterwards from your dashboard.
+                    {t("business_form.field.category_details_save_hint")}
                   </FieldHint>
                 </>
               )}
@@ -1284,16 +1362,34 @@ export function BusinessForm({ existing, initialValues }: Props) {
         <SectionCard>
           <SectionHeader
             step={6}
-            title="Photos"
-            description="A gallery of up to 10 photos — storefront, interior, team, or work samples. Cover photo and profile picture are set in step 3."
+            title={t("business_form.section.photos.title")}
+            description={t("business_form.section.photos.description")}
           />
 
           {existing ? (
             <BusinessGalleryManager businessId={existing.id} />
           ) : (
             <FieldHint>
-              Save your listing first — you can add gallery photos straight after, from your
-              dashboard or by editing this listing.
+              {t("business_form.field.photos_save_hint")}
+            </FieldHint>
+          )}
+        </SectionCard>
+
+        {/* =========================
+            Row 6 — FAQ (optional)
+        ========================== */}
+        <SectionCard>
+          <SectionHeader
+            step={7}
+            title={t("business_form.section.faq.title")}
+            description={t("business_form.section.faq.description")}
+          />
+
+          {existing ? (
+            <BusinessFaqManager businessId={existing.id} />
+          ) : (
+            <FieldHint>
+              {t("business_form.field.faq_save_hint")}
             </FieldHint>
           )}
         </SectionCard>
@@ -1308,7 +1404,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
             onClick={() => router.back()}
             disabled={submitting}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
 
           <Button
@@ -1316,8 +1412,8 @@ export function BusinessForm({ existing, initialValues }: Props) {
             loading={submitting}
           >
             {existing
-              ? "Save changes"
-              : "Create listing"}
+              ? t("business_form.action.save_changes")
+              : t("business_form.action.create_listing")}
           </Button>
 
         </div>

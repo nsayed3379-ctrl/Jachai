@@ -23,8 +23,10 @@ import { ReportButton } from "@/components/report-button";
 import { SimilarBusinessCard } from "@/components/similar-business-card";
 import { MessageOwnerCard } from "@/components/message-owner-card";
 import { BusinessHeroGallery } from "@/components/business-hero-gallery";
+import { OfferBusinessBanner } from "@/components/offer-business-banner";
 import { BusinessTabs, type BusinessTab } from "@/components/business-tabs";
 import { BusinessAbout } from "@/components/business-about";
+import { BusinessFaq } from "@/components/business-faq";
 import { BusinessUpdates } from "@/components/business-updates";
 import { BusinessMenu } from "@/components/business-menu";
 import { CartBar } from "@/components/cart-bar";
@@ -233,7 +235,8 @@ export default function BusinessDetailPage() {
     !!business.facebookUrl ||
     !!business.instagramUrl ||
     !!business.operatingHours ||
-    business.attributes.length > 0;
+    business.attributes.length > 0 ||
+    !!business.hasFaq;
 
   // Category-specific module tabs (spec Phase 2): driven by category.kind, and
   // only shown when the module actually has data (categoryModules flags from the
@@ -297,10 +300,15 @@ export default function BusinessDetailPage() {
 
           <BusinessTabs tabs={visibleTabs} active={activeTab} onChange={setActiveTab} />
 
-          {/* About — only rendered when the business has any of this data */}
+          {/* About — only rendered when the business has any of this data (hasAboutData
+              includes hasFaq, so the tab still appears for an FAQ-only business even
+              with no description/hours/etc.) */}
           {hasAboutData && (
             <section role="tabpanel" aria-label="About" hidden={activeTab !== "about"}>
               <BusinessAbout business={business} />
+              <div className="mt-6">
+                <BusinessFaq businessId={business.id} />
+              </div>
             </section>
           )}
 
@@ -531,6 +539,8 @@ export default function BusinessDetailPage() {
 
         {/* Sidebar — sticky on desktop so it stays useful while the (much longer) main column scrolls. */}
         <div className="space-y-5 lg:sticky lg:top-20">
+          <OfferBusinessBanner businessId={business.id} />
+
           <MapPreview latitude={business.latitude} longitude={business.longitude} name={business.name} />
 
           {business.verified && (
@@ -631,6 +641,8 @@ export default function BusinessDetailPage() {
             isLoggedIn={!!user}
             isOwnBusiness={user?.id === business.ownerUserId}
             onLogin={openLogin}
+            structuredHours={business.structuredHours}
+            hoursExceptions={business.hoursExceptions}
           />
         </div>
       </div>

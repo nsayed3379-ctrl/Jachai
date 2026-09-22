@@ -6,7 +6,8 @@ import Link from "next/link";
 import { businessApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthModal } from "@/lib/auth-modal-context";
-import { PRICE_TIER_LABELS } from "@/lib/config";
+import { priceTierLabel } from "@/lib/config";
+import { useLanguage } from "@/lib/language-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import type { BusinessReactionType, BusinessResponse } from "@/lib/types";
 import { cn, distanceKm, formatDistance } from "@/lib/utils";
@@ -21,13 +22,14 @@ const PHOTO_ROTATE_INTERVAL_MS = 4000;
  * light ink square (not a faded one) beyond it. `sm` is for the mobile
  * list-row card. */
 function SquareStarRating({ rating, size = "md" }: { rating: number; size?: "sm" | "md" }) {
+  const { t } = useLanguage();
   const filled = Math.round(rating);
   const box = size === "sm" ? "h-[18px] w-[18px] rounded" : "h-8 w-8 rounded-md";
   const icon = size === "sm" ? "h-2.5 w-2.5" : "h-5 w-5";
   return (
     <div
       className={cn("inline-flex items-center", size === "sm" ? "gap-1" : "gap-1.5")}
-      aria-label={`${rating} out of 5 stars`}
+      aria-label={t("common.stars_out_of_5", { rating })}
     >
       {[1, 2, 3, 4, 5].map((n) => (
         <span
@@ -60,6 +62,22 @@ function VerifiedSealIcon() {
   return (
     <svg viewBox="0 0 20 20" className="h-3 w-3" fill="currentColor">
       <path d="M10 2a8 8 0 100 16 8 8 0 000-16Zm4.3 6.3-5 5a1 1 0 0 1-1.4 0l-2.2-2.2a1 1 0 1 1 1.4-1.4l1.5 1.5 4.3-4.3a1 1 0 0 1 1.4 1.4Z" />
+    </svg>
+  );
+}
+
+function FireIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="h-3 w-3" fill="currentColor">
+      <path d="M10.5 1.5c.6 2.3-.3 3.6-1.4 4.8C7.9 7.5 6.5 9 6.5 11.3a3.5 3.5 0 0 0 7 0c0-1-.3-1.7-.7-2.4.9.5 1.7 1.6 1.7 3.3a4.5 4.5 0 1 1-9 0c0-3.6 2.6-5.1 4-6.7.9-1 1.3-1.8 1-4Z" />
+    </svg>
+  );
+}
+
+function HeartIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="h-3 w-3" fill="currentColor">
+      <path d="M10 17.3 8.6 16C4 11.8 1 9 1 5.9 1 3.4 3 1.5 5.4 1.5c1.4 0 2.7.6 3.6 1.7A4.8 4.8 0 0 1 12.6 1.5C15 1.5 17 3.4 17 5.9c0 3.1-3 5.9-7.6 10.1l-1.4 1.3Z" />
     </svg>
   );
 }
@@ -170,10 +188,10 @@ function WowBadge({ active }: { active: boolean }) {
 
 const REACTION_CONFIG: Record<
   BusinessReactionType,
-  { label: string; activeColor: string; render: (active: boolean) => ReactNode }
+  { labelKey: string; activeColor: string; render: (active: boolean) => ReactNode }
 > = {
   LIKE: {
-    label: "Like",
+    labelKey: "common.reaction.like",
     activeColor: "text-sky-600",
     render: (active) => (
       <ReactionBadge active={active} gradient="bg-gradient-to-b from-sky-500 to-sky-700" ring="border-sky-300" iconColor="text-sky-500">
@@ -182,7 +200,7 @@ const REACTION_CONFIG: Record<
     ),
   },
   DISLIKE: {
-    label: "Dislike",
+    labelKey: "common.reaction.dislike",
     activeColor: "text-ink-700",
     render: (active) => (
       <ReactionBadge active={active} gradient="bg-gradient-to-b from-ink-500 to-ink-700" ring="border-ink-300" iconColor="text-ink-500">
@@ -191,7 +209,7 @@ const REACTION_CONFIG: Record<
     ),
   },
   LOVE: {
-    label: "Love",
+    labelKey: "common.reaction.love",
     activeColor: "text-crimson-600",
     render: (active) => (
       <ReactionBadge
@@ -205,7 +223,7 @@ const REACTION_CONFIG: Record<
     ),
   },
   WOW: {
-    label: "Wow",
+    labelKey: "common.reaction.wow",
     activeColor: "text-gold-600",
     render: (active) => <WowBadge active={active} />,
   },
@@ -288,13 +306,23 @@ function CardPhoto({
 export function BusinessCard({
   business,
   userLocation,
+  badge,
+  forceTile,
 }: {
   business: BusinessResponse;
   userLocation?: { lat: number; lng: number };
+  /** Set by the homepage's Trending/Most-loved carousels only — never derived from `business` itself. */
+  badge?: "trending" | "most_loved";
+  /** BusinessCarousel passes this — the mobile Yelp-style row layout below assumes it
+   *  stretches across a full-width list, so squeezed into a ~260px snap-scroll carousel
+   *  card it comes out cramped/misaligned. Carousel cards use the vertical photo-tile
+   *  layout (normally desktop/tablet-only) at every viewport width instead. */
+  forceTile?: boolean;
 }) {
   const { user } = useAuth();
   const { openLogin } = useAuthModal();
   const { show } = useToast();
+  const { t, tn, lang } = useLanguage();
   const [counts, setCounts] = useState<Record<BusinessReactionType, number>>({
     LIKE: business.totalLikeCount,
     DISLIKE: business.totalDislikeCount,
@@ -308,7 +336,7 @@ export function BusinessCard({
     : null;
 
   const photos = business.photoUrls;
-  const priceLabel = PRICE_TIER_LABELS[business.priceTier];
+  const priceLabel = priceTierLabel(business.priceTier, lang);
   const href = `/business/${business.slug}`;
 
   // Business-level reaction (business.BusinessReaction) — a direct "react to
@@ -360,7 +388,8 @@ export function BusinessCard({
   const reactionRow = (
     <div className="grid grid-cols-5">
       {REACTION_TYPES.map((type) => {
-        const { label, activeColor, render } = REACTION_CONFIG[type];
+        const { labelKey, activeColor, render } = REACTION_CONFIG[type];
+        const label = t(labelKey);
         const isActive = reacted.has(type);
         return (
           <button
@@ -392,14 +421,28 @@ export function BusinessCard({
       <svg viewBox="0 0 24 24" className="h-3 w-3" fill="currentColor">
         <path d="M5 3a1 1 0 0 1 1 1v16a1 1 0 1 1-2 0V4a1 1 0 0 1 1-1Zm2 1h11.5a.5.5 0 0 1 .4.8L16 9l2.9 4.2a.5.5 0 0 1-.4.8H7V4Z" />
       </svg>
-      Flagged
+      {t("common.flagged")}
+    </span>
+  );
+
+  const badgeChip = badge && (
+    <span
+      className={cn(
+        "inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold sm:px-2.5 sm:py-1 sm:text-[11px]",
+        badge === "trending"
+          ? "border-amber-200 bg-amber-50 text-amber-700"
+          : "border-crimson-200 bg-crimson-50 text-crimson-700"
+      )}
+    >
+      {badge === "trending" ? <FireIcon /> : <HeartIcon />}
+      {badge === "trending" ? t("common.badge.trending") : t("common.badge.most_loved")}
     </span>
   );
 
   return (
     <Card className="flex h-full flex-col overflow-hidden rounded-xl border border-ink-100 bg-white transition-shadow duration-200 hover:shadow-lift">
       {/* ---------- Mobile: Yelp-style horizontal list row ---------- */}
-      <div className="sm:hidden">
+      <div className={cn(forceTile ? "hidden" : "sm:hidden")}>
         <Link href={href} className="flex gap-3 p-3">
           <CardPhoto
             photos={photos}
@@ -409,7 +452,12 @@ export function BusinessCard({
             roundedClass="rounded-lg"
           />
           <div className="min-w-0 flex-1">
-            {flaggedChip && <div className="mb-1">{flaggedChip}</div>}
+            {(flaggedChip || badgeChip) && (
+              <div className="mb-1 flex flex-wrap items-center gap-1">
+                {badgeChip}
+                {flaggedChip}
+              </div>
+            )}
             <h3 className="line-clamp-1 font-display text-[15px] font-bold leading-snug text-ink-900">
               {business.name}
             </h3>
@@ -417,9 +465,7 @@ export function BusinessCard({
             <div className="mt-0.5 flex items-center gap-1.5">
               <SquareStarRating rating={business.averageRating} size="sm" />
               <span className="text-xs font-bold text-ink-900">{business.averageRating.toFixed(1)}</span>
-              <span className="text-[11px] text-ink-400">
-                ({business.reviewCount} {business.reviewCount === 1 ? "review" : "reviews"})
-              </span>
+              <span className="text-[11px] text-ink-400">({tn("business_card.review_count", business.reviewCount)})</span>
             </div>
 
             <p className="mt-1 flex items-center gap-1 text-[11px] text-ink-400">
@@ -442,7 +488,7 @@ export function BusinessCard({
               {business.verified && (
                 <span className="inline-flex items-center gap-0.5 rounded-full bg-brand-600 px-2 py-0.5 text-[10px] font-semibold text-white">
                   <VerifiedSealIcon />
-                  Verified
+                  {t("common.verified")}
                 </span>
               )}
             </div>
@@ -453,7 +499,7 @@ export function BusinessCard({
       </div>
 
       {/* ---------- Desktop / tablet: vertical photo tile ---------- */}
-      <div className="hidden sm:flex sm:grow sm:flex-col">
+      <div className={cn(forceTile ? "flex grow flex-col" : "hidden sm:flex sm:grow sm:flex-col")}>
         <Link href={href} className="flex grow flex-col">
           <CardPhoto
             photos={photos}
@@ -470,7 +516,18 @@ export function BusinessCard({
               {business.verified && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-brand-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
                   <VerifiedSealIcon />
-                  Verified
+                  {t("common.verified")}
+                </span>
+              )}
+              {badge && (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-sm",
+                    badge === "trending" ? "bg-amber-500 text-white" : "bg-crimson-600 text-white"
+                  )}
+                >
+                  {badge === "trending" ? <FireIcon /> : <HeartIcon />}
+                  {badge === "trending" ? t("common.badge.trending") : t("common.badge.most_loved")}
                 </span>
               )}
             </div>
@@ -492,9 +549,7 @@ export function BusinessCard({
             <div className="mt-2 flex items-center gap-2">
               <SquareStarRating rating={business.averageRating} />
               <span className="text-base font-bold text-ink-900">{business.averageRating.toFixed(1)}</span>
-              <span className="text-sm text-ink-400">
-                ({business.reviewCount} {business.reviewCount === 1 ? "rating" : "ratings"})
-              </span>
+              <span className="text-sm text-ink-400">({tn("business_card.rating_count", business.reviewCount)})</span>
             </div>
 
             <CardDescription business={business} />
@@ -518,7 +573,7 @@ export function BusinessCard({
               href={href}
               className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-ink-900 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-ink-800"
             >
-              View details
+              {t("common.view_details")}
               <ArrowUpRightIcon />
             </Link>
           </div>
@@ -531,6 +586,7 @@ export function BusinessCard({
 /** Card description — the owner-written blurb, clamped to two lines with a
  * See more / See less toggle. Desktop card only. */
 function CardDescription({ business }: { business: BusinessResponse }) {
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
 
   const text = business.description;
@@ -548,7 +604,7 @@ function CardDescription({ business }: { business: BusinessResponse }) {
         }}
         className="mt-0.5 inline-flex items-center gap-0.5 text-xs font-semibold text-brand-600 hover:text-brand-700"
       >
-        {expanded ? "See less" : "See more"}
+        {expanded ? t("common.see_less") : t("common.see_more")}
         <ChevronDownIcon up={expanded} />
       </button>
     </div>

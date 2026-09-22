@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { PriceTier, SortOption } from "@/lib/types";
 import { Button } from "./ui/button";
-import { Select } from "./ui/field";
 import { BottomSheet } from "./ui/bottom-sheet";
 import {
   FilterOptionPill,
@@ -13,6 +14,89 @@ import {
   type FiltersProps,
   type LocationData,
 } from "./business-filters";
+
+/**
+ * Stand-in for a native <select> on the mobile hero filter bar — a plain
+ * <select>'s open-state option list is rendered by the OS/browser (not by
+ * us), so on Android Chrome especially it comes out as a plain, unstyled
+ * list that clashes hard with everything else on the page. This renders its
+ * own dropdown panel instead, fully styled, at the cost of building the
+ * open/close and click-outside handling ourselves.
+ */
+function CompactSelect({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(e: PointerEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  const selected = options.find((o) => o.value === value);
+
+  return (
+    <div ref={containerRef} className="relative w-full min-w-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={cn(
+          "flex h-9 w-full items-center justify-between gap-1 rounded-xl border bg-surface px-3 text-xs font-medium text-ink-800 transition-colors duration-150",
+          open ? "border-crimson-400" : "border-ink-200"
+        )}
+      >
+        <span className="truncate">{selected?.label ?? options[0]?.label}</span>
+        <ChevronDown size={14} className={cn("shrink-0 text-ink-400 transition-transform duration-150", open && "rotate-180")} />
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          className="absolute left-0 top-full z-30 mt-1.5 max-h-60 w-full min-w-[9rem] overflow-y-auto rounded-xl border border-ink-100 bg-surface p-1.5 shadow-pop animate-scale-in"
+        >
+          {options.map((opt) => (
+            <button
+              key={opt.value || "__all"}
+              type="button"
+              role="option"
+              aria-selected={opt.value === value}
+              onClick={() => {
+                onChange(opt.value);
+                setOpen(false);
+              }}
+              className={cn(
+                "block w-full rounded-lg px-3 py-2 text-left text-sm transition-colors duration-150",
+                opt.value === value ? "bg-crimson-50 font-semibold text-crimson-700" : "text-ink-700 hover:bg-ink-50"
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function FiltersSheetContent({
   value,
@@ -105,55 +189,37 @@ export function MobileFilters({ value, onChange, onUseMyLocation, locationStatus
   const activeRefineCount = [value.priceTier, value.minRating].filter((v) => v !== undefined).length;
 
   return (
-    <div className="space-y-2.5">
-      <Select
-        className="h-12 w-full rounded-xl text-base"
+    <div className="space-y-1.5">
+      <CompactSelect
         value={value.categoryId ?? ""}
-        onChange={(e) => set("categoryId", e.target.value || undefined)}
-      >
-        <option value="">All categories</option>
-        {categories.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </Select>
+        onChange={(v) => set("categoryId", v || undefined)}
+        options={[{ value: "", label: "All categories" }, ...categories.map((c) => ({ value: c.id, label: c.name }))]}
+      />
 
-      <Select
-        className="h-12 w-full rounded-xl text-base"
-        value={cityId}
-        onChange={(e) => {
-          setCityId(e.target.value);
-          set("areaId", undefined);
-        }}
-      >
-        {cities.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </Select>
+      <div className="flex gap-1.5">
+        <CompactSelect
+          value={cityId}
+          onChange={(v) => {
+            setCityId(v);
+            set("areaId", undefined);
+          }}
+          options={cities.map((c) => ({ value: c.id, label: c.name }))}
+        />
 
-      <Select
-        className="h-12 w-full rounded-xl text-base"
-        value={value.areaId ?? ""}
-        onChange={(e) => set("areaId", e.target.value || undefined)}
-      >
-        <option value="">All areas</option>
-        {areas.map((a) => (
-          <option key={a.id} value={a.id}>
-            {a.name}
-          </option>
-        ))}
-      </Select>
+        <CompactSelect
+          value={value.areaId ?? ""}
+          onChange={(v) => set("areaId", v || undefined)}
+          options={[{ value: "", label: "All areas" }, ...areas.map((a) => ({ value: a.id, label: a.name }))]}
+        />
+      </div>
 
-      <div className="flex gap-2 pt-1">
-        <Button className="flex-1 h-12 rounded-xl text-base" onClick={onSearch}>
+      <div className="flex gap-1.5">
+        <Button className="flex-1 h-9 rounded-xl text-sm" onClick={onSearch}>
           🔍 Search
         </Button>
         <Button
           variant="outline"
-          className="relative h-12 rounded-xl px-4"
+          className="relative h-9 rounded-xl px-4 text-sm"
           onClick={() => setSheetOpen(true)}
         >
           Filters

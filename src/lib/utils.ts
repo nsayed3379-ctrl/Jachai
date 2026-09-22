@@ -17,6 +17,15 @@ export function formatDate(iso: string | null | undefined): string {
   }
 }
 
+export function formatMonthYear(iso: string | null | undefined): string {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+  } catch {
+    return "";
+  }
+}
+
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
   try {
@@ -58,6 +67,34 @@ export function timeAgo(iso: string | null | undefined): string {
   }
   if (diffSec < 60) return "just now";
   return `${value}${unit} ago`;
+}
+
+/** Same rough-unit style as timeAgo, but for a future timestamp (e.g. a poll's closesAt). */
+export function timeUntil(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const date = new Date(iso).getTime();
+  if (Number.isNaN(date)) return "";
+  const diffSec = Math.round((date - Date.now()) / 1000);
+  if (diffSec <= 0) return "Closed";
+  const table: [number, string][] = [
+    [60, "s"],
+    [60, "m"],
+    [24, "h"],
+    [7, "d"],
+    [Number.POSITIVE_INFINITY, "w"],
+  ];
+  let value = diffSec;
+  let unit = "s";
+  for (const [size, u] of table) {
+    if (value < size) {
+      unit = u;
+      break;
+    }
+    value = Math.floor(value / size);
+    unit = u;
+  }
+  if (diffSec < 60) return "Closes in less than a minute";
+  return `Closes in ${value}${unit}`;
 }
 
 /**

@@ -3,12 +3,14 @@ import { Sora, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { AuthModalProvider } from "@/lib/auth-modal-context";
+import { CommunityUsernameModalProvider } from "@/lib/community-username-modal-context";
 import { HomeSearchProvider } from "@/lib/home-search-context";
 import { LanguageProvider } from "@/lib/language-context";
 import { ThemeProvider } from "@/lib/theme-context";
 import { ToastProvider } from "@/lib/toast-context";
 import { Navbar } from "@/components/navbar";
 import { AuthModal } from "@/components/auth/auth-modal";
+import { CommunityUsernameModal } from "@/components/community-username-modal";
 import { SiteFooter } from "@/components/site-footer";
 
 // Runs before hydration so the correct theme class is on <html> for the
@@ -46,12 +48,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <AuthProvider>
               <LanguageProvider>
                 <AuthModalProvider>
-                  <HomeSearchProvider>
-                    <Navbar />
-                    {children}
-                    <SiteFooter />
-                    <AuthModal />
-                  </HomeSearchProvider>
+                  <CommunityUsernameModalProvider>
+                    <HomeSearchProvider>
+                      <Navbar />
+                      {children}
+                      <SiteFooter />
+                      <AuthModal />
+                      <CommunityUsernameModal />
+                    </HomeSearchProvider>
+                  </CommunityUsernameModalProvider>
                 </AuthModalProvider>
               </LanguageProvider>
             </AuthProvider>

@@ -29,20 +29,36 @@ import type {
   CommerceSettings,
   CommerceSettingsBody,
   CommunityCommentResponse,
+  CommunityFeedTab,
+  CommunityFollowListItem,
   CommunityMentionedBusinessSummary,
-  CommunityPostReactionType,
+  HoursExceptionEntry,
+  CommunityPollResponse,
   CommunityPostResponse,
+  CommunityPostType,
+  CommunityPostVoteType,
+  CommunityProfileResponse,
+  CommunitySortOrder,
+  CommunityTopic,
   CompletenessResponse,
   ConfirmUploadRequestT,
   CreateBusinessRequest,
   CreateCommunityPostBody,
+  CreateOfferBody,
   DeliveryQuote,
   DeliveryZone,
   DeliveryZoneBody,
+  Faq,
+  FaqBody,
   FeaturedProduct,
   FeaturedProductBody,
   MenuItem,
   MenuItemBody,
+  OfferAnalyticsResponse,
+  OperatingHoursEntry,
+  OfferAvailability,
+  OfferClaimResponse,
+  OfferResponse,
   Order,
   OrderStatus,
   PlaceBookingBody,
@@ -82,6 +98,7 @@ import type {
   TokenPairDto,
   UpdateBusinessRequest,
   UpdateCommunityPostBody,
+  UpdateOfferBody,
   UpdateReviewRequest,
   UserProfile,
   UserRole,
@@ -322,6 +339,20 @@ export const businessApi = {
   /** Toggles a direct reaction to the business as a whole (business-card reaction row). */
   react: (id: string, reactionType: BusinessReactionType) =>
     request<void>(`/api/v1/businesses/${id}/react`, { method: "POST", body: { reactionType } }),
+
+  /** Full-replace of structured weekly hours (see OperatingHoursEntry) — powers the "open now" badge. */
+  updateHours: (id: string, days: OperatingHoursEntry[]) =>
+    request<OperatingHoursEntry[]>(`/api/v1/businesses/${id}/hours`, { method: "PUT", body: { days } }),
+
+  /** Holiday / special-hours overrides — per-item CRUD (see HoursExceptionEntry), unlike updateHours' full-replace. */
+  addHoursException: (id: string, body: Omit<HoursExceptionEntry, "id">) =>
+    request<HoursExceptionEntry>(`/api/v1/businesses/${id}/hours-exceptions`, { method: "POST", body }),
+
+  updateHoursException: (id: string, exceptionId: string, body: Omit<HoursExceptionEntry, "id">) =>
+    request<HoursExceptionEntry>(`/api/v1/businesses/${id}/hours-exceptions/${exceptionId}`, { method: "PUT", body }),
+
+  removeHoursException: (id: string, exceptionId: string) =>
+    request<void>(`/api/v1/businesses/${id}/hours-exceptions/${exceptionId}`, { method: "DELETE" }),
 };
 
 // ---------------------------------------------------------------------------
@@ -335,6 +366,12 @@ export const reviewApi = {
     request<ReviewResponse>(`/api/v1/reviews/${id}`, { method: "PUT", body }),
 
   remove: (id: string) => request<void>(`/api/v1/reviews/${id}`, { method: "DELETE" }),
+
+  /** Public owner reply ("Response from the owner") — distinct from the private message thread. */
+  reply: (id: string, reply: string) =>
+    request<ReviewResponse>(`/api/v1/reviews/${id}/reply`, { method: "PUT", body: { reply } }),
+
+  removeReply: (id: string) => request<ReviewResponse>(`/api/v1/reviews/${id}/reply`, { method: "DELETE" }),
 
   vote: (id: string, voteType: VoteType) =>
     request<void>(`/api/v1/reviews/${id}/vote`, { method: "POST", body: { voteType } }),
@@ -372,56 +409,126 @@ export const reviewApi = {
 // comments, business mentions. Feed/detail/comment reads are public
 // (auth: false); everything else needs a logged-in user.
 // ---------------------------------------------------------------------------
+export interface CommunityFeedParams {
+  tab?: CommunityFeedTab;
+  topic?: CommunityTopic;
+  postType?: CommunityPostType;
+  sort?: CommunitySortOrder;
+  areaId?: string;
+  page?: number;
+  size?: number;
+}
+
 export const communityApi = {
+  create: (body: CreateCommunityPostBody) =>
+    request<CommunityPostResponse>("/api/v1/community/posts", { method: "POST", body }),
+
+  /** Pre-signed direct-to-storage upload for a post's optional photo attachment — same flow as galleryApi.requestUploadUrl. */
   requestUploadUrl: (filename: string) =>
     request<PreSignedUploadResponse>("/api/v1/community/posts/upload-url", {
       method: "POST",
       query: { filename },
     }),
 
-  create: (body: CreateCommunityPostBody) =>
-    request<CommunityPostResponse>("/api/v1/community/posts", { method: "POST", body }),
-
-  feed: (page = 0, size = 20) =>
+  // No `auth: false` on these reads (unlike the old Facebook-feed implementation) — they're
+  // still public/permitAll on the backend for a logged-out visitor, but a logged-in viewer's
+  // token must go along so the server can resolve myVote and (for tab=FOLLOWING) who's asking.
+  feed: (params: CommunityFeedParams = {}) =>
     request<PageResponse<CommunityPostResponse>>("/api/v1/community/posts", {
-      auth: false,
+      query: { page: 0, size: 20, ...params },
+    }),
+
+  get: (postId: string) => request<CommunityPostResponse>(`/api/v1/community/posts/${postId}`),
+
+  postsByAuthor: (userId: string, page = 0, size = 20) =>
+    request<PageResponse<CommunityPostResponse>>(`/api/v1/community/users/${userId}/posts`, {
       query: { page, size },
     }),
 
-  get: (postId: string) =>
-    request<CommunityPostResponse>(`/api/v1/community/posts/${postId}`, { auth: false }),
+  commentsByAuthor: (userId: string, page = 0, size = 20) =>
+    request<PageResponse<CommunityCommentResponse>>(`/api/v1/community/users/${userId}/comments`, {
+      query: { page, size },
+    }),
 
   update: (postId: string, body: UpdateCommunityPostBody) =>
     request<CommunityPostResponse>(`/api/v1/community/posts/${postId}`, { method: "PATCH", body }),
 
   remove: (postId: string) => request<void>(`/api/v1/community/posts/${postId}`, { method: "DELETE" }),
 
-  react: (postId: string, reactionType: CommunityPostReactionType) =>
-    request<void>(`/api/v1/community/posts/${postId}/reactions`, {
+  vote: (postId: string, voteType: CommunityPostVoteType) =>
+    request<void>(`/api/v1/community/posts/${postId}/votes`, {
       method: "POST",
-      body: { reactionType },
+      body: { voteType },
+    }),
+
+  voteComment: (postId: string, commentId: string, voteType: CommunityPostVoteType) =>
+    request<void>(`/api/v1/community/posts/${postId}/comments/${commentId}/votes`, {
+      method: "POST",
+      body: { voteType },
+    }),
+
+  votePoll: (postId: string, optionId: string) =>
+    request<CommunityPollResponse>(`/api/v1/community/posts/${postId}/poll/votes`, {
+      method: "POST",
+      body: { optionId },
     }),
 
   listComments: (postId: string, page = 0, size = 20) =>
     request<PageResponse<CommunityCommentResponse>>(`/api/v1/community/posts/${postId}/comments`, {
-      auth: false,
       query: { page, size },
     }),
 
-  addComment: (postId: string, content: string) =>
+  addComment: (postId: string, content: string, parentCommentId: string | null = null) =>
     request<CommunityCommentResponse>(`/api/v1/community/posts/${postId}/comments`, {
       method: "POST",
-      body: { content },
+      body: { content, parentCommentId },
     }),
 
   removeComment: (postId: string, commentId: string) =>
     request<void>(`/api/v1/community/posts/${postId}/comments/${commentId}`, { method: "DELETE" }),
+
+  markBestAnswer: (postId: string, commentId: string) =>
+    request<CommunityCommentResponse>(`/api/v1/community/posts/${postId}/comments/${commentId}/best-answer`, { method: "POST" }),
+
+  unmarkBestAnswer: (postId: string, commentId: string) =>
+    request<CommunityCommentResponse>(`/api/v1/community/posts/${postId}/comments/${commentId}/best-answer`, { method: "DELETE" }),
+
+  closeQuestion: (postId: string) => request<void>(`/api/v1/community/posts/${postId}/close`, { method: "POST" }),
+
+  reopenQuestion: (postId: string) => request<void>(`/api/v1/community/posts/${postId}/reopen`, { method: "POST" }),
 
   searchMentions: (q: string) =>
     request<CommunityMentionedBusinessSummary[]>("/api/v1/community/mentions/search", {
       auth: false,
       query: { q },
     }),
+
+  follow: (userId: string) => request<void>(`/api/v1/community/users/${userId}/follow`, { method: "POST" }),
+
+  unfollow: (userId: string) => request<void>(`/api/v1/community/users/${userId}/follow`, { method: "DELETE" }),
+
+  following: (userId: string, page = 0, size = 20) =>
+    request<PageResponse<CommunityFollowListItem>>(`/api/v1/community/users/${userId}/following`, { query: { page, size } }),
+
+  followers: (userId: string, page = 0, size = 20) =>
+    request<PageResponse<CommunityFollowListItem>>(`/api/v1/community/users/${userId}/followers`, { query: { page, size } }),
+
+  checkUsername: (value: string) =>
+    request<{ available: boolean }>("/api/v1/community/username/available", {
+      auth: false,
+      query: { value },
+    }),
+
+  suggestUsername: () => request<{ suggestion: string }>("/api/v1/community/username/suggestion"),
+
+  setUsername: (username: string) =>
+    request<{ communityUsername: string }>("/api/v1/community/username", {
+      method: "POST",
+      body: { username },
+    }),
+
+  getProfile: (username: string) =>
+    request<CommunityProfileResponse>(`/api/v1/community/profile/${encodeURIComponent(username)}`, { auth: false }),
 };
 
 // ---------------------------------------------------------------------------
@@ -496,6 +603,72 @@ export const bookmarkApi = {
   myCollections: () => request<Collection[]>("/api/v1/collections"),
 
   collectionBookmarks: (id: string) => request<Bookmark[]>(`/api/v1/collections/${id}/bookmarks`),
+};
+
+// ---------------------------------------------------------------------------
+// Offers / Discounts. Feed/detail/business-banner reads aren't `auth: false`
+// (same reasoning as communityApi above) — they're public on the backend,
+// but a logged-in viewer's token still needs to go along so the server can
+// resolve the `saved` flag on each OfferResponse.
+// ---------------------------------------------------------------------------
+export interface OfferFeedParams {
+  categoryId?: string;
+  areaId?: string;
+  availability?: OfferAvailability;
+  endingSoon?: boolean;
+  page?: number;
+  size?: number;
+}
+
+export const offerApi = {
+  feed: (params: OfferFeedParams = {}) =>
+    request<PageResponse<OfferResponse>>("/api/v1/offers", { query: { page: 0, size: 20, ...params } }),
+
+  get: (offerId: string) => request<OfferResponse>(`/api/v1/offers/${offerId}`),
+
+  /** Business-profile banner — a business's own currently-active offers, no paging. */
+  businessOffers: (businessId: string) => request<OfferResponse[]>(`/api/v1/offers/business/${businessId}`),
+
+  /** Owner dashboard — every status, not just active. */
+  businessOffersForOwner: (businessId: string, page = 0, size = 20) =>
+    request<PageResponse<OfferResponse>>(`/api/v1/offers/business/${businessId}/mine`, { query: { page, size } }),
+
+  create: (body: CreateOfferBody) => request<OfferResponse>("/api/v1/offers", { method: "POST", body }),
+
+  update: (offerId: string, body: UpdateOfferBody) =>
+    request<OfferResponse>(`/api/v1/offers/${offerId}`, { method: "PATCH", body }),
+
+  submit: (offerId: string) => request<OfferResponse>(`/api/v1/offers/${offerId}/submit`, { method: "POST" }),
+
+  cancel: (offerId: string) => request<void>(`/api/v1/offers/${offerId}`, { method: "DELETE" }),
+
+  claim: (offerId: string) => request<OfferClaimResponse>(`/api/v1/offers/${offerId}/claim`, { method: "POST" }),
+
+  /** Business-owner/staff action — looks up a customer's claim by its redemption code. */
+  redeem: (redemptionCode: string) =>
+    request<OfferClaimResponse>("/api/v1/offers/redeem", { method: "POST", body: { redemptionCode } }),
+
+  myClaims: (page = 0, size = 20) =>
+    request<PageResponse<OfferClaimResponse>>("/api/v1/offers/claims/mine", { query: { page, size } }),
+
+  save: (offerId: string) => request<void>(`/api/v1/offers/${offerId}/save`, { method: "POST" }),
+
+  unsave: (offerId: string) => request<void>(`/api/v1/offers/${offerId}/save`, { method: "DELETE" }),
+
+  mySavedOffers: (page = 0, size = 20) =>
+    request<PageResponse<OfferResponse>>("/api/v1/offers/saved/mine", { query: { page, size } }),
+
+  analytics: (offerId: string) => request<OfferAnalyticsResponse>(`/api/v1/offers/${offerId}/analytics`),
+
+  adminQueue: (page = 0, size = 20) =>
+    request<PageResponse<OfferResponse>>("/api/v1/offers/admin/queue", { query: { page, size } }),
+
+  adminApprove: (offerId: string) => request<OfferResponse>(`/api/v1/offers/admin/${offerId}/approve`, { method: "POST" }),
+
+  adminReject: (offerId: string, reason?: string) =>
+    request<OfferResponse>(`/api/v1/offers/admin/${offerId}/reject`, { method: "POST", body: { reason: reason ?? null } }),
+
+  adminRemove: (offerId: string) => request<void>(`/api/v1/offers/admin/${offerId}/remove`, { method: "POST" }),
 };
 
 // ---------------------------------------------------------------------------
@@ -687,6 +860,17 @@ export const catalogApi = {
     request<void>(`/api/v1/businesses/${businessId}/products/${id}`, { method: "DELETE" }),
   reorderProducts: (businessId: string, orderedIds: string[]) =>
     request<FeaturedProduct[]>(`/api/v1/businesses/${businessId}/products/reorder`, { method: "PATCH", body: { orderedIds } }),
+
+  faqs: (businessId: string) =>
+    request<Faq[]>(`/api/v1/businesses/${businessId}/faqs`, { auth: false }),
+  addFaq: (businessId: string, body: FaqBody) =>
+    request<Faq>(`/api/v1/businesses/${businessId}/faqs`, { method: "POST", body }),
+  updateFaq: (businessId: string, id: string, body: FaqBody) =>
+    request<Faq>(`/api/v1/businesses/${businessId}/faqs/${id}`, { method: "PUT", body }),
+  removeFaq: (businessId: string, id: string) =>
+    request<void>(`/api/v1/businesses/${businessId}/faqs/${id}`, { method: "DELETE" }),
+  reorderFaqs: (businessId: string, orderedIds: string[]) =>
+    request<Faq[]>(`/api/v1/businesses/${businessId}/faqs/reorder`, { method: "PATCH", body: { orderedIds } }),
 };
 
 // ---------------------------------------------------------------------------

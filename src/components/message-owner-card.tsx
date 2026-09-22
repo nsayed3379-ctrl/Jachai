@@ -2,18 +2,23 @@
 
 import { useState } from "react";
 import { messageApi } from "@/lib/api";
+import { getOpenStatus } from "@/lib/business-hours";
+import { useLanguage } from "@/lib/language-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
+import type { HoursExceptionEntry, OperatingHoursEntry } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/field";
 
 const MAX_LEN = 1000;
 
-const QUICK_PROMPTS = [
-  "What are your prices?",
-  "Are you open right now?",
-  "Do you take bookings?",
-  "Where exactly are you located?",
+const OPEN_NOW_PROMPT_KEY = "message_owner.prompt.open_now";
+
+const QUICK_PROMPT_KEYS = [
+  "message_owner.prompt.prices",
+  OPEN_NOW_PROMPT_KEY,
+  "message_owner.prompt.bookings",
+  "message_owner.prompt.location",
 ];
 
 function OwnerAvatar({ name, logoUrl }: { name: string; logoUrl?: string | null }) {
@@ -57,6 +62,8 @@ export function MessageOwnerCard({
   isLoggedIn,
   isOwnBusiness,
   onLogin,
+  structuredHours,
+  hoursExceptions,
 }: {
   businessId: string;
   businessName: string;
@@ -64,14 +71,37 @@ export function MessageOwnerCard({
   isLoggedIn: boolean;
   isOwnBusiness: boolean;
   onLogin: () => void;
+  /** Power an inline auto-answer for the "Are you open right now?" quick prompt — omitted/null just skips that. */
+  structuredHours?: OperatingHoursEntry[] | null;
+  hoursExceptions?: HoursExceptionEntry[] | null;
 }) {
   const { show } = useToast();
+  const { t } = useLanguage();
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [openAnswer, setOpenAnswer] = useState<string | null>(null);
 
-  function addPrompt(prompt: string) {
+  function addPrompt(key: string, prompt: string) {
+    // The other 3 prompts just insert canned text; this one also shows a computed
+    // answer immediately, alongside (not instead of) the normal send flow — the
+    // computed answer can't cover everything (holidays, etc.), so the visitor can
+    // still send a real message.
+    if (key === OPEN_NOW_PROMPT_KEY) {
+      const status = getOpenStatus(structuredHours, hoursExceptions);
+      setOpenAnswer(
+        status
+          ? status.open
+            ? status.changesAt
+              ? t("message_owner.open_status.open_until", { time: status.changesAt })
+              : t("message_owner.open_status.open_no_time")
+            : status.changesAt
+              ? t("message_owner.open_status.closed_opens", { time: status.changesAt })
+              : t("message_owner.open_status.closed_no_time")
+          : null
+      );
+    }
     setText((cur) => {
       const trimmed = cur.trim();
       if (!trimmed) return prompt + " ";
@@ -87,6 +117,7 @@ export function MessageOwnerCard({
       await messageApi.send(businessId, body);
       setText("");
       setSent(true);
+      setOpenAnswer(null);
     } catch (err) {
       show(errorMessage(err), "error");
     } finally {
@@ -99,22 +130,19 @@ export function MessageOwnerCard({
       <div className="flex items-center gap-3 border-b border-ink-100 bg-gradient-to-br from-sand-50 to-surface px-4 py-3">
         <OwnerAvatar name={businessName} logoUrl={ownerLogoUrl} />
         <div className="min-w-0">
-          <p className="text-sm font-bold text-ink-900">Message the owner</p>
-          <p className="truncate text-xs text-ink-400">Usually the fastest way to get an answer</p>
+          <p className="text-sm font-bold text-ink-900">{t("message_owner.heading")}</p>
+          <p className="truncate text-xs text-ink-400">{t("message_owner.subheading")}</p>
         </div>
       </div>
 
       <div className="p-4">
         {isOwnBusiness ? (
-          <p className="text-sm text-ink-500">
-            This is your listing. Customer messages arrive in your{" "}
-            <span className="font-medium text-ink-700">owner inbox</span>.
-          </p>
+          <p className="text-sm text-ink-500">{t("message_owner.own_business_note")}</p>
         ) : !isLoggedIn ? (
           <div className="text-center">
-            <p className="text-sm text-ink-500">Log in to send {businessName} a private message.</p>
+            <p className="text-sm text-ink-500">{t("message_owner.login_prompt", { business: businessName })}</p>
             <Button className="mt-3 w-full" size="sm" onClick={onLogin}>
-              Log in to message
+              {t("message_owner.login_to_message")}
             </Button>
           </div>
         ) : sent ? (
@@ -124,29 +152,41 @@ export function MessageOwnerCard({
                 <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <p className="text-sm font-semibold text-ink-900">Message sent</p>
-            <p className="text-xs text-ink-400">The owner will see it in their inbox and can reply to you there.</p>
+            <p className="text-sm font-semibold text-ink-900">{t("message_owner.sent_heading")}</p>
+            <p className="text-xs text-ink-400">{t("message_owner.sent_description")}</p>
             <button
               type="button"
-              onClick={() => setSent(false)}
+              onClick={() => {
+                setSent(false);
+                setOpenAnswer(null);
+              }}
               className="mt-1 text-xs font-semibold text-crimson-700 hover:underline"
             >
-              Send another
+              {t("message_owner.send_another")}
             </button>
           </div>
         ) : (
           <>
+            {openAnswer && (
+              <div className="mb-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                {openAnswer} {t("message_owner.open_answer_suffix")}
+              </div>
+            )}
+
             <div className="mb-2 flex flex-wrap gap-1.5">
-              {QUICK_PROMPTS.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => addPrompt(p)}
-                  className="rounded-full border border-ink-200 bg-white px-2.5 py-1 text-[11px] font-medium text-ink-600 transition-colors hover:border-crimson-300 hover:bg-crimson-50 hover:text-crimson-700"
-                >
-                  {p}
-                </button>
-              ))}
+              {QUICK_PROMPT_KEYS.map((key) => {
+                const promptText = t(key);
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => addPrompt(key, promptText)}
+                    className="rounded-full border border-ink-200 bg-white px-2.5 py-1 text-[11px] font-medium text-ink-600 transition-colors hover:border-crimson-300 hover:bg-crimson-50 hover:text-crimson-700"
+                  >
+                    {promptText}
+                  </button>
+                );
+              })}
             </div>
 
             <div
@@ -156,7 +196,7 @@ export function MessageOwnerCard({
               )}
             >
               <Textarea
-                placeholder="Ask about pricing, availability, or booking…"
+                placeholder={t("message_owner.compose_placeholder")}
                 value={text}
                 onChange={(e) => setText(e.target.value.slice(0, MAX_LEN))}
                 onFocus={() => setFocused(true)}
@@ -165,7 +205,7 @@ export function MessageOwnerCard({
                 className="border-0 bg-transparent focus:ring-0"
               />
               <div className="flex items-center justify-between px-3 pb-2 pt-0.5">
-                <span className="text-[11px] text-ink-300">Only the owner can see this</span>
+                <span className="text-[11px] text-ink-300">{t("message_owner.private_hint")}</span>
                 <span className={cn("text-[11px]", text.length > MAX_LEN - 50 ? "text-crimson-600" : "text-ink-300")}>
                   {text.length}/{MAX_LEN}
                 </span>
@@ -181,7 +221,7 @@ export function MessageOwnerCard({
             >
               <span className="inline-flex items-center gap-1.5">
                 <PaperPlaneIcon />
-                Send message
+                {t("message_owner.send_message")}
               </span>
             </Button>
           </>
