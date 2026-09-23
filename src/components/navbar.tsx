@@ -391,8 +391,12 @@ export function Navbar() {
           )}
         </div>
 
+        <Link href="/community" className={cn(linkClass, "md:hidden ml-auto text-sm font-medium")}>
+          Community
+        </Link>
+
         <button
-          className={cn("md:hidden ml-auto p-2 rounded-full", transparent ? "text-white hover:bg-white/15" : "hover:bg-ink-100")}
+          className={cn("md:hidden p-2 rounded-full", transparent ? "text-white hover:bg-white/15" : "hover:bg-ink-100")}
           onClick={() => setMenuOpen((v) => !v)}
           aria-label="Toggle menu"
         >
@@ -404,9 +408,6 @@ export function Navbar() {
 
       {menuOpen && (
         <div className="md:hidden border-t border-ink-100 bg-surface px-4 py-3 flex flex-col gap-1 text-base">
-          <Link href="/community" className="px-3 py-2 rounded hover:bg-ink-100" onClick={() => setMenuOpen(false)}>
-            Community
-          </Link>
           <div className="flex items-center justify-between px-3 py-2">
             <span className="text-ink-500">{t("nav.theme")}</span>
             <ThemeToggle className="text-ink-600 hover:bg-ink-100" />

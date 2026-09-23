@@ -32,12 +32,12 @@ export function PostActions({
       {onCommentClick ? (
         <button type="button" onClick={onCommentClick} className={pillClass} aria-label={countLabel}>
           <MessageCircle size={15} />
-          {commentCount}
+          {commentCount > 0 && commentCount}
         </button>
       ) : (
         <span className={cn(pillClass, "pointer-events-none")} aria-label={countLabel}>
           <MessageCircle size={15} />
-          {commentCount}
+          {commentCount > 0 && commentCount}
         </span>
       )}
       <button type="button" onClick={onShare} className={pillClass} aria-label="Share this post">

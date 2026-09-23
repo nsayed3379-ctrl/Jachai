@@ -505,7 +505,7 @@ export function BusinessCard({
             photos={photos}
             alt={business.name}
             categoryName={business.categoryName}
-            className="h-48 w-full flex-none"
+            className={cn("w-full flex-none", forceTile ? "h-36" : "h-48")}
             roundedClass="rounded-t-xl"
           >
             <div className="absolute left-3 top-3 flex flex-wrap items-center gap-1.5 pr-12">
@@ -541,10 +541,12 @@ export function BusinessCard({
             </span>
           </CardPhoto>
 
-          <div className="p-4 pb-0">
+          <div className={cn(forceTile ? "p-3.5 pb-0" : "p-4 pb-0")}>
             {flaggedChip && <div className="mb-2">{flaggedChip}</div>}
 
-            <h3 className="font-display text-lg font-bold leading-snug text-ink-900">{business.name}</h3>
+            <h3 className={cn("font-display font-bold leading-snug text-ink-900", forceTile ? "text-base" : "text-lg")}>
+              {business.name}
+            </h3>
 
             <div className="mt-2 flex items-center gap-2">
               <SquareStarRating rating={business.averageRating} />
@@ -552,17 +554,17 @@ export function BusinessCard({
               <span className="text-sm text-ink-400">({tn("business_card.rating_count", business.reviewCount)})</span>
             </div>
 
-            <CardDescription business={business} />
+            {!forceTile && <CardDescription business={business} />}
           </div>
         </Link>
 
         {/* Footer: outside the card's Link so Share's WhatsApp/Facebook <a>
             tags never nest inside the card's own anchor. */}
-        <div className="px-4 pb-4">
+        <div className={cn(forceTile ? "px-3.5 pb-3.5" : "px-4 pb-4")}>
           <div className="mt-2 border-t border-ink-100 pt-2">{reactionRow}</div>
 
           <div className="mt-3 flex items-center justify-between gap-2">
-            <span className="inline-flex items-center gap-1 truncate rounded-full bg-gold-50 px-3 py-1.5 text-xs font-medium text-gold-700">
+            <span className="inline-flex min-w-0 items-center gap-1 truncate rounded-full bg-gold-50 px-3 py-1.5 text-xs font-medium text-gold-700">
               <PinIcon />
               <span className="truncate">
                 {business.areaName}, {business.cityName}

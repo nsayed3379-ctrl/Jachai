@@ -75,6 +75,22 @@ export default function BusinessDetailPage() {
   const [activeTab, setActiveTab] = useState<string>("reviews");
   const [photosModalOpen, setPhotosModalOpen] = useState(false);
   const [photosModalIndex, setPhotosModalIndex] = useState<number | null>(null);
+  /** Deep-linked from e.g. an offer's "Order Now" (`?item=<menuItemId>`) — lands on the Menu tab, scrolled to that card. */
+  const [highlightItemId, setHighlightItemId] = useState<string | null>(null);
+
+  // Read once the business (and therefore its module tabs) has loaded — plain
+  // window.location instead of useSearchParams() so this page stays a single
+  // client component with no Suspense boundary needed (same convention as the
+  // homepage's own categoryId/areaId deep-link seeding).
+  useEffect(() => {
+    if (!business) return;
+    const item = new URL(window.location.href).searchParams.get("item");
+    if (item) {
+      setHighlightItemId(item);
+      setActiveTab("menu");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [business]);
 
   async function handleSwitchToClaim() {
     setSwitchingForClaim(true);
@@ -323,6 +339,7 @@ export default function BusinessDetailPage() {
                   businessId={business.id}
                   businessName={business.name}
                   businessSlug={business.slug}
+                  highlightItemId={m.key === "menu" ? highlightItemId : null}
                 />
               </section>
             ) : null
@@ -667,16 +684,25 @@ function CategoryModulePanel({
   businessId,
   businessName,
   businessSlug,
+  highlightItemId,
 }: {
   moduleKey: ModuleKey;
   heading: string;
   businessId: string;
   businessName: string;
   businessSlug: string;
+  highlightItemId?: string | null;
 }) {
   switch (moduleKey) {
     case "menu":
-      return <BusinessMenu businessId={businessId} businessName={businessName} businessSlug={businessSlug} />;
+      return (
+        <BusinessMenu
+          businessId={businessId}
+          businessName={businessName}
+          businessSlug={businessSlug}
+          highlightItemId={highlightItemId}
+        />
+      );
     case "products":
       return <BusinessProducts businessId={businessId} />;
     case "team":

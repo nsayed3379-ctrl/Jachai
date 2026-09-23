@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { CommunityMobileNav } from "@/components/community-mobile-nav";
 import { CommunitySidebar } from "@/components/community-sidebar";
 import { CommunityTrendingWidget } from "@/components/community-trending-widget";
+import { QuestionsForYouWidget } from "@/components/questions-for-you-widget";
 
 /**
  * Shared 3-column shell for every /community/* route (feed, post detail,
@@ -32,6 +33,7 @@ export default function CommunityLayout({ children }: { children: React.ReactNod
       </div>
 
       <aside className="sticky top-24 hidden w-72 shrink-0 xl:block">
+        <QuestionsForYouWidget limit={3} className="mb-4" />
         <CommunityTrendingWidget />
       </aside>
     </div>

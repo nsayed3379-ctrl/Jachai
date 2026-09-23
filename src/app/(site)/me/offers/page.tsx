@@ -86,7 +86,7 @@ function MyOffersContent() {
           <EmptyState title="No saved offers yet" description="Save an offer from its detail page to find it here later." />
         )}
         {!loading && !error && tab === "SAVED" && saved.length > 0 && (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {saved.map((o) => (
               <OfferCard key={o.id} offer={o} />
             ))}

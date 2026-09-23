@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { offerApi } from "@/lib/api";
+import { catalogApi, offerApi } from "@/lib/api";
 import { useOwnerBusiness } from "@/lib/owner-business-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import { formatDate } from "@/lib/utils";
 import { OFFER_STATUS_META, OFFER_TYPES, OFFER_TYPE_HAS_NUMERIC_VALUE, offerDiscountLabel } from "@/lib/offer-constants";
-import type { CreateOfferBody, OfferAvailability, OfferResponse, OfferType } from "@/lib/types";
+import type { CreateOfferBody, MenuItem, OfferAvailability, OfferResponse, OfferType } from "@/lib/types";
 import { ModulePhotoInput } from "@/components/category-modules/module-photo-input";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/field";
@@ -26,6 +26,10 @@ interface Draft {
   availability: OfferAvailability;
   maxTotalRedemptions: string;
   maxRedemptionsPerUser: string;
+  /** Optional — an existing menu item this offer's discount applies to. "" = none. */
+  menuItemId: string;
+  /** When true (and menuItemId is ""), saving creates a brand-new menu item from this offer's own title/price/photo and links it. */
+  createNewMenuItem: boolean;
 }
 
 function emptyDraft(): Draft {
@@ -43,6 +47,8 @@ function emptyDraft(): Draft {
     availability: "BOTH",
     maxTotalRedemptions: "",
     maxRedemptionsPerUser: "",
+    menuItemId: "",
+    createNewMenuItem: false,
   };
 }
 
@@ -68,6 +74,8 @@ function draftFromOffer(o: OfferResponse): Draft {
     availability: o.availability,
     maxTotalRedemptions: o.maxTotalRedemptions != null ? String(o.maxTotalRedemptions) : "",
     maxRedemptionsPerUser: o.maxRedemptionsPerUser != null ? String(o.maxRedemptionsPerUser) : "",
+    menuItemId: o.menuItemId ?? "",
+    createNewMenuItem: false,
   };
 }
 
@@ -88,6 +96,7 @@ function draftToBody(d: Draft, businessId: string): CreateOfferBody {
     availability: d.availability,
     maxTotalRedemptions: d.maxTotalRedemptions !== "" ? Number(d.maxTotalRedemptions) : null,
     maxRedemptionsPerUser: d.maxRedemptionsPerUser !== "" ? Number(d.maxRedemptionsPerUser) : null,
+    menuItemId: d.menuItemId || null,
   };
 }
 
@@ -96,6 +105,7 @@ export default function OwnerOffersPage() {
   const { show } = useToast();
 
   const [offers, setOffers] = useState<OfferResponse[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -113,6 +123,17 @@ export default function OwnerOffersPage() {
   }, [business.id, show]);
 
   useEffect(load, [load]);
+
+  // Populates the "link to menu item" picker below — restaurants only, so an
+  // empty list here just means the picker stays hidden (see `form`).
+  const loadMenuItems = useCallback(() => {
+    catalogApi
+      .menuItems(business.id)
+      .then(setMenuItems)
+      .catch(() => setMenuItems([]));
+  }, [business.id]);
+
+  useEffect(loadMenuItems, [loadMenuItems]);
 
   const patch = (p: Partial<Draft>) => setDraft((d) => ({ ...d, ...p }));
 
@@ -136,9 +157,33 @@ export default function OwnerOffersPage() {
       show("Title, Valid From, and Valid Until are required.", "error");
       return;
     }
+    const newItemPrice = draft.originalPrice !== "" ? Number(draft.originalPrice)
+      : draft.offerPrice !== "" ? Number(draft.offerPrice) : null;
+    if (draft.createNewMenuItem && !draft.menuItemId && (newItemPrice === null || newItemPrice <= 0)) {
+      show("Set an Original price or Offer price above — a new menu item needs one to be orderable.", "error");
+      return;
+    }
     setSaving(true);
     try {
-      const body = draftToBody(draft, business.id);
+      let body = draftToBody(draft, business.id);
+
+      // "Create a new menu item from this offer" — spin up the product first
+      // (reusing the offer's own title/price/photo, no separate form), then
+      // link the offer to whatever id comes back.
+      if (draft.createNewMenuItem && !draft.menuItemId) {
+        const newItem = await catalogApi.addMenuItem(business.id, {
+          name: draft.title.trim(),
+          description: draft.description.trim() || null,
+          priceText: null,
+          price: newItemPrice,
+          available: true,
+          photoUrl: draft.imageUrl,
+          menuSection: null,
+          popular: false,
+        });
+        body = { ...body, menuItemId: newItem.id };
+      }
+
       if (editingId) {
         await offerApi.update(editingId, body);
       } else {
@@ -146,6 +191,7 @@ export default function OwnerOffersPage() {
       }
       cancelForm();
       load();
+      loadMenuItems();
       show("Offer saved", "success");
     } catch (err) {
       show(errorMessage(err), "error");
@@ -223,6 +269,51 @@ export default function OwnerOffersPage() {
           <Label>Offer price (optional)</Label>
           <Input type="number" min={0} value={draft.offerPrice} onChange={(e) => patch({ offerPrice: e.target.value })} />
         </div>
+      </div>
+
+      <div className="space-y-2 rounded-lg border border-ink-200 bg-surface p-3">
+        <Label>Menu item</Label>
+        {menuItems.length > 0 && (
+          <div>
+            <Select
+              value={draft.menuItemId}
+              disabled={draft.createNewMenuItem}
+              onChange={(e) => patch({ menuItemId: e.target.value })}
+            >
+              <option value="">— Not linked to an existing item —</option>
+              {menuItems.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                  {item.price != null ? ` (৳${item.price})` : ""}
+                </option>
+              ))}
+            </Select>
+            <p className="mt-1 text-xs text-ink-400">
+              While this offer is active, that item&apos;s card on your Menu shows the offer price instead — no
+              separate duplicate item, and it reverts on its own once the offer ends.
+            </p>
+          </div>
+        )}
+
+        <label className="flex items-start gap-2 pt-1 text-xs text-ink-600">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={draft.createNewMenuItem}
+            disabled={!!draft.menuItemId}
+            onChange={(e) => patch({ createNewMenuItem: e.target.checked })}
+          />
+          <span>
+            This is a new product — add it to the Menu too.
+            <span className="block text-ink-400">
+              Creates &ldquo;{draft.title.trim() || "this offer's title"}&rdquo; as a new menu item at{" "}
+              {draft.originalPrice !== "" ? `৳${draft.originalPrice}` : draft.offerPrice !== "" ? `৳${draft.offerPrice}` : (
+                <span className="font-semibold text-rose-600">no price set — fill in Original or Offer price above, or it won&apos;t be orderable</span>
+              )}
+              , using this offer&apos;s description and photo, and links it — no separate form to fill in.
+            </span>
+          </span>
+        </label>
       </div>
 
       <div>
@@ -321,6 +412,7 @@ export default function OwnerOffersPage() {
                         </div>
                         <p className="mt-1 text-xs text-ink-400">
                           {formatDate(o.validFrom)} – {formatDate(o.validUntil)}
+                          {o.menuItemName && <> · Linked to <span className="font-medium text-ink-600">{o.menuItemName}</span></>}
                         </p>
                         {o.status === "REJECTED" && o.rejectionReason && (
                           <p className="mt-1 text-xs text-rose-600">Rejected: {o.rejectionReason}</p>

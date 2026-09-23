@@ -296,6 +296,10 @@ export interface MenuItem {
   popular: boolean;
   sortOrder: number;
   createdAt: string;
+  /** Set only when an ACTIVE offer links to this item — see CatalogService#menu. Null otherwise. */
+  activeOfferId: string | null;
+  /** The linked offer's discounted price — show this instead of `price` when set. */
+  activeOfferPrice: number | null;
 }
 
 export interface FeaturedProduct {
@@ -1019,7 +1023,17 @@ export type CommunityTopic =
 export type CommunityFeedTab = "FOR_YOU" | "FOLLOWING" | "NEARBY";
 export type CommunitySortOrder = "NEW" | "TOP";
 /** Derived server-side, not stored — see CommunityPostService#questionStatus. Only present when postType === "QUESTION". */
-export type CommunityQuestionStatus = "OPEN" | "ANSWERED" | "CLOSED";
+export type CommunityQuestionStatus = "OPEN" | "RESOLVED" | "CLOSED";
+
+/** One card in the "Questions for you" widget — see CommunityPostService#recommendedQuestions. */
+export interface CommunityQuestionRecommendation {
+  id: string;
+  headline: string;
+  answerCount: number;
+  followerCount: number;
+  /** Null if nobody has followed this question yet. */
+  lastFollowedAt: string | null;
+}
 
 /** Never carries the poster's real name/phone/photo — see CommunityPostService#toAuthorSummary. */
 export interface CommunityAuthorSummary {
@@ -1179,6 +1193,10 @@ export interface OfferResponse {
   description: string | null;
   termsAndConditions: string | null;
   imageUrl: string | null;
+  /** Optional — the existing menu item this offer's discount applies to. Null = the offer stands alone. */
+  menuItemId: string | null;
+  /** Denormalized for display — null whenever menuItemId is null. */
+  menuItemName: string | null;
   validFrom: string;
   validUntil: string;
   availability: OfferAvailability;
@@ -1225,6 +1243,8 @@ export interface CreateOfferBody {
   description?: string | null;
   termsAndConditions?: string | null;
   imageUrl?: string | null;
+  /** Optional — an existing menu item (same business) this offer's discount applies to. */
+  menuItemId?: string | null;
   /** ISO instant */
   validFrom: string;
   /** ISO instant */

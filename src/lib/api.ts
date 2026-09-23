@@ -38,6 +38,7 @@ import type {
   CommunityPostType,
   CommunityPostVoteType,
   CommunityProfileResponse,
+  CommunityQuestionRecommendation,
   CommunitySortOrder,
   CommunityTopic,
   CompletenessResponse,
@@ -496,6 +497,19 @@ export const communityApi = {
   closeQuestion: (postId: string) => request<void>(`/api/v1/community/posts/${postId}/close`, { method: "POST" }),
 
   reopenQuestion: (postId: string) => request<void>(`/api/v1/community/posts/${postId}/reopen`, { method: "POST" }),
+
+  /** "Questions for you" widget — personalized, so requires a logged-in viewer. */
+  recommendedQuestions: () =>
+    request<CommunityQuestionRecommendation[]>("/api/v1/community/questions/recommended"),
+
+  followQuestion: (postId: string) =>
+    request<void>(`/api/v1/community/posts/${postId}/follow-question`, { method: "POST" }),
+
+  unfollowQuestion: (postId: string) =>
+    request<void>(`/api/v1/community/posts/${postId}/follow-question`, { method: "DELETE" }),
+
+  passQuestion: (postId: string) =>
+    request<void>(`/api/v1/community/posts/${postId}/pass`, { method: "POST" }),
 
   searchMentions: (q: string) =>
     request<CommunityMentionedBusinessSummary[]>("/api/v1/community/mentions/search", {

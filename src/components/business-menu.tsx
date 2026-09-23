@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { catalogApi, commerceApi } from "@/lib/api";
 import type { MenuItem, PublicCommerceView } from "@/lib/types";
 import { addToCart, CartConflictError, setQuantity, startNewCart } from "@/lib/cart";
 import { useCart } from "@/lib/use-cart";
 import { formatTk } from "@/lib/commerce";
 import { errorMessage, useToast } from "@/lib/toast-context";
+import { cn } from "@/lib/utils";
 import { EmptyState, PageSpinner } from "./ui/misc";
 
 /** True when this item can currently be ordered online — available + a positive numeric price. */
@@ -71,6 +72,7 @@ function MenuCard({
   item,
   orderingActive,
   cartQty,
+  highlighted,
   onAdd,
   onSetQty,
 }: {
@@ -78,14 +80,23 @@ function MenuCard({
   /** business is in DIRECT_ORDER, ordering on, not paused */
   orderingActive: boolean;
   cartQty: number;
+  /** True when this is the card a deep link (e.g. an offer's "Order Now") pointed at. */
+  highlighted?: boolean;
   onAdd: (item: MenuItem) => void;
   onSetQty: (item: MenuItem, qty: number) => void;
 }) {
   const orderable = orderingActive && isOrderable(item);
+  const hasOffer = item.activeOfferPrice != null;
   const priceLabel = typeof item.price === "number" ? formatTk(item.price) : item.priceText;
 
   return (
-    <div className="group flex items-center justify-between gap-3 rounded-2xl border border-ink-100 bg-white p-2.5 transition-all hover:border-ink-200 hover:shadow-card sm:p-3">
+    <div
+      id={`menu-item-${item.id}`}
+      className={cn(
+        "group flex items-center justify-between gap-3 rounded-2xl border bg-white p-2.5 transition-all hover:border-ink-200 hover:shadow-card sm:p-3",
+        highlighted ? "border-crimson-300 ring-2 ring-crimson-500/30" : "border-ink-100"
+      )}
+    >
       <div className="min-w-0 flex-1 py-0.5">
         <p className="flex flex-wrap items-center gap-x-1.5 text-[15px] font-bold leading-tight text-ink-900">
           {item.name}
@@ -94,11 +105,23 @@ function MenuCard({
               ★ Popular
             </span>
           )}
+          {hasOffer && (
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-crimson-50 px-1.5 py-[1px] text-[9px] font-bold uppercase tracking-wide text-crimson-700">
+              Offer
+            </span>
+          )}
         </p>
         {item.description && (
           <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-ink-500 sm:text-[13px]">{item.description}</p>
         )}
-        {priceLabel && <p className="mt-1.5 text-[15px] font-extrabold text-ink-900">{priceLabel}</p>}
+        {hasOffer ? (
+          <p className="mt-1.5 flex items-baseline gap-1.5">
+            <span className="text-[15px] font-extrabold text-crimson-700">{formatTk(item.activeOfferPrice!)}</span>
+            {priceLabel && <span className="text-xs text-ink-400 line-through">{priceLabel}</span>}
+          </p>
+        ) : (
+          priceLabel && <p className="mt-1.5 text-[15px] font-extrabold text-ink-900">{priceLabel}</p>
+        )}
 
         {/* Ordering state — only while the business is actively taking orders. */}
         {orderingActive && !orderable && (
@@ -142,10 +165,13 @@ export function BusinessMenu({
   businessId,
   businessName,
   businessSlug,
+  highlightItemId,
 }: {
   businessId: string;
   businessName: string;
   businessSlug: string;
+  /** Deep-linked from e.g. an offer's "Order Now" — scrolls to and briefly highlights this card. */
+  highlightItemId?: string | null;
 }) {
   const { show } = useToast();
   const { cart } = useCart();
@@ -153,6 +179,7 @@ export function BusinessMenu({
   const [commerce, setCommerce] = useState<PublicCommerceView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showFull, setShowFull] = useState(false);
+  const scrolledToHighlight = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -168,6 +195,22 @@ export function BusinessMenu({
       cancelled = true;
     };
   }, [businessId]);
+
+  // A deep-linked item might only live in the collapsed-away full list (not
+  // the Popular strip) — force it open so there's actually a card to scroll to.
+  useEffect(() => {
+    if (highlightItemId) setShowFull(true);
+  }, [highlightItemId]);
+
+  useEffect(() => {
+    if (!highlightItemId || !items || scrolledToHighlight.current) return;
+    if (!items.some((it) => it.id === highlightItemId)) return;
+    scrolledToHighlight.current = true;
+    const raf = requestAnimationFrame(() => {
+      document.getElementById(`menu-item-${highlightItemId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [highlightItemId, items]);
 
   const groups = useMemo(() => {
     const map = new Map<string, MenuItem[]>();
@@ -196,7 +239,9 @@ export function BusinessMenu({
   function handleAdd(item: MenuItem) {
     if (typeof item.price !== "number") return;
     const businessRef = { id: businessId, name: businessName, slug: businessSlug };
-    const itemRef = { id: item.id, name: item.name, price: item.price };
+    // Mirrors OrderService#placeOrder's server-authoritative pricing — the cart
+    // should never show a different number than what checkout actually charges.
+    const itemRef = { id: item.id, name: item.name, price: item.activeOfferPrice ?? item.price };
     try {
       addToCart(businessRef, itemRef, 1);
       show(`${item.name} added to cart`, "success");
@@ -230,6 +275,7 @@ export function BusinessMenu({
       item={it}
       orderingActive={orderingActive}
       cartQty={qtyInCart(it.id)}
+      highlighted={it.id === highlightItemId}
       onAdd={handleAdd}
       onSetQty={handleSetQty}
     />
@@ -272,12 +318,17 @@ export function BusinessMenu({
           View full menu ({items.length} items)
         </button>
       ) : (
-        groups.map(([section, rows]) => (
-          <section key={section}>
-            <h2 className="mb-2 font-display text-base font-bold text-ink-900">{section}</h2>
-            <div className="space-y-2">{rows.map(renderCard)}</div>
-          </section>
-        ))
+        groups.map(([section, rows]) => {
+          // Items already shown in the Popular strip above don't repeat down here.
+          const sectionRows = popular.length > 0 ? rows.filter((r) => !r.popular) : rows;
+          if (sectionRows.length === 0) return null;
+          return (
+            <section key={section}>
+              <h2 className="mb-2 font-display text-base font-bold text-ink-900">{section}</h2>
+              <div className="space-y-2">{sectionRows.map(renderCard)}</div>
+            </section>
+          );
+        })
       )}
     </div>
   );

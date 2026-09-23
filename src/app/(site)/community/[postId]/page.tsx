@@ -127,7 +127,7 @@ export default function CommunityPostDetailPage() {
 
   function handleBestAnswerMarked(updated: CommunityCommentResponse) {
     setComments((prev) => prev.map((c) => (c.id === updated.id ? updated : { ...c, isBestAnswer: false })));
-    setPost((prev) => (prev && prev.questionStatus !== "CLOSED" ? { ...prev, questionStatus: "ANSWERED" } : prev));
+    setPost((prev) => (prev && prev.questionStatus !== "CLOSED" ? { ...prev, questionStatus: "RESOLVED" } : prev));
   }
 
   function handleBestAnswerUnmarked(updated: CommunityCommentResponse) {
@@ -151,7 +151,7 @@ export default function CommunityPostDetailPage() {
     try {
       await communityApi.reopenQuestion(post.id);
       const hasBestAnswer = comments.some((c) => c.isBestAnswer);
-      setPost((prev) => (prev ? { ...prev, questionStatus: hasBestAnswer ? "ANSWERED" : "OPEN" } : prev));
+      setPost((prev) => (prev ? { ...prev, questionStatus: hasBestAnswer ? "RESOLVED" : "OPEN" } : prev));
       show("Question reopened", "success");
     } catch (err) {
       show(errorMessage(err), "error");

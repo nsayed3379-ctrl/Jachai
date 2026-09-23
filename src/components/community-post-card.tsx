@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { BadgeCheck, Store, X } from "lucide-react";
 import { communityApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
@@ -35,6 +36,7 @@ export function CommunityPostCard({
   onChanged: (post: CommunityPostResponse) => void;
   onDeleted: (postId: string) => void;
 }) {
+  const router = useRouter();
   const { user } = useAuth();
   const { show } = useToast();
   const [deleting, setDeleting] = useState(false);
@@ -95,10 +97,28 @@ export function CommunityPostCard({
     }
   }
 
+  // Plain div instead of a wrapping <Link> — the header and business badge
+  // below render their own <a> tags, and nested anchors are invalid HTML
+  // that Next hydrates differently than the browser parses (causes the
+  // "In HTML, <a> cannot be a descendant of <a>" DOM-nesting error).
+  const postHref = `/community/${post.id}`;
+  function handleCardClick() {
+    router.push(postHref);
+  }
+  function handleCardKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      router.push(postHref);
+    }
+  }
+
   return (
-    <Link
-      href={`/community/${post.id}`}
-      className="group flex flex-col py-5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-crimson-500"
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={handleCardClick}
+      onKeyDown={handleCardKeyDown}
+      className="group flex cursor-pointer flex-col py-5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-crimson-500"
     >
       <div className="flex items-start justify-between gap-2">
         <PostHeader author={post.author} area={post.area} createdAt={post.createdAt} size="sm" />
@@ -133,7 +153,7 @@ export function CommunityPostCard({
         <>
           <CommunityMarkdown
             className={cn(
-              "line-clamp-6 overflow-hidden",
+              "line-clamp-3 overflow-hidden",
               post.title ? "mt-1 text-sm text-ink-600" : "mt-2 text-[15px] font-medium text-ink-900"
             )}
           >
@@ -141,7 +161,7 @@ export function CommunityPostCard({
           </CommunityMarkdown>
           {/* Heuristic on raw length, not rendered height — good enough to tell
               whether the line-clamp above is actually cutting the body off. */}
-          {post.body.length > 220 && <span className="text-sm font-semibold text-ink-400">Read more</span>}
+          {post.body.length > 140 && <span className="text-sm font-medium text-crimson-600">(more)</span>}
         </>
       )}
 
@@ -163,11 +183,18 @@ export function CommunityPostCard({
         </span>
       )}
 
-      {/* Vote control moved down here (horizontal, matching the card's width) instead of a
-          tall vertical rail on the left — keeps the card from reading stretched/lopsided. */}
+      {/* Quora-style action row: separate "Upvote · N" / bare-downvote pills
+          (not one fused Reddit-style score pill), matching the reference feed card. */}
       <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <VoteControls score={post.score} myVote={post.myVote} onVote={handleVote} size="sm" orientation="horizontal" />
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          <VoteControls
+            score={post.score}
+            upvoteCount={post.upvoteCount}
+            myVote={post.myVote}
+            onVote={handleVote}
+            size="sm"
+            orientation="split"
+          />
           <PostActions
             commentCount={post.postType === "QUESTION" ? post.answerCount : post.commentCount}
             onShare={handleShare}
@@ -182,6 +209,6 @@ export function CommunityPostCard({
           deleting={deleting}
         />
       </div>
-    </Link>
+    </div>
   );
 }

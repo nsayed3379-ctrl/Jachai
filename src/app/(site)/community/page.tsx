@@ -42,9 +42,12 @@ function CommunityPageInner() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Type filtering (Questions/Reviews/Discussions) now lives only in the sidebar (see
-  // CommunitySidebar) — no in-page pill duplicating it. postType still reads from the URL
-  // so a sidebar link like `?postType=QUESTION` lands pre-filtered.
-  const [postType] = useState<CommunityPostType | null>(() => (searchParams.get("postType") as CommunityPostType | null) ?? null);
+  // CommunitySidebar) — no in-page pill duplicating it. postType is derived straight from
+  // the URL on every render (not useState) so a sidebar link like `?postType=QUESTION`
+  // re-filters even when it's a client-side navigation onto an already-mounted page —
+  // a `useState(() => searchParams...)` initializer here would only run once on mount
+  // and silently ignore every later query-param change.
+  const postType = (searchParams.get("postType") as CommunityPostType | null) ?? null;
   const [topic, setTopic] = useState<CommunityTopic | null>(() => (searchParams.get("topic") as CommunityTopic | null) ?? null);
   const [sort, setSort] = useState<CommunitySortOrder>("NEW");
   const promptedForUsername = useRef(false);

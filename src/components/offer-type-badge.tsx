@@ -13,7 +13,7 @@ export function OfferTypeBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full bg-crimson-600 px-2.5 py-1 text-xs font-bold text-white shadow-sm",
+        "inline-flex items-center rounded-full bg-gradient-to-r from-crimson-600 to-crimson-500 px-2.5 py-1 text-xs font-bold text-white shadow-md",
         className
       )}
     >

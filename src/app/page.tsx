@@ -12,6 +12,7 @@ import { BusinessFilters } from "@/components/business-filters";
 import { CategoryQuickNav } from "@/components/category-quick-nav";
 import { CategoriesGrid } from "@/components/categories-grid";
 import { ExploreCities } from "@/components/explore-cities";
+import { QuestionsForYouWidget } from "@/components/questions-for-you-widget";
 import { Reveal } from "@/components/reveal";
 import { EmptyState, ErrorBanner, Pagination } from "@/components/ui/misc";
 
@@ -238,7 +239,7 @@ export default function HomePage() {
             popover — plus the category quick-nav strip, which stays lg+ only. */}
         <div className="relative z-20 mt-16 animate-hero-in">
           <div className="lg:hidden bg-scrim/90 backdrop-blur-md border-b border-white/10">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
               {/* Full self-contained mobile/tablet filter UI (bottom sheet /
                   popover) — unchanged. Below lg only; lg+ uses the Navbar's
                   inline search instead, so this whole div is lg:hidden above. */}
@@ -303,6 +304,14 @@ export default function HomePage() {
           )}
         </div>
       )}
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Reveal>
+          <div className="mx-auto max-w-md py-4">
+            <QuestionsForYouWidget limit={4} />
+          </div>
+        </Reveal>
+      </div>
 
       {/* BusinessList: a distinct, "gorgeous" section — soft gradient wash +
           blurred color blobs (a subtle mesh-gradient look) behind the grid,

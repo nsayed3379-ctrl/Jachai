@@ -96,6 +96,6 @@ export const COMMUNITY_SORT_OPTIONS: { value: CommunitySortOrder; label: string 
 // small colored dot, matching the icon-quality pass done elsewhere in Community).
 export const COMMUNITY_QUESTION_STATUS_META: Record<CommunityQuestionStatus, { label: string; tone: "gold" | "brand" | "neutral"; dotClass: string }> = {
   OPEN: { label: "Open", tone: "gold", dotClass: "bg-gold-500" },
-  ANSWERED: { label: "Answered", tone: "brand", dotClass: "bg-brand-500" },
+  RESOLVED: { label: "Resolved", tone: "brand", dotClass: "bg-brand-500" },
   CLOSED: { label: "Closed", tone: "neutral", dotClass: "bg-ink-400" },
 };

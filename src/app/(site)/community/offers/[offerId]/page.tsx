@@ -172,7 +172,13 @@ export default function OfferDetailPage() {
             {isActive && !fullyClaimed && (
               <>
                 {showOrderNow && (
-                  <Link href={`/business/${offer.businessSlug}`}>
+                  <Link
+                    href={
+                      offer.menuItemId
+                        ? `/business/${offer.businessSlug}?item=${offer.menuItemId}`
+                        : `/business/${offer.businessSlug}`
+                    }
+                  >
                     <Button>Order Now</Button>
                   </Link>
                 )}

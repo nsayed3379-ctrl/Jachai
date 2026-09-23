@@ -18,24 +18,27 @@ import type { CommunityPostVoteType } from "@/lib/types";
  */
 export function VoteControls({
   score,
+  upvoteCount,
   myVote,
   onVote,
   size = "md",
   orientation = "vertical",
 }: {
   score: number;
+  /** Only read by orientation="split" — the other two variants show net `score` instead. */
+  upvoteCount?: number;
   myVote: CommunityPostVoteType | null;
   onVote: (type: CommunityPostVoteType) => Promise<void>;
   size?: "sm" | "md";
-  orientation?: "vertical" | "horizontal";
+  orientation?: "vertical" | "horizontal" | "split";
 }) {
   const { user } = useAuth();
   const { openLogin } = useAuthModal();
   const { show } = useToast();
   const [voting, setVoting] = useState(false);
 
-  // Post cards wrap the whole card in a <Link> to the detail page — without
-  // stopping propagation, a vote click bubbles up and also navigates away.
+  // Post cards navigate to the detail page on click of the whole card —
+  // without stopping propagation, a vote click bubbles up and also navigates away.
   async function handleVote(type: CommunityPostVoteType, e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -66,6 +69,46 @@ export function VoteControls({
     : isDown
       ? "border-ink-300 bg-ink-200/60"
       : "border-ink-200 bg-ink-50";
+
+  if (orientation === "split") {
+    // Two separate pills — "Upvote · N" (word + count, count hidden at zero) and a
+    // bare downvote icon with no visible count, matching Quora's feed-card action row.
+    return (
+      <div className="inline-flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={(e) => handleVote("UPVOTE", e)}
+          disabled={voting}
+          aria-label="Upvote"
+          aria-pressed={isUp}
+          title="Upvote"
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors duration-150",
+            "disabled:cursor-not-allowed disabled:opacity-50",
+            isUp ? "border-crimson-200 bg-crimson-50 text-crimson-700" : "border-ink-200 text-ink-600 hover:border-ink-300 hover:bg-ink-50"
+          )}
+        >
+          <ArrowBigUp size={15} fill={isUp ? "currentColor" : "none"} strokeWidth={isUp ? 1.5 : 2} />
+          Upvote{upvoteCount ? ` · ${upvoteCount}` : ""}
+        </button>
+        <button
+          type="button"
+          onClick={(e) => handleVote("DOWNVOTE", e)}
+          disabled={voting}
+          aria-label="Downvote"
+          aria-pressed={isDown}
+          title="Downvote"
+          className={cn(
+            "flex items-center justify-center rounded-full border p-1.5 transition-colors duration-150",
+            "disabled:cursor-not-allowed disabled:opacity-50",
+            isDown ? "border-ink-300 bg-ink-200/60 text-ink-900" : "border-ink-200 text-ink-400 hover:border-ink-300 hover:text-ink-700"
+          )}
+        >
+          <ArrowBigDown size={15} fill={isDown ? "currentColor" : "none"} strokeWidth={isDown ? 1.5 : 2} />
+        </button>
+      </div>
+    );
+  }
 
   if (orientation === "horizontal") {
     // Single fused pill: up arrow / label / down arrow — the label reads "Vote"

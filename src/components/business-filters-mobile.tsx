@@ -61,7 +61,7 @@ function CompactSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         className={cn(
-          "flex h-9 w-full items-center justify-between gap-1 rounded-xl border bg-surface px-3 text-xs font-medium text-ink-800 transition-colors duration-150",
+          "flex h-9 w-full items-center justify-between gap-1 rounded-xl border bg-surface px-2.5 text-xs font-medium text-ink-800 transition-colors duration-150",
           open ? "border-crimson-400" : "border-ink-200"
         )}
       >
@@ -190,13 +190,13 @@ export function MobileFilters({ value, onChange, onUseMyLocation, locationStatus
 
   return (
     <div className="space-y-1.5">
-      <CompactSelect
-        value={value.categoryId ?? ""}
-        onChange={(v) => set("categoryId", v || undefined)}
-        options={[{ value: "", label: "All categories" }, ...categories.map((c) => ({ value: c.id, label: c.name }))]}
-      />
+      <div className="grid grid-cols-3 gap-1.5">
+        <CompactSelect
+          value={value.categoryId ?? ""}
+          onChange={(v) => set("categoryId", v || undefined)}
+          options={[{ value: "", label: "All categories" }, ...categories.map((c) => ({ value: c.id, label: c.name }))]}
+        />
 
-      <div className="flex gap-1.5">
         <CompactSelect
           value={cityId}
           onChange={(v) => {

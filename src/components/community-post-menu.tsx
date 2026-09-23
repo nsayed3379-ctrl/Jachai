@@ -64,12 +64,8 @@ export function PostMenu({
       ref={containerRef}
       className="relative shrink-0"
       onClick={(e) => {
-        // This whole card is wrapped in a <Link>. stopPropagation alone only
-        // stops React's synthetic bubbling — it never reaches the Link's own
-        // handler, which is what would normally call preventDefault(), so
-        // the browser's native "navigate to href" still fires unless we
-        // preventDefault() here ourselves.
-        e.preventDefault();
+        // The whole card navigates to the post on click — stop the menu's
+        // clicks from bubbling up to that handler.
         e.stopPropagation();
       }}
     >
