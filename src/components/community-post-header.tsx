@@ -31,7 +31,7 @@ export function PostHeader({
   createdAt: string;
   size?: "sm" | "md";
 }) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { openLogin } = useAuthModal();
   const { show } = useToast();
   const [following, setFollowing] = useState(false);
@@ -40,7 +40,7 @@ export function PostHeader({
   const displayName = author.communityUsername ? `u/${author.communityUsername}` : "[deleted]";
   const avatarSize = size === "md" ? "h-9 w-9 text-xs" : "h-8 w-8 text-[11px]";
   const nameSize = size === "md" ? "text-sm" : "text-[13px]";
-  const isSelf = user?.id === author.id;
+  const isSelf = profile?.communityProfileId === author.id;
 
   async function handleFollow(e: React.MouseEvent) {
     e.preventDefault();

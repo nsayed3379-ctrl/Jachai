@@ -110,7 +110,7 @@ function CommentNode({
   const [markingBest, setMarkingBest] = useState(false);
 
   const replies = allComments.filter((c) => c.parentCommentId === comment.id);
-  const isCommentAuthor = user?.id === comment.author.id;
+  const isCommentAuthor = profile?.communityProfileId === comment.author.id;
   const canDelete = isCommentAuthor || isPostAuthor;
   const displayName = comment.author.communityUsername ? `u/${comment.author.communityUsername}` : "[deleted]";
   const isAnswer = isQuestion && comment.depth === 0;

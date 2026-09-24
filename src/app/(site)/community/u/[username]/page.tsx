@@ -17,7 +17,11 @@ type Tab = "posts" | "comments";
 
 export default function CommunityProfilePage() {
   const { username } = useParams<{ username: string }>();
-  const { user } = useAuth();
+  // myProfile (not `profile`, already the name of this page's *viewed* community
+  // profile state below) carries the logged-in viewer's own communityProfileId —
+  // "is this my own profile" must compare against that, never against user.id,
+  // which is the real account id and no longer what a community response returns.
+  const { user, profile: myProfile } = useAuth();
   const { openLogin } = useAuthModal();
   const { show } = useToast();
   const [profile, setProfile] = useState<CommunityProfileResponse | null>(null);
@@ -36,8 +40,8 @@ export default function CommunityProfilePage() {
       .then((res) => {
         setProfile(res);
         return Promise.all([
-          communityApi.postsByAuthor(res.userId, 0, 20),
-          communityApi.commentsByAuthor(res.userId, 0, 20),
+          communityApi.postsByAuthor(res.communityProfileId, 0, 20),
+          communityApi.commentsByAuthor(res.communityProfileId, 0, 20),
         ]);
       })
       .then((results) => {
@@ -69,10 +73,10 @@ export default function CommunityProfilePage() {
     setFollowBusy(true);
     try {
       if (profile.isFollowing) {
-        await communityApi.unfollow(profile.userId);
+        await communityApi.unfollow(profile.communityProfileId);
         setProfile({ ...profile, isFollowing: false });
       } else {
-        await communityApi.follow(profile.userId);
+        await communityApi.follow(profile.communityProfileId);
         setProfile({ ...profile, isFollowing: true });
       }
     } catch (err) {
@@ -85,7 +89,7 @@ export default function CommunityProfilePage() {
   if (loading) return <PageSpinner />;
   if (error || !profile) return <ErrorBanner message={error ?? "Community profile not found"} />;
 
-  const isOwnProfile = user?.id === profile.userId;
+  const isOwnProfile = myProfile?.communityProfileId === profile.communityProfileId;
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 sm:px-0">

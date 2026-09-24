@@ -35,12 +35,12 @@ function FollowRow({
   item: CommunityFollowListItem;
   onToggled: (userId: string, isFollowing: boolean) => void;
 }) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { openLogin } = useAuthModal();
   const { show } = useToast();
   const [toggling, setToggling] = useState(false);
 
-  const isSelf = user?.id === item.author.id;
+  const isSelf = profile?.communityProfileId === item.author.id;
   const displayName = item.author.communityUsername ? `u/${item.author.communityUsername}` : "[deleted]";
 
   async function handleToggle(e: React.MouseEvent) {

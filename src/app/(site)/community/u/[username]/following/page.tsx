@@ -13,8 +13,8 @@ import { EmptyState, ErrorBanner, PageSpinner } from "@/components/ui/misc";
 
 export default function CommunityFollowingPage() {
   const { username } = useParams<{ username: string }>();
-  const { user } = useAuth();
-  const [ownerUserId, setOwnerUserId] = useState<string | null>(null);
+  const { user, profile } = useAuth();
+  const [ownerCommunityProfileId, setOwnerCommunityProfileId] = useState<string | null>(null);
   const [items, setItems] = useState<CommunityFollowListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,9 +24,9 @@ export default function CommunityFollowingPage() {
     setError(null);
     communityApi
       .getProfile(username)
-      .then((profile) => {
-        setOwnerUserId(profile.userId);
-        return communityApi.following(profile.userId, 0, 50);
+      .then((viewedProfile) => {
+        setOwnerCommunityProfileId(viewedProfile.communityProfileId);
+        return communityApi.following(viewedProfile.communityProfileId, 0, 50);
       })
       .then((res) => setItems(res.content))
       .catch((err) => setError(errorMessage(err)))
@@ -39,7 +39,7 @@ export default function CommunityFollowingPage() {
     setItems((prev) => prev.map((item) => (item.author.id === userId ? { ...item, isFollowing } : item)));
   }
 
-  const isOwnList = Boolean(user && ownerUserId && user.id === ownerUserId);
+  const isOwnList = Boolean(user && ownerCommunityProfileId && profile?.communityProfileId === ownerCommunityProfileId);
 
   return (
     <div className="py-6">

@@ -11,6 +11,7 @@ import type { ReviewResponse, VoteType } from "@/lib/types";
 import { StarDisplay } from "./star-rating";
 import { Badge } from "./ui/misc";
 import { ReportButton } from "./report-button";
+import { PhotoGalleryModal } from "./photo-gallery-modal";
 
 const CONTENT_PREVIEW_LENGTH = 220;
 
@@ -30,6 +31,7 @@ export function ReviewCard({
   const [deleting, setDeleting] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [failedPhotoIndexes, setFailedPhotoIndexes] = useState<Set<number>>(new Set());
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [counts, setCounts] = useState({
     USEFUL: review.usefulCount,
     FUNNY: review.funnyCount,
@@ -121,7 +123,13 @@ export function ReviewCard({
         <div className="mt-3 flex gap-2 overflow-x-auto">
           {review.photoUrls.map((url, i) =>
             failedPhotoIndexes.has(i) ? null : (
-              <div key={i} className="relative h-20 w-20 flex-shrink-0 rounded overflow-hidden bg-ink-100">
+              <button
+                key={i}
+                type="button"
+                onClick={() => setLightboxIndex(i)}
+                aria-label={`Open photo ${i + 1} of ${review.photoUrls.length}`}
+                className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded bg-ink-100"
+              >
                 <Image
                   src={url}
                   alt="Review photo"
@@ -130,11 +138,19 @@ export function ReviewCard({
                   sizes="80px"
                   onError={() => setFailedPhotoIndexes((prev) => new Set(prev).add(i))}
                 />
-              </div>
+              </button>
             )
           )}
         </div>
       )}
+
+      <PhotoGalleryModal
+        open={lightboxIndex !== null}
+        onClose={() => setLightboxIndex(null)}
+        photos={review.photoUrls}
+        businessName={displayName}
+        initialIndex={lightboxIndex}
+      />
 
       {review.ownerReply && (
         <div className="mt-3 rounded-lg border border-ink-100 bg-sand-50/70 p-3">

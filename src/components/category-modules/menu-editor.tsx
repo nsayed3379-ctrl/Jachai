@@ -11,6 +11,7 @@ interface Draft {
   description: string;
   priceText: string;
   price: string; // numeric order price — kept as a string in the form
+  compareAtPrice: string; // optional "was" price shown struck through
   available: boolean;
   menuSection: string;
   popular: boolean;
@@ -37,6 +38,7 @@ export function MenuEditor({ businessId, addLabel }: { businessId: string; addLa
         description: "",
         priceText: "",
         price: "",
+        compareAtPrice: "",
         available: true,
         menuSection: "",
         popular: false,
@@ -47,6 +49,7 @@ export function MenuEditor({ businessId, addLabel }: { businessId: string; addLa
         description: m.description ?? "",
         priceText: m.priceText ?? "",
         price: m.price != null ? String(m.price) : "",
+        compareAtPrice: m.compareAtPrice != null ? String(m.compareAtPrice) : "",
         available: m.available,
         menuSection: m.menuSection ?? "",
         popular: m.popular,
@@ -55,6 +58,8 @@ export function MenuEditor({ businessId, addLabel }: { businessId: string; addLa
       toBody={(d) => {
         const priceNum = d.price.trim() === "" ? null : Number(d.price);
         const price = priceNum != null && Number.isFinite(priceNum) && priceNum > 0 ? priceNum : null;
+        const compareAtNum = d.compareAtPrice.trim() === "" ? null : Number(d.compareAtPrice);
+        const compareAtPrice = compareAtNum != null && Number.isFinite(compareAtNum) && compareAtNum > 0 ? compareAtNum : null;
         return {
           name: d.name,
           description: d.description || null,
@@ -64,6 +69,7 @@ export function MenuEditor({ businessId, addLabel }: { businessId: string; addLa
           photoUrl: d.photoUrl || null,
           // A numeric price makes the item orderable; the backend derives the flag from this.
           price,
+          compareAtPrice,
           available: d.available,
           orderingEnabled: price != null,
         };
@@ -84,7 +90,10 @@ export function MenuEditor({ businessId, addLabel }: { businessId: string; addLa
               )}
               {m.available && m.price != null && (
                 <span className="ml-1.5 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">
-                  Orderable · ৳{m.price}
+                  Orderable · {m.compareAtPrice != null && (
+                    <span className="text-emerald-700/60 line-through">৳{m.compareAtPrice}</span>
+                  )}{" "}
+                  ৳{m.price}
                 </span>
               )}
               {!m.available && (
@@ -153,6 +162,23 @@ export function MenuEditor({ businessId, addLabel }: { businessId: string; addLa
             An item with an <span className="font-medium">order price</span> shows an “Add to cart” button on your public
             menu (when direct ordering is on). Leave it blank to keep the item showcase-only.
           </p>
+          <div>
+            <Label>
+              Original price (৳) <span className="text-ink-300">— optional, shown struck through as a discount</span>
+            </Label>
+            <Input
+              type="number"
+              min="0"
+              step="1"
+              inputMode="decimal"
+              value={d.compareAtPrice}
+              onChange={(e) => patch({ compareAtPrice: e.target.value })}
+              placeholder="e.g. 500"
+            />
+            <p className="mt-1 text-xs text-ink-400">
+              Must be higher than the order price above, or it&rsquo;s ignored. Leave blank if there&rsquo;s no discount.
+            </p>
+          </div>
           <label className="flex items-center gap-2 text-sm text-ink-700">
             <input
               type="checkbox"

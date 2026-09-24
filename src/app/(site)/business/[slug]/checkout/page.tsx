@@ -7,8 +7,8 @@ import { businessApi, commerceApi, orderApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthModal } from "@/lib/auth-modal-context";
 import { useCart } from "@/lib/use-cart";
-import { clearCart, removeLine, setQuantity } from "@/lib/cart";
-import { formatTk, PAYMENT_METHOD_LABELS } from "@/lib/commerce";
+import { billedQty, clearCart, removeLine, setQuantity } from "@/lib/cart";
+import { formatTk, paymentMethodLabel } from "@/lib/commerce";
 import { errorMessage } from "@/lib/toast-context";
 import type {
   BusinessResponse,
@@ -17,7 +17,7 @@ import type {
   PaymentMethod,
   PublicCommerceView,
 } from "@/lib/types";
-import { GoogleLocationPicker } from "@/components/google-location-picker";
+import { LeafletLocationPicker } from "@/components/leaflet-location-picker";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/field";
 import { ErrorBanner, PageSpinner } from "@/components/ui/misc";
@@ -74,12 +74,17 @@ export default function CheckoutPage() {
     }
   }, [profile]);
 
+  // Delivery is only a real option once the business has at least one configured
+  // zone — otherwise every quote would come back non-deliverable and the customer
+  // would hit a dead end after already picking it.
+  const deliveryAvailable = commerce ? commerce.ownDeliveryEnabled && commerce.hasDeliveryZones : false;
+
   // Default the fulfillment choice to the first enabled option.
   useEffect(() => {
     if (!commerce || fulfillment) return;
     if (commerce.pickupEnabled) setFulfillment("PICKUP");
-    else if (commerce.ownDeliveryEnabled) setFulfillment("OWN_DELIVERY");
-  }, [commerce, fulfillment]);
+    else if (deliveryAvailable) setFulfillment("OWN_DELIVERY");
+  }, [commerce, fulfillment, deliveryAvailable]);
 
   // Default payment to the first enabled option.
   useEffect(() => {
@@ -220,6 +225,11 @@ export default function CheckoutPage() {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-ink-900">{l.name}</p>
                 <p className="text-xs text-ink-400">{formatTk(l.price)} each</p>
+                {l.isBogo && l.quantity >= 2 && (
+                  <p className="text-xs font-semibold text-crimson-600">
+                    Buy 1 Get 1 applied — {billedQty(l)} of {l.quantity} charged
+                  </p>
+                )}
               </div>
               <div className="inline-flex items-center rounded-lg border border-ink-200">
                 <button
@@ -241,7 +251,7 @@ export default function CheckoutPage() {
                 </button>
               </div>
               <span className="w-16 text-right text-sm font-semibold text-ink-900">
-                {formatTk(l.price * l.quantity)}
+                {formatTk(l.price * billedQty(l))}
               </span>
               <button
                 type="button"
@@ -267,7 +277,7 @@ export default function CheckoutPage() {
               onClick={() => setFulfillment("PICKUP")}
             />
           )}
-          {commerce.ownDeliveryEnabled && (
+          {deliveryAvailable && (
             <FulfillmentChoice
               active={fulfillment === "OWN_DELIVERY"}
               label="Delivery"
@@ -296,7 +306,7 @@ export default function CheckoutPage() {
               </Button>
             </div>
             {pin && (
-              <GoogleLocationPicker
+              <LeafletLocationPicker
                 latitude={pin.lat}
                 longitude={pin.lng}
                 onChange={(lat, lng) => setPin({ lat, lng })}
@@ -376,14 +386,14 @@ export default function CheckoutPage() {
           {commerce.paymentCashOnDelivery && (
             <PaymentChoice
               active={payment === "CASH_ON_DELIVERY"}
-              label={PAYMENT_METHOD_LABELS.CASH_ON_DELIVERY}
+              label={paymentMethodLabel("CASH_ON_DELIVERY", fulfillment ?? "OWN_DELIVERY")}
               onClick={() => setPayment("CASH_ON_DELIVERY")}
             />
           )}
           {commerce.paymentPayAtBusiness && (
             <PaymentChoice
               active={payment === "PAY_AT_BUSINESS"}
-              label={PAYMENT_METHOD_LABELS.PAY_AT_BUSINESS}
+              label={paymentMethodLabel("PAY_AT_BUSINESS", fulfillment ?? "OWN_DELIVERY")}
               onClick={() => setPayment("PAY_AT_BUSINESS")}
             />
           )}

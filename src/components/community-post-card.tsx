@@ -37,11 +37,11 @@ export function CommunityPostCard({
   onDeleted: (postId: string) => void;
 }) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { show } = useToast();
   const [deleting, setDeleting] = useState(false);
 
-  const isAuthor = user?.id === post.author.id;
+  const isAuthor = profile?.communityProfileId === post.author.id;
   const typeMeta = COMMUNITY_POST_TYPE_META[post.postType];
   const business = post.mentionedBusinesses[0] ?? null;
 

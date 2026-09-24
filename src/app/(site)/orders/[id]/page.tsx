@@ -9,7 +9,7 @@ import {
   FULFILLMENT_LABELS,
   ORDER_STATUS_LABELS,
   ORDER_STATUS_TONE,
-  PAYMENT_METHOD_LABELS,
+  paymentMethodLabel,
   formatTk,
 } from "@/lib/commerce";
 import { errorMessage, useToast } from "@/lib/toast-context";
@@ -99,14 +99,29 @@ function OrderDetailContent() {
         <div className="rounded-2xl border border-ink-100 bg-surface p-4 text-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">Fulfillment</p>
           <p className="mt-1 font-medium text-ink-900">{FULFILLMENT_LABELS[order.fulfillmentType]}</p>
-          {order.deliveryAddress && <p className="mt-1 text-ink-600">{order.deliveryAddress}</p>}
-          {order.deliveryDistanceKm != null && (
-            <p className="mt-0.5 text-xs text-ink-400">{order.deliveryDistanceKm} km away</p>
+          {order.fulfillmentType === "PICKUP" ? (
+            <>
+              <p className="mt-1 text-ink-600">{order.businessAddress}</p>
+              <p className="text-ink-600">{order.businessPhone}</p>
+            </>
+          ) : (
+            <>
+              {order.deliveryAddress && <p className="mt-1 text-ink-600">{order.deliveryAddress}</p>}
+              {order.deliveryDistanceKm != null && (
+                <p className="mt-0.5 text-xs text-ink-400">{order.deliveryDistanceKm} km away</p>
+              )}
+            </>
+          )}
+          {order.estimatedReadyAt && (
+            <p className="mt-1 text-xs font-medium text-crimson-700">
+              {order.fulfillmentType === "PICKUP" ? "Ready for pickup by " : "Estimated by "}
+              {formatDateTime(order.estimatedReadyAt)}
+            </p>
           )}
         </div>
         <div className="rounded-2xl border border-ink-100 bg-surface p-4 text-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">Payment</p>
-          <p className="mt-1 font-medium text-ink-900">{PAYMENT_METHOD_LABELS[order.paymentMethod]}</p>
+          <p className="mt-1 font-medium text-ink-900">{paymentMethodLabel(order.paymentMethod, order.fulfillmentType)}</p>
           <p className="mt-0.5 text-xs text-ink-400">{order.paymentStatus === "PAID" ? "Paid" : "Unpaid"}</p>
         </div>
       </section>

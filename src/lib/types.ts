@@ -30,6 +30,8 @@ export interface UserProfile {
   hasLinkedAccount: boolean;
   /** Public "Join Community" pseudonymous handle (u/username) — null until the setup flow is completed. */
   communityUsername: string | null;
+  /** This account's own Community-facing pseudonymous id — compare against a post/comment's author.id for "is this mine", never against `id`. */
+  communityProfileId: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -290,6 +292,8 @@ export interface MenuItem {
   priceText: string | null;
   /** Commerce (Phase A): numeric price — required for the item to be orderable. */
   price: number | null;
+  /** Optional "was" price shown struck through next to price; only meaningful when greater than price. */
+  compareAtPrice: number | null;
   available: boolean;
   orderingEnabled: boolean;
   photoUrl: string | null;
@@ -298,7 +302,9 @@ export interface MenuItem {
   createdAt: string;
   /** Set only when an ACTIVE offer links to this item — see CatalogService#menu. Null otherwise. */
   activeOfferId: string | null;
-  /** The linked offer's discounted price — show this instead of `price` when set. */
+  /** Set whenever activeOfferId is, even for non-numeric types like BUY_ONE_GET_ONE (where activeOfferPrice stays null). */
+  activeOfferType: OfferType | null;
+  /** Only set for numeric offer types (percentage/fixed discount) — show this instead of `price` when set. */
   activeOfferPrice: number | null;
 }
 
@@ -339,6 +345,8 @@ export interface MenuItemBody {
   price?: number | null;
   available?: boolean | null;
   orderingEnabled?: boolean | null;
+  /** Optional "was" price; only kept server-side when greater than price. */
+  compareAtPrice?: number | null;
 }
 export interface FeaturedProductBody {
   name: string;
@@ -468,6 +476,8 @@ export interface CartLine {
   name: string;
   price: number;
   quantity: number;
+  /** Snapshotted at add-to-cart time — every pair bills as one, same math as OrderService#placeOrder. */
+  isBogo?: boolean;
 }
 
 export interface Cart {
@@ -512,6 +522,9 @@ export interface Order {
   businessId: string;
   businessName: string;
   businessSlug: string;
+  businessPhone: string;
+  /** "{area}, {city}" — the business has no separate street-address field. */
+  businessAddress: string;
   customerUserId: string;
   status: OrderStatus;
   fulfillmentType: FulfillmentType;
@@ -529,6 +542,8 @@ export interface Order {
   deliveryDistanceKm: number | null;
   customerNote: string | null;
   rejectionReason: string | null;
+  /** Set once the owner accepts the order; null before that. */
+  estimatedReadyAt: string | null;
   createdAt: string;
   items: OrderItem[];
   timeline: OrderStatusEvent[] | null;
@@ -1119,7 +1134,8 @@ export interface CommunityCommentResponse {
 }
 
 export interface CommunityProfileResponse {
-  userId: string;
+  /** Community-facing pseudonymous id — never the real account id. */
+  communityProfileId: string;
   communityUsername: string;
   memberSince: string;
   verified: boolean;

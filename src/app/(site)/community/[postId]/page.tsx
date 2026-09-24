@@ -185,7 +185,7 @@ export default function CommunityPostDetailPage() {
   if (loading) return <PageSpinner />;
   if (error || !post) return <ErrorBanner message={error ?? "Post not found"} />;
 
-  const isAuthor = user?.id === post.author.id;
+  const isAuthor = profile?.communityProfileId === post.author.id;
   const isQuestion = post.postType === "QUESTION";
   const typeMeta = COMMUNITY_POST_TYPE_META[post.postType];
   const business = post.mentionedBusinesses[0] ?? null;

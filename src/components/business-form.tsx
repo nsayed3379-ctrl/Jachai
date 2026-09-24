@@ -32,7 +32,7 @@ import {
   emptyCatalogDraft,
   type CatalogDraft,
 } from "./category-modules/category-modules-draft";
-import { GoogleLocationPicker } from "./google-location-picker";
+import { LeafletLocationPicker } from "./leaflet-location-picker";
 import { HoursExceptionsManager } from "./hours-exceptions-manager";
 import {
   buildSummary,
@@ -946,7 +946,7 @@ export function BusinessForm({ existing, initialValues }: Props) {
 
               </div>
 
-              <GoogleLocationPicker
+              <LeafletLocationPicker
                 latitude={form.latitude}
                 longitude={form.longitude}
                 onChange={(lat, lng) => {

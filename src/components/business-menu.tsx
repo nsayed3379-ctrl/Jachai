@@ -87,7 +87,10 @@ function MenuCard({
 }) {
   const orderable = orderingActive && isOrderable(item);
   const hasOffer = item.activeOfferPrice != null;
+  const isBogo = item.activeOfferType === "BUY_ONE_GET_ONE";
   const priceLabel = typeof item.price === "number" ? formatTk(item.price) : item.priceText;
+  // A standalone discount (no linked Offer) — the Offer's own struck-through price wins when both are set.
+  const hasDiscount = !hasOffer && typeof item.price === "number" && typeof item.compareAtPrice === "number" && item.compareAtPrice > item.price;
 
   return (
     <div
@@ -105,9 +108,19 @@ function MenuCard({
               ★ Popular
             </span>
           )}
+          {isBogo && (
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-crimson-50 px-1.5 py-[1px] text-[9px] font-bold uppercase tracking-wide text-crimson-700">
+              Buy 1 Get 1
+            </span>
+          )}
           {hasOffer && (
             <span className="inline-flex items-center gap-0.5 rounded-full bg-crimson-50 px-1.5 py-[1px] text-[9px] font-bold uppercase tracking-wide text-crimson-700">
               Offer
+            </span>
+          )}
+          {hasDiscount && (
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-crimson-50 px-1.5 py-[1px] text-[9px] font-bold uppercase tracking-wide text-crimson-700">
+              Sale
             </span>
           )}
         </p>
@@ -118,6 +131,11 @@ function MenuCard({
           <p className="mt-1.5 flex items-baseline gap-1.5">
             <span className="text-[15px] font-extrabold text-crimson-700">{formatTk(item.activeOfferPrice!)}</span>
             {priceLabel && <span className="text-xs text-ink-400 line-through">{priceLabel}</span>}
+          </p>
+        ) : hasDiscount ? (
+          <p className="mt-1.5 flex items-baseline gap-1.5">
+            <span className="text-[15px] font-extrabold text-crimson-700">{formatTk(item.price!)}</span>
+            <span className="text-xs text-ink-400 line-through">{formatTk(item.compareAtPrice!)}</span>
           </p>
         ) : (
           priceLabel && <p className="mt-1.5 text-[15px] font-extrabold text-ink-900">{priceLabel}</p>
@@ -241,7 +259,12 @@ export function BusinessMenu({
     const businessRef = { id: businessId, name: businessName, slug: businessSlug };
     // Mirrors OrderService#placeOrder's server-authoritative pricing — the cart
     // should never show a different number than what checkout actually charges.
-    const itemRef = { id: item.id, name: item.name, price: item.activeOfferPrice ?? item.price };
+    const itemRef = {
+      id: item.id,
+      name: item.name,
+      price: item.activeOfferPrice ?? item.price,
+      isBogo: item.activeOfferType === "BUY_ONE_GET_ONE",
+    };
     try {
       addToCart(businessRef, itemRef, 1);
       show(`${item.name} added to cart`, "success");

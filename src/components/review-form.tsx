@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { galleryApi, reviewApi, uploadFileToPresignedUrl } from "@/lib/api";
+import { reviewApi, uploadFileToPresignedUrl } from "@/lib/api";
 import { useLanguage } from "@/lib/language-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import type { ReviewResponse } from "@/lib/types";
@@ -12,6 +12,8 @@ import { Textarea } from "./ui/field";
 const MAX_PHOTO_MB = 5;
 const MAX_PHOTOS = 6;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+/** Mirrors SubmitReviewRequest/UpdateReviewRequest's @Size(min = 10) on the backend. */
+const MIN_CONTENT_LENGTH = 10;
 
 function CameraIcon() {
   return (
@@ -48,7 +50,10 @@ export function ReviewForm({
 }) {
   const { show } = useToast();
   const { t } = useLanguage();
-  const [rating, setRating] = useState(editing?.rating ?? 5);
+  // 0 = no star picked yet — was defaulting to 5, which let a single stray
+  // "Submit" click (no text, no deliberate star pick) post a full 5★ review
+  // and move the business's public rating. See MIN_CONTENT_LENGTH below.
+  const [rating, setRating] = useState(editing?.rating ?? 0);
   const [content, setContent] = useState(editing?.content ?? "");
   const [photoUrls, setPhotoUrls] = useState<string[]>(editing?.photoUrls ?? []);
   const [uploading, setUploading] = useState(false);
@@ -74,11 +79,7 @@ export function ReviewForm({
           show(t("review_form.error.too_large", { name: file.name || t("review_form.photo"), max: MAX_PHOTO_MB }), "error");
           continue;
         }
-        // Note: the backend exposes photo upload only under
-        // /businesses/{id}/photos (spec §13 gallery); there is no dedicated
-        // review-photo upload endpoint yet, so we reuse the business's
-        // pre-signed-URL flow here as the closest available equivalent.
-        const presigned = await galleryApi.requestUploadUrl(businessId, file.name || "review-photo.jpg");
+        const presigned = await reviewApi.requestUploadUrl(file.name || "review-photo.jpg");
         await uploadFileToPresignedUrl(presigned.uploadUrl, file);
         setPhotoUrls((prev) => [...prev, presigned.cdnUrlAfterUpload]);
         count++;
@@ -97,6 +98,14 @@ export function ReviewForm({
   }
 
   async function submit() {
+    if (rating < 1) {
+      show(t("review_form.error.rating_required"), "error");
+      return;
+    }
+    if (content.trim().length < MIN_CONTENT_LENGTH) {
+      show(t("review_form.error.content_too_short", { min: MIN_CONTENT_LENGTH }), "error");
+      return;
+    }
     setSubmitting(true);
     try {
       if (editing) {
@@ -129,7 +138,7 @@ export function ReviewForm({
       />
 
       {!editing && (
-        <div className="mt-3">
+        <div className="mt-3 rounded-xl border border-ink-100 bg-surface p-3">
           {/* Camera capture opens the device camera directly on phones;
               the gallery input opens the photo library / file picker. */}
           <input
@@ -149,44 +158,48 @@ export function ReviewForm({
             className="hidden"
           />
 
-          <div className="flex flex-wrap items-center gap-2 text-xs text-ink-500">
-            <span>{t("review_form.add_photos")}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-ink-600">{t("review_form.add_photos")}</span>
             {photoUrls.length < MAX_PHOTOS && (
               <>
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => cameraInputRef.current?.click()}
                   disabled={uploading}
-                  className="inline-flex items-center gap-1 rounded-md border border-ink-200 px-2 py-1 font-medium text-ink-600 transition-colors hover:border-crimson-400 hover:text-crimson-600 disabled:opacity-50"
+                  className="gap-1.5"
                 >
                   <CameraIcon />
                   {t("review_form.camera")}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => galleryInputRef.current?.click()}
                   disabled={uploading}
-                  className="inline-flex items-center gap-1 rounded-md border border-ink-200 px-2 py-1 font-medium text-ink-600 transition-colors hover:border-crimson-400 hover:text-crimson-600 disabled:opacity-50"
+                  className="gap-1.5"
                 >
                   <GalleryIcon />
                   {t("review_form.gallery")}
-                </button>
+                </Button>
               </>
             )}
-            {uploading && <span className="text-ink-400">{t("common.uploading")}</span>}
+            {uploading && <span className="text-xs text-ink-400">{t("common.uploading")}</span>}
           </div>
 
           {photoUrls.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               {photoUrls.map((url, i) => (
-                <div key={i} className="relative h-14 w-14 overflow-hidden rounded-md border border-ink-200">
+                <div key={i} className="relative h-16 w-16 overflow-hidden rounded-lg border border-ink-200 shadow-sm">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={url} alt="" className="h-full w-full object-cover" />
                   <button
                     type="button"
                     onClick={() => removePhoto(i)}
                     aria-label={t("review_form.remove_photo")}
-                    className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black/60 text-[10px] font-bold leading-none text-white hover:bg-black/80"
+                    className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-xs font-bold leading-none text-white transition-colors hover:bg-black/80"
                   >
                     ✕
                   </button>
@@ -197,13 +210,13 @@ export function ReviewForm({
         </div>
       )}
 
-      <div className="mt-4 flex justify-end gap-2">
+      <div className="mt-4 flex flex-col gap-2 border-t border-ink-100 pt-4 sm:flex-row sm:justify-end sm:gap-3">
         {onCancel && (
-          <Button variant="ghost" onClick={onCancel}>
+          <Button variant="outline" size="md" onClick={onCancel} className="w-full sm:w-auto">
             {t("common.cancel")}
           </Button>
         )}
-        <Button onClick={submit} loading={submitting || uploading}>
+        <Button size="md" onClick={submit} loading={submitting || uploading} className="w-full sm:w-auto">
           {editing ? t("review_form.save_changes") : t("review_form.submit_review")}
         </Button>
       </div>

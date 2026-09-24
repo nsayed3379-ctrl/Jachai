@@ -55,6 +55,17 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   PAY_AT_BUSINESS: "Pay at the business",
 };
 
+/**
+ * Same payment methods read differently depending on how the order is being
+ * fulfilled — "Cash on delivery" implies a courier, which is misleading on a
+ * Pickup order (there's no one delivering it). The underlying PaymentMethod
+ * value is unchanged; only the label shown to the customer/owner adapts.
+ */
+export function paymentMethodLabel(method: PaymentMethod, fulfillmentType: FulfillmentType): string {
+  if (fulfillmentType === "PICKUP" && method === "CASH_ON_DELIVERY") return "Pay at pickup";
+  return PAYMENT_METHOD_LABELS[method];
+}
+
 export const FULFILLMENT_LABELS: Record<FulfillmentType, string> = {
   PICKUP: "Pickup",
   OWN_DELIVERY: "Own delivery",

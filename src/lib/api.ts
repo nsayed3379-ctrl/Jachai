@@ -360,6 +360,13 @@ export const businessApi = {
 // Reviews
 // ---------------------------------------------------------------------------
 export const reviewApi = {
+  /** Pre-signed direct-to-storage upload for a review photo — any authenticated user, not owner-gated (unlike galleryApi's). */
+  requestUploadUrl: (filename: string) =>
+    request<PreSignedUploadResponse>("/api/v1/reviews/upload-url", {
+      method: "POST",
+      query: { filename },
+    }),
+
   submit: (body: SubmitReviewRequest) =>
     request<ReviewResponse>("/api/v1/reviews", { method: "POST", body }),
 

@@ -30,6 +30,8 @@ export interface CartItemRef {
   id: string;
   name: string;
   price: number;
+  /** True when a currently-active BUY_ONE_GET_ONE offer is linked to this item. */
+  isBogo?: boolean;
 }
 
 export function readCart(): Cart | null {
@@ -108,8 +110,13 @@ export function cartCount(cart: Cart | null): number {
   return cart ? cart.lines.reduce((n, l) => n + l.quantity, 0) : 0;
 }
 
+/** Every pair bills as one for a BOGO line — mirrors OrderService#placeOrder's billedQty math exactly. */
+export function billedQty(line: CartLine): number {
+  return line.isBogo ? Math.ceil(line.quantity / 2) : line.quantity;
+}
+
 export function cartSubtotal(cart: Cart | null): number {
-  return cart ? cart.lines.reduce((sum, l) => sum + l.price * l.quantity, 0) : 0;
+  return cart ? cart.lines.reduce((sum, l) => sum + l.price * billedQty(l), 0) : 0;
 }
 
 // ---- useSyncExternalStore plumbing -------------------------------------------
@@ -157,10 +164,15 @@ function mutateLine(cart: Cart, item: CartItemRef, qty: number): Cart {
   let lines: CartLine[];
   if (existing) {
     lines = cart.lines.map((l) =>
-      l.menuItemId === item.id ? { ...l, quantity: clampQty(l.quantity + qty), price: item.price, name: item.name } : l
+      l.menuItemId === item.id
+        ? { ...l, quantity: clampQty(l.quantity + qty), price: item.price, name: item.name, isBogo: item.isBogo }
+        : l
     );
   } else {
-    lines = [...cart.lines, { menuItemId: item.id, name: item.name, price: item.price, quantity: clampQty(qty) }];
+    lines = [
+      ...cart.lines,
+      { menuItemId: item.id, name: item.name, price: item.price, quantity: clampQty(qty), isBogo: item.isBogo },
+    ];
   }
   return { ...cart, lines: lines.filter((l) => l.quantity > 0) };
 }
