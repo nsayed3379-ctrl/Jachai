@@ -95,13 +95,22 @@ export default function CommunityProfilePage() {
     <div className="mx-auto max-w-2xl px-4 py-6 sm:px-0">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div
-            className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-xl font-bold text-white ${avatarColorClass(
-              profile.communityUsername
-            )}`}
-          >
-            {avatarInitials(profile.communityUsername)}
-          </div>
+          {profile.communityAvatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={profile.communityAvatarUrl}
+              alt=""
+              className="h-16 w-16 shrink-0 rounded-full object-cover"
+            />
+          ) : (
+            <div
+              className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-xl font-bold text-white ${avatarColorClass(
+                profile.communityUsername
+              )}`}
+            >
+              {avatarInitials(profile.communityUsername)}
+            </div>
+          )}
           <div>
             <h1 className="flex items-center gap-1.5 font-display text-xl font-bold text-ink-900">
               u/{profile.communityUsername}
@@ -112,6 +121,11 @@ export default function CommunityProfilePage() {
               )}
             </h1>
             <p className="mt-0.5 text-sm text-ink-500">Member since {formatMonthYear(profile.memberSince)}</p>
+            {isOwnProfile && (
+              <Link href="/account" className="mt-0.5 inline-block text-xs font-medium text-crimson-700 hover:underline">
+                Change avatar
+              </Link>
+            )}
             <p className="mt-1 text-xs text-ink-400">
               {profile.postCount} post{profile.postCount === 1 ? "" : "s"} · {profile.commentCount} comment
               {profile.commentCount === 1 ? "" : "s"} · {profile.reviewCount} review{profile.reviewCount === 1 ? "" : "s"}

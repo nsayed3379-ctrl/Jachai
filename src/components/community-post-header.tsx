@@ -68,15 +68,24 @@ export function PostHeader({
 
   return (
     <div className="flex min-w-0 items-start gap-2.5">
-      <div
-        className={cn(
-          "flex shrink-0 items-center justify-center rounded-full font-bold text-white",
-          avatarSize,
-          avatarColorClass(author.communityUsername ?? author.id)
-        )}
-      >
-        {avatarInitials(author.communityUsername)}
-      </div>
+      {author.communityAvatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={author.communityAvatarUrl}
+          alt=""
+          className={cn("shrink-0 rounded-full object-cover", avatarSize)}
+        />
+      ) : (
+        <div
+          className={cn(
+            "flex shrink-0 items-center justify-center rounded-full font-bold text-white",
+            avatarSize,
+            avatarColorClass(author.communityUsername ?? author.id)
+          )}
+        >
+          {avatarInitials(author.communityUsername)}
+        </div>
+      )}
       <div className="min-w-0 leading-tight">
         <p className={cn("flex flex-wrap items-center gap-x-1 gap-y-0.5", nameSize)}>
           {author.communityUsername ? (

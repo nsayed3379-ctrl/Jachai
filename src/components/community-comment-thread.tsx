@@ -192,14 +192,23 @@ function CommentNode({
         </Badge>
       )}
       <div className="flex items-start gap-2">
-        <div
-          className={cn(
-            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white",
-            avatarColorClass(comment.author.communityUsername ?? comment.author.id)
-          )}
-        >
-          {avatarInitials(comment.author.communityUsername)}
-        </div>
+        {comment.author.communityAvatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={comment.author.communityAvatarUrl}
+            alt=""
+            className="h-7 w-7 shrink-0 rounded-full object-cover"
+          />
+        ) : (
+          <div
+            className={cn(
+              "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white",
+              avatarColorClass(comment.author.communityUsername ?? comment.author.id)
+            )}
+          >
+            {avatarInitials(comment.author.communityUsername)}
+          </div>
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-semibold text-ink-800">

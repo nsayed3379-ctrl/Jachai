@@ -70,13 +70,18 @@ function FollowRow({
       href={item.author.communityUsername ? `/community/u/${item.author.communityUsername}` : "#"}
       className="flex items-center gap-3 rounded-xl border border-ink-100 bg-surface p-3 transition-colors duration-150 hover:border-ink-200"
     >
-      <span
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${avatarColorClass(
-          item.author.communityUsername ?? item.author.id
-        )}`}
-      >
-        {avatarInitials(item.author.communityUsername)}
-      </span>
+      {item.author.communityAvatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={item.author.communityAvatarUrl} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" />
+      ) : (
+        <span
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${avatarColorClass(
+            item.author.communityUsername ?? item.author.id
+          )}`}
+        >
+          {avatarInitials(item.author.communityUsername)}
+        </span>
+      )}
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1 truncate text-sm font-semibold text-ink-800">
           {displayName}

@@ -32,6 +32,8 @@ export interface UserProfile {
   communityUsername: string | null;
   /** This account's own Community-facing pseudonymous id — compare against a post/comment's author.id for "is this mine", never against `id`. */
   communityProfileId: string;
+  /** Separate from profilePhotoUrl — the avatar shown publicly next to u/{communityUsername}. */
+  communityAvatarUrl: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -1076,6 +1078,8 @@ export interface CommunityAuthorSummary {
   reviewCount: number;
   memberSince: string | null;
   verified: boolean;
+  /** Separate, optional avatar for this pseudonymous identity — never the real account photo. Null falls back to initials. */
+  communityAvatarUrl: string | null;
 }
 
 export interface CommunityMentionedBusinessSummary {
@@ -1164,6 +1168,7 @@ export interface CommunityProfileResponse {
   isFollowing: boolean;
   followerCount: number;
   followingCount: number;
+  communityAvatarUrl: string | null;
 }
 
 /** One row of a Following/Followers list. */

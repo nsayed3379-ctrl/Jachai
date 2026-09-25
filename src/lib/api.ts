@@ -291,6 +291,19 @@ export const userApi = {
       method: "POST",
       query: { filename },
     }),
+
+  /** Separate upload path from requestPhotoUploadUrl above — the storage key never includes the real user id. */
+  requestCommunityAvatarUploadUrl: (filename: string) =>
+    request<PreSignedUploadResponse>("/api/v1/users/me/community-avatar/upload-url", {
+      method: "POST",
+      query: { filename },
+    }),
+
+  updateCommunityAvatar: (communityAvatarUrl: string | null) =>
+    request<UserProfile>("/api/v1/users/me/community-avatar", {
+      method: "PUT",
+      body: { communityAvatarUrl },
+    }),
 };
 
 // ---------------------------------------------------------------------------

@@ -209,14 +209,19 @@ export function CommunityComposer({ onPosted }: { onPosted: (post: CommunityPost
         className="group flex w-full items-center gap-3 rounded-2xl border border-ink-100 bg-surface px-4 py-3 text-left shadow-card transition-all duration-200 hover:border-crimson-200 hover:shadow-pop"
       >
         {profile?.communityUsername ? (
-          <span
-            className={cn(
-              "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white",
-              avatarColorClass(profile.communityUsername)
-            )}
-          >
-            {avatarInitials(profile.communityUsername)}
-          </span>
+          profile.communityAvatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={profile.communityAvatarUrl} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+          ) : (
+            <span
+              className={cn(
+                "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white",
+                avatarColorClass(profile.communityUsername)
+              )}
+            >
+              {avatarInitials(profile.communityUsername)}
+            </span>
+          )
         ) : (
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink-50 text-ink-400 transition-colors group-hover:bg-crimson-50 group-hover:text-crimson-500">
             <Plus size={18} />
@@ -232,16 +237,24 @@ export function CommunityComposer({ onPosted }: { onPosted: (post: CommunityPost
         <div className="max-h-[85vh] overflow-y-auto p-5 sm:p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {profile?.communityUsername && (
-                <span
-                  className={cn(
-                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm",
-                    avatarColorClass(profile.communityUsername)
-                  )}
-                >
-                  {avatarInitials(profile.communityUsername)}
-                </span>
-              )}
+              {profile?.communityUsername &&
+                (profile.communityAvatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={profile.communityAvatarUrl}
+                    alt=""
+                    className="h-10 w-10 shrink-0 rounded-full object-cover shadow-sm"
+                  />
+                ) : (
+                  <span
+                    className={cn(
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm",
+                      avatarColorClass(profile.communityUsername)
+                    )}
+                  >
+                    {avatarInitials(profile.communityUsername)}
+                  </span>
+                ))}
               <div className="leading-tight">
                 <h2 id="community-composer-heading" className="font-display text-lg font-bold text-ink-900">
                   Create a Post
