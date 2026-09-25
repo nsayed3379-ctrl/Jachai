@@ -11,6 +11,33 @@ import { cn, formatDate } from "@/lib/utils";
 import type { MessageThread } from "@/lib/types";
 import { ErrorBanner, PageSpinner } from "@/components/ui/misc";
 
+function MessagesShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const hasThread = !!pathname.split("/me/messages/")[1];
+
+  return (
+    <div className="w-full max-w-5xl mx-auto py-2 sm:py-6 md:py-8">
+      <div className="flex flex-col md:flex-row h-[calc(100dvh-9rem)] min-h-[420px] md:h-[75vh] rounded-2xl border border-ink-200/70 bg-surface shadow-xl shadow-ink-900/5 overflow-hidden">
+        <ThreadsSidebar />
+        <main className={cn("flex-1 flex-col min-w-0 min-h-0", hasThread ? "flex" : "hidden md:flex")}>
+          {hasThread && (
+            <Link
+              href="/me/messages"
+              className="md:hidden flex shrink-0 items-center gap-1.5 border-b border-ink-100 px-4 py-2.5 text-sm font-medium text-ink-600 hover:text-crimson-700"
+            >
+              <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M12 15l-5-5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              All messages
+            </Link>
+          )}
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}
+
 function initials(name: string) {
   return name
     .split(" ")
@@ -37,7 +64,15 @@ function ThreadsSidebar() {
   }, []);
 
   return (
-    <aside className="w-full sm:w-72 shrink-0 border-b sm:border-b-0 sm:border-r border-ink-100 flex flex-col">
+    // Phones/small tablets: master–detail — the list fills the panel until a
+    // thread is open, then the thread takes over (with a back link). md+ keeps
+    // the original side-by-side layout.
+    <aside
+      className={cn(
+        "w-full min-h-0 flex-1 md:flex-none md:w-72 lg:w-80 shrink-0 md:border-r border-ink-100 flex-col",
+        activeThreadId ? "hidden md:flex" : "flex"
+      )}
+    >
       <div className="px-4 py-4 border-b border-ink-100">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-crimson-600 to-crimson-500 shadow-sm">
@@ -122,12 +157,7 @@ function ThreadsSidebar() {
 export default function MessagesLayout({ children }: { children: React.ReactNode }) {
   return (
     <RoleGate>
-      <div className="w-full max-w-5xl mx-auto px-4 py-8">
-        <div className="flex flex-col sm:flex-row h-[75vh] rounded-2xl border border-ink-200/70 bg-surface shadow-xl shadow-ink-900/5 overflow-hidden">
-          <ThreadsSidebar />
-          <main className="flex-1 flex flex-col min-w-0">{children}</main>
-        </div>
-      </div>
+      <MessagesShell>{children}</MessagesShell>
     </RoleGate>
   );
 }

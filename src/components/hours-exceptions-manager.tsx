@@ -125,7 +125,7 @@ export function HoursExceptionsManager({ businessId, initial }: { businessId: st
 
   const form = (
     <div className="space-y-3 rounded-xl border border-dashed border-ink-300 bg-sand-50/40 p-3">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <Label>{t("hours_exceptions.field.start_date")}</Label>
           <Input type="date" value={draft.startDate} onChange={(e) => patch({ startDate: e.target.value })} />
@@ -159,7 +159,7 @@ export function HoursExceptionsManager({ businessId, initial }: { businessId: st
       </div>
 
       {!draft.closed && (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Input type="time" value={draft.openTime} onChange={(e) => patch({ openTime: e.target.value })} className="w-32" />
           <span className="text-xs text-ink-400">–</span>
           <Input type="time" value={draft.closeTime} onChange={(e) => patch({ closeTime: e.target.value })} className="w-32" />

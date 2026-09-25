@@ -236,7 +236,7 @@ export default function OwnerOffersPage() {
         <Input value={draft.title} onChange={(e) => patch({ title: e.target.value })} placeholder="e.g. 20% off all pizzas" />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <Label>Type</Label>
           <Select value={draft.offerType} onChange={(e) => patch({ offerType: e.target.value as OfferType })}>
@@ -260,7 +260,7 @@ export default function OwnerOffersPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <Label>Original price (optional)</Label>
           <Input type="number" min={0} value={draft.originalPrice} onChange={(e) => patch({ originalPrice: e.target.value })} />
@@ -321,7 +321,7 @@ export default function OwnerOffersPage() {
         <Textarea rows={3} value={draft.description} onChange={(e) => patch({ description: e.target.value })} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <Label>Valid from</Label>
           <Input type="datetime-local" value={draft.validFrom} onChange={(e) => patch({ validFrom: e.target.value })} />
@@ -341,7 +341,7 @@ export default function OwnerOffersPage() {
         </Select>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <Label>Max total claims (optional)</Label>
           <Input type="number" min={1} value={draft.maxTotalRedemptions} onChange={(e) => patch({ maxTotalRedemptions: e.target.value })} />
@@ -480,7 +480,7 @@ function RedeemCodeBox() {
 
   return (
     <div className="flex flex-wrap items-end gap-2 rounded-xl border border-ink-100/70 bg-surface p-3 shadow-card">
-      <div className="min-w-[180px] flex-1">
+      <div className="w-full min-w-0 sm:w-auto sm:min-w-[180px] flex-1">
         <Label>Redeem a customer&apos;s code</Label>
         <Input
           value={code}

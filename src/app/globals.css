@@ -47,8 +47,30 @@
     --surface: 27 33 30;
   }
 
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
   body {
     @apply bg-sand-50 text-ink-900 font-body transition-colors duration-200;
+    /* Long unbroken strings (URLs, phone numbers, IDs) wrap instead of
+       pushing the page wider than the screen. */
+    overflow-wrap: break-word;
+    /* Safety net for the full-bleed sections (w-screen breakouts) — stops a
+       sideways scroll on every device without breaking position: sticky. */
+    overflow-x: hidden;
+  }
+  @supports (overflow: clip) {
+    html,
+    body {
+      overflow-x: clip;
+    }
+  }
+  img,
+  video,
+  canvas,
+  iframe {
+    max-width: 100%;
   }
   h1, h2, h3, h4 {
     @apply font-display;
@@ -92,6 +114,19 @@
     rgb(var(--ink-100)) 63%
   );
   background-size: 400px 100%;
+}
+
+/* iOS Safari zooms the whole page when a focused field's text is under
+   16px — keep form fields at 16px on iOS phones only (desktop and Android
+   keep the original sizes). Outside @layer so it wins over text-sm/xs. */
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 767px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
 }
 
 /* Respect the OS-level "reduce motion" setting — everything above still
