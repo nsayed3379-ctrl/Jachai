@@ -32,6 +32,8 @@ export interface CartItemRef {
   price: number;
   /** True when a currently-active BUY_ONE_GET_ONE offer is linked to this item. */
   isBogo?: boolean;
+  /** "Was" price to show struck through at checkout — only when it's a real discount. */
+  compareAtPrice?: number | null;
 }
 
 export function readCart(): Cart | null {
@@ -165,13 +167,27 @@ function mutateLine(cart: Cart, item: CartItemRef, qty: number): Cart {
   if (existing) {
     lines = cart.lines.map((l) =>
       l.menuItemId === item.id
-        ? { ...l, quantity: clampQty(l.quantity + qty), price: item.price, name: item.name, isBogo: item.isBogo }
+        ? {
+            ...l,
+            quantity: clampQty(l.quantity + qty),
+            price: item.price,
+            name: item.name,
+            isBogo: item.isBogo,
+            compareAtPrice: item.compareAtPrice,
+          }
         : l
     );
   } else {
     lines = [
       ...cart.lines,
-      { menuItemId: item.id, name: item.name, price: item.price, quantity: clampQty(qty), isBogo: item.isBogo },
+      {
+        menuItemId: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: clampQty(qty),
+        isBogo: item.isBogo,
+        compareAtPrice: item.compareAtPrice,
+      },
     ];
   }
   return { ...cart, lines: lines.filter((l) => l.quantity > 0) };

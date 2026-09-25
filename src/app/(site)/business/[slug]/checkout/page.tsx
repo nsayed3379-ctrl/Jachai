@@ -224,10 +224,20 @@ export default function CheckoutPage() {
             <li key={l.menuItemId} className="flex items-center gap-3 py-2.5">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-ink-900">{l.name}</p>
-                <p className="text-xs text-ink-400">{formatTk(l.price)} each</p>
+                <p className="text-xs text-ink-400">
+                  {l.compareAtPrice != null && (
+                    <span className="mr-1 line-through">{formatTk(l.compareAtPrice)}</span>
+                  )}
+                  {formatTk(l.price)} each
+                </p>
                 {l.isBogo && l.quantity >= 2 && (
                   <p className="text-xs font-semibold text-crimson-600">
                     Buy 1 Get 1 applied — {billedQty(l)} of {l.quantity} charged
+                  </p>
+                )}
+                {!l.isBogo && l.compareAtPrice != null && (
+                  <p className="text-xs font-semibold text-crimson-600">
+                    You save {formatTk((l.compareAtPrice - l.price) * l.quantity)}
                   </p>
                 )}
               </div>

@@ -478,6 +478,8 @@ export interface CartLine {
   quantity: number;
   /** Snapshotted at add-to-cart time — every pair bills as one, same math as OrderService#placeOrder. */
   isBogo?: boolean;
+  /** Snapshotted "was" price (from an active offer's list price, or the item's own compareAtPrice) — only set when it's a real discount, i.e. greater than price. */
+  compareAtPrice?: number | null;
 }
 
 export interface Cart {
