@@ -389,9 +389,20 @@ export const reviewApi = {
       query: { page, size, sort },
     }),
 
-  ownerDashboard: (businessId: string, page = 0, size = 20) =>
+  ownerDashboard: (
+    businessId: string,
+    page = 0,
+    size = 20,
+    filters?: { rating?: number | null; unrepliedOnly?: boolean; flaggedOnly?: boolean }
+  ) =>
     request<PageResponse<ReviewResponse>>(`/api/v1/reviews/business/${businessId}/dashboard`, {
-      query: { page, size },
+      query: {
+        page,
+        size,
+        rating: filters?.rating ?? undefined,
+        unrepliedOnly: filters?.unrepliedOnly || undefined,
+        flaggedOnly: filters?.flaggedOnly || undefined,
+      },
     }),
 
   ratingTrend: (businessId: string, bucket: "week" | "month" = "week") =>

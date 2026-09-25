@@ -58,12 +58,25 @@ export function MenuEditor({ businessId, addLabel }: { businessId: string; addLa
       toBody={(d) => {
         const priceNum = d.price.trim() === "" ? null : Number(d.price);
         const price = priceNum != null && Number.isFinite(priceNum) && priceNum > 0 ? priceNum : null;
-        const compareAtNum = d.compareAtPrice.trim() === "" ? null : Number(d.compareAtPrice);
+        let compareAtNum = d.compareAtPrice.trim() === "" ? null : Number(d.compareAtPrice);
+        let priceText = d.priceText;
+        // A bare number typed into "Display price text" (e.g. "280") is never a real
+        // showcase label — it's an original price the owner had no other field for
+        // before "Original price" existed. Route it there instead of silently dropping
+        // it: business-menu.tsx only ever reads compareAtPrice for the struck-through
+        // price, never priceText, once a numeric order price is set.
+        if (compareAtNum == null && price != null && /^\d+(\.\d+)?$/.test(priceText.trim())) {
+          const bareNumber = Number(priceText.trim());
+          if (bareNumber > price) {
+            compareAtNum = bareNumber;
+            priceText = "";
+          }
+        }
         const compareAtPrice = compareAtNum != null && Number.isFinite(compareAtNum) && compareAtNum > 0 ? compareAtNum : null;
         return {
           name: d.name,
           description: d.description || null,
-          priceText: d.priceText || null,
+          priceText: priceText || null,
           menuSection: d.menuSection || null,
           popular: d.popular,
           photoUrl: d.photoUrl || null,
@@ -160,7 +173,9 @@ export function MenuEditor({ businessId, addLabel }: { businessId: string; addLa
           </div>
           <p className="text-xs text-ink-400">
             An item with an <span className="font-medium">order price</span> shows an “Add to cart” button on your public
-            menu (when direct ordering is on). Leave it blank to keep the item showcase-only.
+            menu (when direct ordering is on). Leave it blank to keep the item showcase-only. This is a label, not a price
+            — for a discount, use <span className="font-medium">Original price</span> below instead of typing the old
+            amount here.
           </p>
           <div>
             <Label>

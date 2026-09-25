@@ -15,15 +15,19 @@ export function ClaimBusinessModal({
   businessId,
   businessName,
   onClaimed,
+  alreadyClaimed = false,
 }: {
   open: boolean;
   onClose: () => void;
   businessId: string;
   businessName: string;
   onClaimed: () => void;
+  /** Skips straight to the document-review path — phone/email instant-verify only works on an
+   *  unclaimed listing (the backend rejects it otherwise), so there's nothing to "choose" here. */
+  alreadyClaimed?: boolean;
 }) {
   const { show } = useToast();
-  const [step, setStep] = useState<Step>("choose");
+  const [step, setStep] = useState<Step>(alreadyClaimed ? "document" : "choose");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [code, setCode] = useState("");
@@ -31,7 +35,7 @@ export function ClaimBusinessModal({
   const [file, setFile] = useState<File | null>(null);
 
   function reset() {
-    setStep("choose");
+    setStep(alreadyClaimed ? "document" : "choose");
     setError(null);
     setCode("");
     setEmail("");
@@ -126,7 +130,7 @@ export function ClaimBusinessModal({
     <Modal open={open} onClose={handleClose} labelledBy="claim-modal-heading" panelClassName="max-w-md">
       <div className="p-6 sm:p-8">
         <h2 id="claim-modal-heading" className="font-display text-xl font-bold text-ink-900">
-          Claim {businessName}
+          {alreadyClaimed ? `Dispute the claim on ${businessName}` : `Claim ${businessName}`}
         </h2>
 
         {step === "choose" && (
@@ -237,8 +241,9 @@ export function ClaimBusinessModal({
         {step === "document" && (
           <div className="mt-5 space-y-4">
             <p className="text-sm text-ink-500">
-              Upload a utility bill or similar document showing your name and this business&apos;s address. An
-              admin will review it.
+              {alreadyClaimed
+                ? "This listing is already claimed by someone else. Upload a utility bill or similar document showing your name and this business's address, and an admin will review the dispute."
+                : "Upload a utility bill or similar document showing your name and this business's address. An admin will review it."}
             </p>
             <input
               type="file"
@@ -250,9 +255,11 @@ export function ClaimBusinessModal({
             <Button className="w-full" onClick={submitDocument} loading={busy} disabled={!file}>
               Submit for review
             </Button>
-            <button onClick={() => setStep("choose")} className="text-xs text-ink-400 hover:underline">
-              ← Choose a different method
-            </button>
+            {!alreadyClaimed && (
+              <button onClick={() => setStep("choose")} className="text-xs text-ink-400 hover:underline">
+                ← Choose a different method
+              </button>
+            )}
           </div>
         )}
 

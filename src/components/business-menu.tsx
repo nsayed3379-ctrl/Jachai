@@ -257,6 +257,15 @@ export function BusinessMenu({
   function handleAdd(item: MenuItem) {
     if (typeof item.price !== "number") return;
     const businessRef = { id: businessId, name: businessName, slug: businessSlug };
+    // "Was" price for the checkout "you save" line — the offer's own pre-discount list
+    // price takes priority over compareAtPrice (an active offer is more precise/time-boxed);
+    // BOGO has no numeric "was" price, it's shown as its own separate line instead.
+    const compareAtPrice =
+      item.activeOfferPrice != null
+        ? item.price
+        : item.compareAtPrice != null && item.compareAtPrice > item.price
+          ? item.compareAtPrice
+          : null;
     // Mirrors OrderService#placeOrder's server-authoritative pricing — the cart
     // should never show a different number than what checkout actually charges.
     const itemRef = {
@@ -264,6 +273,7 @@ export function BusinessMenu({
       name: item.name,
       price: item.activeOfferPrice ?? item.price,
       isBogo: item.activeOfferType === "BUY_ONE_GET_ONE",
+      compareAtPrice,
     };
     try {
       addToCart(businessRef, itemRef, 1);

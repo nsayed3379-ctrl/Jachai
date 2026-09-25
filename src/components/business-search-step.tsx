@@ -31,7 +31,16 @@ function ResultCard({ business, onClaim }: { business: BusinessResponse; onClaim
         </div>
       </div>
       {business.claimed ? (
-        <span className="text-xs text-ink-400">Already claimed</span>
+        <div className="text-right">
+          <p className="text-xs text-ink-400">Already claimed</p>
+          <button
+            type="button"
+            onClick={onClaim}
+            className="text-xs font-medium text-crimson-700 hover:underline"
+          >
+            Is this your business? Dispute this claim
+          </button>
+        </div>
       ) : (
         <Button size="sm" variant="outline" onClick={onClaim}>
           Claim this business
@@ -131,6 +140,7 @@ export function BusinessSearchStep({ onAddNew }: { onAddNew: (searchedName: stri
         businessId={claimTarget?.id ?? ""}
         businessName={claimTarget?.name ?? ""}
         onClaimed={() => setClaimTarget(null)}
+        alreadyClaimed={claimTarget?.claimed ?? false}
       />
     </div>
   );
