@@ -1,16 +1,17 @@
 import { cn } from "@/lib/utils";
 import { ButtonHTMLAttributes, forwardRef } from "react";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger" | "outline";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "outline";
 type Size = "sm" | "md" | "lg";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: Variant;
+  variant?: ButtonVariant;
   size?: Size;
   loading?: boolean;
 }
 
-const variantClasses: Record<Variant, string> = {
+/** Exported so IconButton can reuse the same variant → color mapping instead of duplicating it. */
+export const buttonVariantClasses: Record<ButtonVariant, string> = {
   primary: "bg-crimson-600 text-white shadow-sm hover:bg-crimson-700 active:bg-crimson-800 disabled:bg-ink-200",
   secondary: "bg-gold-400 text-ink-900 hover:bg-gold-500 disabled:bg-ink-100",
   outline: "border border-ink-200 text-ink-800 bg-surface hover:border-crimson-300 hover:text-crimson-700 disabled:text-ink-300",
@@ -34,7 +35,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           "inline-flex items-center justify-center rounded-full font-semibold transition-all",
           "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-crimson-500",
           "disabled:cursor-not-allowed disabled:shadow-none",
-          variantClasses[variant],
+          buttonVariantClasses[variant],
           sizeClasses[size],
           className
         )}

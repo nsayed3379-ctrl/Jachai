@@ -5,6 +5,12 @@ const config: Config = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
+      screens: {
+        // Additive only — sm/md/lg/xl/2xl stay at Tailwind's defaults since
+        // business-card.tsx's mobile/desktop split and every form's grid
+        // columns already depend on those exact values.
+        xs: "22.5rem", // 360px — smallest common Android width this app targets
+      },
       colors: {
         // Driven by CSS variables (see globals.css) so the whole neutral
         // scale inverts under html.dark with zero per-component changes.
@@ -76,10 +82,27 @@ const config: Config = {
         // and modal/sheet backdrops — these dim an image or the page behind
         // an overlay and must stay dark in both light and dark mode.
         scrim: "#161E1A",
+        // Semantic aliases onto the scales above — NOT new hex values. Lets new
+        // components reach for bg-primary-600/text-trust-600/bg-warn-500 by
+        // intent without renaming crimson/brand/gold (which stay exactly as
+        // they are everywhere they're already used, e.g. VerifiedBadge's
+        // bg-brand-600, every Button variant="primary"'s bg-crimson-600).
+        primary: {
+          50: "#FDECEC", 100: "#FBD5D3", 200: "#F4A9A3", 300: "#EA7D73", 400: "#DE5347",
+          500: "#D32323", 600: "#B71C1C", 700: "#961818", 800: "#731212", 900: "#4F0C0C",
+        },
+        trust: {
+          50: "#EAF5F0", 100: "#CDE7DA", 200: "#9FD0B7", 300: "#69B393", 400: "#3D9576",
+          500: "#1F7A5C", 600: "#136348", 700: "#0F5039", 800: "#0C3E2D", 900: "#092E22",
+        },
+        warn: {
+          50: "#FBF5E7", 100: "#F4E4B9", 200: "#ECD088", 300: "#E1B959", 400: "#D2A238",
+          500: "#B9862A", 600: "#976B20", 700: "#75521A", 800: "#553D15", 900: "#3A2A0F",
+        },
       },
       fontFamily: {
-        display: ["var(--font-sora)", "system-ui", "sans-serif"],
-        body: ["var(--font-inter)", "system-ui", "sans-serif"],
+        display: ["var(--font-sora)", "var(--font-noto-bengali)", "system-ui", "sans-serif"],
+        body: ["var(--font-inter)", "var(--font-noto-bengali)", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       borderRadius: {
@@ -89,6 +112,8 @@ const config: Config = {
         lg: "14px",
         xl: "18px",
         "2xl": "24px",
+        card: "12px",
+        sheet: "20px",
       },
       boxShadow: {
         card: "0 1px 3px rgba(22,30,26,0.08), 0 1px 0 rgba(22,30,26,0.04)",

@@ -91,6 +91,13 @@
   }
 }
 
+/* Tabular numbers — ratings, prices, counters. Opt-in utility rather than a
+   global body setting, since most running text doesn't need fixed-width digits. */
+.tnum {
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
+
 .line-clamp-1 {
   overflow: hidden;
   display: -webkit-box;

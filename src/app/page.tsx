@@ -16,6 +16,7 @@ import { ExploreCities } from "@/components/explore-cities";
 import { QuestionsForYouWidget } from "@/components/questions-for-you-widget";
 import { Reveal } from "@/components/reveal";
 import { EmptyState, ErrorBanner, Pagination } from "@/components/ui/misc";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Rotates every HERO_ROTATE_INTERVAL_MS — see the crossfade layers below.
 const HERO_IMAGES = [
@@ -31,32 +32,32 @@ function SkeletonCard() {
     <div className="overflow-hidden rounded-xl border border-ink-100/70 bg-surface shadow-card">
       {/* Mobile: horizontal list row */}
       <div className="flex gap-3 p-3 sm:hidden">
-        <div className="skeleton animate-shimmer h-24 w-24 flex-none rounded-lg" />
+        <Skeleton className="h-24 w-24 flex-none rounded-lg" />
         <div className="min-w-0 flex-1 space-y-2 py-1">
-          <div className="skeleton animate-shimmer h-3.5 w-3/4 rounded" />
-          <div className="skeleton animate-shimmer h-3 w-1/2 rounded" />
-          <div className="skeleton animate-shimmer h-2.5 w-2/3 rounded" />
-          <div className="skeleton animate-shimmer h-2.5 w-full rounded" />
+          <Skeleton className="h-3.5 w-3/4 rounded" />
+          <Skeleton className="h-3 w-1/2 rounded" />
+          <Skeleton className="h-2.5 w-2/3 rounded" />
+          <Skeleton className="h-2.5 w-full rounded" />
         </div>
       </div>
 
       {/* Desktop: photo tile */}
       <div className="hidden sm:block">
         <div className="p-4 pb-3 flex items-center gap-2.5">
-          <div className="skeleton animate-shimmer h-10 w-10 shrink-0 rounded-full" />
+          <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
           <div className="min-w-0 flex-1 space-y-2">
-            <div className="skeleton animate-shimmer h-3.5 w-3/4 rounded" />
-            <div className="skeleton animate-shimmer h-2.5 w-1/2 rounded" />
+            <Skeleton className="h-3.5 w-3/4 rounded" />
+            <Skeleton className="h-2.5 w-1/2 rounded" />
           </div>
         </div>
-        <div className="skeleton animate-shimmer h-44 w-full" />
+        <Skeleton className="h-44 w-full" />
         <div className="p-4 space-y-2.5">
-          <div className="skeleton animate-shimmer h-3.5 w-1/3 rounded" />
-          <div className="skeleton animate-shimmer h-3 w-2/3 rounded" />
+          <Skeleton className="h-3.5 w-1/3 rounded" />
+          <Skeleton className="h-3 w-2/3 rounded" />
           <div className="pt-3 mt-1 border-t border-ink-100 flex gap-2">
-            <div className="skeleton animate-shimmer h-6 w-14 rounded-full" />
-            <div className="skeleton animate-shimmer h-6 w-14 rounded-full" />
-            <div className="skeleton animate-shimmer h-6 w-14 rounded-full" />
+            <Skeleton className="h-6 w-14 rounded-full" />
+            <Skeleton className="h-6 w-14 rounded-full" />
+            <Skeleton className="h-6 w-14 rounded-full" />
           </div>
         </div>
       </div>
