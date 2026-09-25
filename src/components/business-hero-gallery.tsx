@@ -95,7 +95,7 @@ export function BusinessHeroGallery({
         <div className="mt-2 sm:mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1">
           <StarDisplay rating={business.averageRating} size="lg" />
           <span className="text-lg sm:text-xl font-bold text-white">{business.averageRating.toFixed(1)}</span>
-          
+          <a
             href="#reviews"
             className="pointer-events-auto text-sm sm:text-lg text-white/80 hover:text-white hover:underline"
           >

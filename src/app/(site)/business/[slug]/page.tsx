@@ -406,7 +406,7 @@ export default function BusinessDetailPage() {
                   {business.areaName}, {business.cityName}
                 </span>
               </p>
-              
+              <a
                 href={`https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -621,7 +621,7 @@ export default function BusinessDetailPage() {
           <CreateBusinessAccountModal open={createBizModalOpen} onClose={() => setCreateBizModalOpen(false)} />
 
           <div className="rounded-xl border border-ink-100/70 bg-surface p-4 shadow-card space-y-3">
-            
+            <a
               href={`tel:${business.contactNumber}`}
               onClick={() => trackEvent(business.id, "PHONE_CLICK")}
               className="flex items-center gap-2.5 text-sm text-ink-700 hover:text-crimson-700 break-all"
