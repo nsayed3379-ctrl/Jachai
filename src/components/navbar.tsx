@@ -19,7 +19,7 @@ function Logo({ light }: { light: boolean }) {
     <Link
       href="/"
       className={cn(
-        "flex items-center gap-2 font-display font-extrabold text-2xl transition-colors",
+        "flex shrink-0 items-center gap-2 font-display font-extrabold text-xl sm:text-2xl transition-colors",
         light ? "text-white" : "text-ink-900"
       )}
     >
@@ -144,11 +144,16 @@ export function Navbar() {
 
   const transparent = isHero && !scrolled;
   const linkClass = transparent
-    ? "px-3 py-2 rounded-full hover:bg-white/15 text-white"
-    : "px-3 py-2 rounded-full hover:bg-crimson-50 hover:text-crimson-700 text-ink-700";
+    ? "whitespace-nowrap px-2.5 lg:px-3 py-2 rounded-full hover:bg-white/15 text-white"
+    : "whitespace-nowrap px-2.5 lg:px-3 py-2 rounded-full hover:bg-crimson-50 hover:text-crimson-700 text-ink-700";
   const accountLinkClass = transparent
-    ? "px-3 py-2 rounded-full text-base font-medium text-white hover:bg-white/15"
-    : "px-3 py-2 rounded-full text-base font-medium text-ink-600 hover:bg-ink-100";
+    ? "whitespace-nowrap px-2.5 lg:px-3 py-2 rounded-full text-sm lg:text-base font-medium text-white hover:bg-white/15"
+    : "whitespace-nowrap px-2.5 lg:px-3 py-2 rounded-full text-sm lg:text-base font-medium text-ink-600 hover:bg-ink-100";
+
+  // Close the mobile menu whenever the route changes (e.g. browser back).
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   return (
     <header
@@ -157,7 +162,7 @@ export function Navbar() {
         transparent ? "bg-transparent border-b border-transparent" : "border-b border-ink-100 bg-surface/90 backdrop-blur shadow-sm"
       )}
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-3">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-2 sm:gap-3">
         <Logo light={transparent} />
 
         {/* Primary search (free-text query + Near me) lives right here on the
@@ -178,7 +183,7 @@ export function Navbar() {
           </div>
         )}
 
-        <nav className="hidden md:flex items-center gap-1 text-base font-medium ml-auto">
+        <nav className="hidden md:flex shrink-0 items-center gap-0.5 lg:gap-1 text-sm lg:text-base font-medium ml-auto">
           <Link href="/community" className={linkClass}>
             Community
           </Link>
@@ -213,7 +218,7 @@ export function Navbar() {
           )}
         </nav>
 
-        <div className="hidden md:flex items-center gap-2">
+        <div className="hidden md:flex shrink-0 items-center gap-1 lg:gap-2">
           <ThemeToggle
             className={
               transparent ? "text-white hover:bg-white/15" : "text-ink-600 hover:bg-ink-100"
@@ -228,7 +233,10 @@ export function Navbar() {
               >
                 <Link href="/account" className={cn(accountLinkClass, "flex items-center gap-2")}>
                   <Avatar photoUrl={profile?.profilePhotoUrl} />
-                  {profile?.name || t("nav.account")}
+                  {/* Name only where there's room — the avatar alone identifies the menu on tablets/small laptops. */}
+                  <span className={cn("max-w-[9rem] truncate", isHero ? "hidden xl:inline" : "hidden lg:inline")}>
+                    {profile?.name || t("nav.account")}
+                  </span>
                   <svg
                     viewBox="0 0 20 20"
                     className={cn("h-3.5 w-3.5 transition-transform duration-150", accountMenuOpen && "rotate-180")}
@@ -383,7 +391,7 @@ export function Navbar() {
               <button
                 type="button"
                 onClick={openSignup}
-                className="px-5 py-2 rounded-full bg-crimson-600 text-white text-base font-semibold shadow-sm hover:bg-crimson-700"
+                className="whitespace-nowrap px-4 lg:px-5 py-2 rounded-full bg-crimson-600 text-white text-sm lg:text-base font-semibold shadow-sm hover:bg-crimson-700"
               >
                 {t("nav.sign_up")}
               </button>
@@ -396,18 +404,23 @@ export function Navbar() {
         </Link>
 
         <button
-          className={cn("md:hidden p-2 rounded-full", transparent ? "text-white hover:bg-white/15" : "hover:bg-ink-100")}
+          className={cn("md:hidden shrink-0 p-2 rounded-full", transparent ? "text-white hover:bg-white/15" : "hover:bg-ink-100")}
           onClick={() => setMenuOpen((v) => !v)}
           aria-label="Toggle menu"
+          aria-expanded={menuOpen}
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
+            {menuOpen ? (
+              <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+            ) : (
+              <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
+            )}
           </svg>
         </button>
       </div>
 
       {menuOpen && (
-        <div className="md:hidden border-t border-ink-100 bg-surface px-4 py-3 flex flex-col gap-1 text-base">
+        <div className="md:hidden max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain border-t border-ink-100 bg-surface px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex flex-col gap-1 text-base shadow-pop">
           <div className="flex items-center justify-between px-3 py-2">
             <span className="text-ink-500">{t("nav.theme")}</span>
             <ThemeToggle className="text-ink-600 hover:bg-ink-100" />
@@ -542,7 +555,7 @@ export function Navbar() {
                 onClick={() => setMenuOpen(false)}
               >
                 <Avatar photoUrl={profile?.profilePhotoUrl} size={24} />
-                {profile?.name || t("nav.account")}
+                <span className="min-w-0 truncate">{profile?.name || t("nav.account")}</span>
               </Link>
               <button onClick={() => logout()} className="text-left px-3 py-2 rounded hover:bg-ink-100 text-rose-600">
                 {t("nav.log_out")}

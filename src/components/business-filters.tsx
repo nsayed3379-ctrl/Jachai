@@ -233,7 +233,7 @@ export function PrimarySearchBar({
   }
 
   return (
-    <div className={cn("flex items-center gap-4", className)}>
+    <div className={cn("flex min-w-0 flex-1 items-center gap-2 xl:gap-4", className)}>
       <form
         onSubmit={handleSubmit}
         className="flex min-w-0 max-w-[480px] flex-1 items-stretch overflow-hidden rounded-md bg-white shadow-[0_2px_8px_rgba(0,0,0,0.18)]"
@@ -249,7 +249,7 @@ export function PrimarySearchBar({
           />
         </div>
         <span className="my-2 w-px shrink-0 bg-ink-200" />
-        <div className="hidden w-[180px] shrink-0 items-center gap-1.5 px-3 text-ink-500 sm:flex">
+        <div className="hidden w-[180px] shrink-0 items-center gap-1.5 px-3 text-ink-500 xl:flex">
           <PinIcon filled={false} />
           <span className="truncate text-base">{cityLabel}</span>
         </div>
@@ -266,8 +266,10 @@ export function PrimarySearchBar({
         type="button"
         onClick={onUseMyLocation}
         disabled={locationStatus === "locating"}
+        aria-label={locationStatus === "granted" ? "Using location" : "Near me"}
+        title={locationStatus === "granted" ? "Using location" : "Near me"}
         className={cn(
-          "shrink-0 inline-flex items-center gap-1.5 rounded-md px-3 py-2.5 text-base font-semibold whitespace-nowrap transition-colors disabled:opacity-70 disabled:cursor-wait",
+          "shrink-0 inline-flex items-center gap-1.5 rounded-md px-2.5 xl:px-3 py-2.5 text-base font-semibold whitespace-nowrap transition-colors disabled:opacity-70 disabled:cursor-wait",
           light ? "text-white hover:bg-white/15" : "text-ink-700 hover:bg-ink-100"
         )}
       >
@@ -279,7 +281,7 @@ export function PrimarySearchBar({
         ) : (
           <PinIcon filled={locationStatus === "granted"} />
         )}
-        {locationStatus === "granted" ? "Using location" : "Near me"}
+        <span className="hidden xl:inline">{locationStatus === "granted" ? "Using location" : "Near me"}</span>
       </button>
     </div>
   );

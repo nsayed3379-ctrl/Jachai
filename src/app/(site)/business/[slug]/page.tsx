@@ -406,7 +406,7 @@ export default function BusinessDetailPage() {
                   {business.areaName}, {business.cityName}
                 </span>
               </p>
-              <a
+              
                 href={`https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -424,8 +424,8 @@ export default function BusinessDetailPage() {
           {/* Reviews — the default section; stays visible on first load (spec) */}
           <section role="tabpanel" aria-label="Reviews" hidden={activeTab !== "reviews"}>
             <div id="reviews" className="scroll-mt-24">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="font-display text-xl font-bold text-ink-900">Recommended Reviews</h2>
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+              <h2 className="font-display text-lg sm:text-xl font-bold text-ink-900">Recommended Reviews</h2>
               {!reviewsAuthRequired && reviews.length > 0 && (
                 <label className="flex items-center gap-2 text-xs text-ink-500">
                   Sort by
@@ -442,7 +442,7 @@ export default function BusinessDetailPage() {
               )}
             </div>
 
-            <div className="mt-3 flex flex-wrap items-center gap-6 mb-2">
+            <div className="mt-3 flex flex-wrap items-center gap-4 sm:gap-6 mb-2">
               <div className="text-center">
                 <p className="font-display text-3xl font-extrabold text-ink-900">{business.averageRating.toFixed(1)}</p>
                 <StarDisplay rating={business.averageRating} />
@@ -545,7 +545,7 @@ export default function BusinessDetailPage() {
               <h2 className="mb-3 font-display text-lg font-semibold text-ink-900">Similar businesses nearby</h2>
               <div className="-mx-1 flex snap-x gap-4 overflow-x-auto px-1 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {similarBusinesses.map((b) => (
-                  <div key={b.id} className="w-56 shrink-0 snap-start sm:w-60">
+                  <div key={b.id} className="w-[72vw] max-w-[15rem] shrink-0 snap-start sm:w-60">
                     <SimilarBusinessCard business={b} userLocation={userLocation ?? undefined} />
                   </div>
                 ))}
@@ -621,10 +621,10 @@ export default function BusinessDetailPage() {
           <CreateBusinessAccountModal open={createBizModalOpen} onClose={() => setCreateBizModalOpen(false)} />
 
           <div className="rounded-xl border border-ink-100/70 bg-surface p-4 shadow-card space-y-3">
-            <a
+            
               href={`tel:${business.contactNumber}`}
               onClick={() => trackEvent(business.id, "PHONE_CLICK")}
-              className="flex items-center gap-2.5 text-sm text-ink-700 hover:text-crimson-700"
+              className="flex items-center gap-2.5 text-sm text-ink-700 hover:text-crimson-700 break-all"
             >
               <svg viewBox="0 0 24 24" className="h-4 w-4 flex-none text-ink-400" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M4 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L14 13l5 2v4a2 2 0 0 1-2 2C9.5 21 3 14.5 3 6a2 2 0 0 1 1-2Z" strokeLinecap="round" strokeLinejoin="round" />
