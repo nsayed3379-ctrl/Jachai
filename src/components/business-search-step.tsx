@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { businessApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import type { BusinessResponse } from "@/lib/types";
 import { StarDisplay } from "@/components/star-rating";
@@ -13,6 +14,9 @@ import { EmptyState, Spinner } from "@/components/ui/misc";
 const EXAMPLE_QUERIES = ["KFC", "Biriyani House Mirpur", "Rahman Electronics Uttara"];
 
 function ResultCard({ business, onClaim }: { business: BusinessResponse; onClaim: () => void }) {
+  const { user } = useAuth();
+  const isOwnBusiness = !!user && user.id === business.ownerUserId;
+
   return (
     <div className="rounded-lg border border-ink-100 bg-surface p-4 flex items-center justify-between gap-3 flex-wrap">
       <div>
@@ -30,7 +34,9 @@ function ResultCard({ business, onClaim }: { business: BusinessResponse; onClaim
           </span>
         </div>
       </div>
-      {business.claimed ? (
+      {isOwnBusiness ? (
+        <p className="text-xs font-medium text-ink-500">This is your business</p>
+      ) : business.claimed ? (
         <div className="text-right">
           <p className="text-xs text-ink-400">Already claimed</p>
           <button

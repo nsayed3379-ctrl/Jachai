@@ -117,6 +117,14 @@ export function BusinessForm({ existing, initialValues }: Props) {
   const [attributes, setAttributes] = useState<BusinessAttribute[]>([]);
   const [loadingRef, setLoadingRef] = useState(true);
 
+  // Brand → Branches — create-mode only (editing a listing's brand is an admin-panel action,
+  // see business-review-backend's BusinessForm). Self-service linking only offers brands the
+  // owner already has another business under, sourced from their own listings rather than a
+  // full brand directory — matches the backend's ownership check exactly, so this picker can
+  // never lead to the 403 "needs admin approval" case.
+  const [ownBrands, setOwnBrands] = useState<{ id: string; name: string }[]>([]);
+  const [brandMode, setBrandMode] = useState<"none" | "existing" | "new">("none");
+
   const [form, setForm] =
     useState<CreateBusinessRequest>(() => (initialValues ? { ...emptyForm, ...initialValues } : emptyForm));
 
@@ -193,6 +201,22 @@ export function BusinessForm({ existing, initialValues }: Props) {
         setLoadingRef(false);
       });
   }, [show]);
+
+  useEffect(() => {
+    if (existing) return;
+    businessApi
+      .mine()
+      .then((mine) => {
+        const seen = new Map<string, string>();
+        for (const b of mine) {
+          if (b.brandId && b.brandName && !seen.has(b.brandId)) {
+            seen.set(b.brandId, b.brandName);
+          }
+        }
+        setOwnBrands(Array.from(seen, ([id, name]) => ({ id, name })));
+      })
+      .catch(() => {});
+  }, [existing]);
 
   /*
    * Load existing business data
@@ -876,6 +900,84 @@ export function BusinessForm({ existing, initialValues }: Props) {
             </div>
 
           </div>
+
+          {!existing && (
+            <div className="mt-4 border-t border-ink-100 pt-4">
+              <Label>{t("business_form.field.brand")}</Label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBrandMode("none");
+                    set("brandId", undefined);
+                    set("newBrandName", undefined);
+                  }}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    brandMode === "none"
+                      ? "border-crimson-500 bg-crimson-50 text-crimson-700"
+                      : "border-ink-200 text-ink-600 hover:border-ink-300"
+                  }`}
+                >
+                  {t("business_form.field.brand_none")}
+                </button>
+                {ownBrands.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBrandMode("existing");
+                      set("newBrandName", undefined);
+                    }}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      brandMode === "existing"
+                        ? "border-crimson-500 bg-crimson-50 text-crimson-700"
+                        : "border-ink-200 text-ink-600 hover:border-ink-300"
+                    }`}
+                  >
+                    {t("business_form.field.brand_existing")}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBrandMode("new");
+                    set("brandId", undefined);
+                  }}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    brandMode === "new"
+                      ? "border-crimson-500 bg-crimson-50 text-crimson-700"
+                      : "border-ink-200 text-ink-600 hover:border-ink-300"
+                  }`}
+                >
+                  {t("business_form.field.brand_new")}
+                </button>
+              </div>
+
+              {brandMode === "existing" && (
+                <div className="mt-2 max-w-sm">
+                  <Select value={form.brandId ?? ""} onChange={(e) => set("brandId", e.target.value || undefined)}>
+                    <option value="">{t("business_form.field.select_brand")}</option>
+                    {ownBrands.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              )}
+
+              {brandMode === "new" && (
+                <div className="mt-2 max-w-sm">
+                  <Input
+                    value={form.newBrandName ?? ""}
+                    onChange={(e) => set("newBrandName", e.target.value || undefined)}
+                    placeholder={t("business_form.field.brand_new_placeholder")}
+                  />
+                </div>
+              )}
+
+              <FieldHint>{t("business_form.field.brand_hint")}</FieldHint>
+            </div>
+          )}
         </SectionCard>
 
         {/* =========================
