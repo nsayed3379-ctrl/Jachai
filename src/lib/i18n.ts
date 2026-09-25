@@ -123,6 +123,10 @@ export const dictionary: Record<PreferredLanguage, Record<string, string>> = {
     "business_card.rating_count.one": "{n} rating",
     "business_card.rating_count.other": "{n} ratings",
 
+    // brand-card.tsx
+    "brand_card.branch_count.one": "{n} branch",
+    "brand_card.branch_count.other": "{n} branches",
+
     // review-card.tsx
     "review_card.confirm_delete": "Delete this review? This cannot be undone after the 72-hour window closes.",
     "review_card.toast.deleted": "Review deleted",
@@ -405,6 +409,9 @@ export const dictionary: Record<PreferredLanguage, Record<string, string>> = {
     // cardinal split (see translateCount() in this file), so only ".other" is needed.
     "business_card.review_count.other": "{n}টি রিভিউ",
     "business_card.rating_count.other": "{n}টি রেটিং",
+
+    // brand-card.tsx
+    "brand_card.branch_count.other": "{n}টি শাখা",
 
     // review-card.tsx
     "review_card.confirm_delete": "এই রিভিউটি মুছে ফেলতে চান? ৭২ ঘণ্টার সময়সীমা শেষ হওয়ার পর এটি আর ফেরানো যাবে না।",

@@ -5,6 +5,7 @@ import { getOpenStatus } from "@/lib/business-hours";
 import { PRICE_TIER_LABELS } from "@/lib/config";
 import type { BusinessResponse } from "@/lib/types";
 import { cn, distanceKm, formatDistance } from "@/lib/utils";
+import { BranchSwitcher } from "./branch-switcher";
 import { GalleryImage } from "./gallery-image";
 import { PhotoGalleryModal } from "./photo-gallery-modal";
 import { StarDisplay } from "./star-rating";
@@ -151,6 +152,19 @@ export function BusinessHeroGallery({
           <span>
             {business.areaName}, {business.cityName}
           </span>
+          {business.brandId && business.branchCount && business.branchCount > 1 && (
+            <>
+              <span aria-hidden className="text-white/50">
+                ·
+              </span>
+              <BranchSwitcher
+                brandSlug={business.brandSlug!}
+                brandName={business.brandName!}
+                branchCount={business.branchCount}
+                currentBusinessId={business.id}
+              />
+            </>
+          )}
           {distance && (
             <>
               <span aria-hidden className="text-white/50">

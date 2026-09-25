@@ -6,6 +6,7 @@ import { rememberBusinesses } from "@/lib/business-cache";
 import { useHomeSearch } from "@/lib/home-search-context";
 import { errorMessage } from "@/lib/toast-context";
 import type { Area, BusinessResponse, Category } from "@/lib/types";
+import { BrandCard } from "@/components/brand-card";
 import { BusinessCard } from "@/components/business-card";
 import { BusinessCarousel } from "@/components/business-carousel";
 import { BusinessFilters } from "@/components/business-filters";
@@ -366,7 +367,11 @@ export default function HomePage() {
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
                   {results.map((b, i) => (
                     <Reveal key={b.id} delay={Math.min(i, 8) * 60}>
-                      <BusinessCard business={b} userLocation={cardLocation ?? undefined} />
+                      {b.branchCount && b.branchCount > 1 ? (
+                        <BrandCard business={b} />
+                      ) : (
+                        <BusinessCard business={b} userLocation={cardLocation ?? undefined} />
+                      )}
                     </Reveal>
                   ))}
                 </div>

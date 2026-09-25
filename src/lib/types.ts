@@ -104,6 +104,17 @@ export interface BusinessResponse {
   claimed: boolean;
   averageRating: number;
   reviewCount: number;
+  // Brand → Branches. Non-null only when this listing is part of a chain. Unlike
+  // categoryModules/hasUpdates/etc below, these ARE populated on search/list results too
+  // (not just the detail view) — the search grid needs brandId/branchCount to decide whether
+  // to render a grouped "N branches" card, and the branch-switcher pill needs them on detail.
+  brandId: string | null;
+  brandName: string | null;
+  brandSlug: string | null;
+  // True total live branch count for the brand (not just how many are on the current search page).
+  branchCount: number | null;
+  // Combined rating across every live branch of the brand. Null when brandId is null.
+  brandAverageRating: number | null;
   // Set when a LISTING report against this business is resolved ACTION_TAKEN — a visible,
   // Yelp-style "consumer alert" with the report's reason, not a takedown (see report workflow).
   flagged: boolean;
@@ -690,6 +701,12 @@ export interface CreateBusinessRequest {
   email?: string | null;
   facebookUrl?: string | null;
   instagramUrl?: string | null;
+  // Brand → Branches — optional, mutually exclusive. brandId links to an existing chain (only
+  // allowed when the owner already owns another business under it); newBrandName starts a new
+  // chain. Create-only; there's no owner-facing way to edit a listing's brand after creation
+  // (that's an admin-panel-only action for v1 — see business-review-backend's BusinessForm).
+  brandId?: string;
+  newBrandName?: string;
 }
 
 export type UpdateBusinessRequest = CreateBusinessRequest;

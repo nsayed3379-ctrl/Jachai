@@ -316,6 +316,10 @@ export const businessApi = {
   getBySlug: (slug: string) =>
     request<BusinessResponse>(`/api/v1/businesses/${encodeURIComponent(slug)}`, { auth: false }),
 
+  /** Other locations of the same chain — see BusinessResponse.branchCount/brandSlug. */
+  getBranches: (brandSlug: string) =>
+    request<BusinessResponse[]>(`/api/v1/brands/${encodeURIComponent(brandSlug)}/branches`, { auth: false }),
+
   mine: () => request<BusinessResponse[]>("/api/v1/businesses/mine"),
 
   /** Free-text pre-check before "add a business" — e.g. "Biriyani House Mirpur" or just "KFC". */
