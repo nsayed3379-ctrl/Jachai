@@ -41,13 +41,13 @@ export function MessageBubble({
 }) {
   const [revealed, setRevealed] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const pickerRef = useRef<HTMLDivElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
   const failed = status === "failed";
 
   useEffect(() => {
     if (!pickerOpen) return;
     function onPointerDown(e: PointerEvent) {
-      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) setPickerOpen(false);
+      if (rowRef.current && !rowRef.current.contains(e.target as Node)) setPickerOpen(false);
     }
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") setPickerOpen(false);
@@ -61,54 +61,34 @@ export function MessageBubble({
   }, [pickerOpen]);
 
   const reactTrigger = onReact && (
-    <div ref={pickerRef} className="relative shrink-0 self-end">
-      <button
-        type="button"
-        onClick={() => setPickerOpen((v) => !v)}
-        aria-label="React to this message"
-        aria-haspopup="menu"
-        aria-expanded={pickerOpen}
-        className={cn(
-          // Hidden until hover (desktop) — but hover never fires on touch, so `revealed`
-          // (the same tap-the-bubble state that shows the timestamp) also reveals this,
-          // otherwise there'd be no way to react at all on mobile.
-          "relative flex h-6 w-6 items-center justify-center rounded-full text-ink-300 opacity-0 transition-opacity duration-150 after:absolute after:-inset-2.5 after:content-[''] hover:text-ink-600 focus-visible:opacity-100 group-hover:opacity-100 dark:text-ink-500 dark:hover:text-ink-300",
-          (pickerOpen || revealed) && "!opacity-100",
-          focusRing
-        )}
-      >
-        <SmilePlus size={16} strokeWidth={1.75} />
-      </button>
-      {pickerOpen && (
-        <div
-          role="menu"
-          className={cn(
-            "absolute bottom-full z-20 mb-1 flex gap-0.5 rounded-full border border-ink-100 bg-surface p-1 shadow-pop dark:border-ink-700",
-            isMine ? "right-0" : "left-0"
-          )}
-        >
-          {REACTION_EMOJI.map((emoji) => (
-            <button
-              key={emoji}
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setPickerOpen(false);
-                onReact(emoji);
-              }}
-              aria-label={`React with ${emoji}`}
-              className={cn("flex h-8 w-8 items-center justify-center rounded-full text-base hover:bg-ink-100 dark:hover:bg-ink-800", focusRing)}
-            >
-              {emoji}
-            </button>
-          ))}
-        </div>
+    <button
+      type="button"
+      onClick={() => setPickerOpen((v) => !v)}
+      aria-label="React to this message"
+      aria-haspopup="menu"
+      aria-expanded={pickerOpen}
+      className={cn(
+        // Hidden until hover (desktop) — but hover never fires on touch, so `revealed`
+        // (the same tap-the-bubble state that shows the timestamp) also reveals this,
+        // otherwise there'd be no way to react at all on mobile.
+        "relative shrink-0 self-end flex h-6 w-6 items-center justify-center rounded-full text-ink-300 opacity-0 transition-opacity duration-150 after:absolute after:-inset-2.5 after:content-[''] hover:text-ink-600 focus-visible:opacity-100 group-hover:opacity-100 dark:text-ink-500 dark:hover:text-ink-300",
+        (pickerOpen || revealed) && "!opacity-100",
+        focusRing
       )}
-    </div>
+    >
+      <SmilePlus size={16} strokeWidth={1.75} />
+    </button>
   );
 
   return (
-    <div className={cn("group flex items-end gap-1.5", isMine ? "justify-end" : "justify-start", isFirstInGroup ? "mt-3" : "mt-0.5")}>
+    <div
+      ref={rowRef}
+      className={cn(
+        "group relative flex items-end gap-1.5",
+        isMine ? "justify-end" : "justify-start",
+        isFirstInGroup ? "mt-3" : "mt-0.5"
+      )}
+    >
       {!isMine &&
         (isLastInGroup ? (
           avatarUrl ? (
@@ -198,6 +178,35 @@ export function MessageBubble({
       </div>
 
       {!isMine && reactTrigger}
+
+      {pickerOpen && (
+        // Anchored to the whole row (left-0/right-0 span its full width, which always
+        // fits inside the chat window) rather than to the small trigger button itself —
+        // anchoring to the trigger let the popup overflow past the window's edge
+        // whenever a wide bubble pushed the trigger close to that edge.
+        <div className={cn("absolute bottom-full z-20 mb-1 flex", isMine ? "right-0" : "left-0")}>
+          <div
+            role="menu"
+            className="flex gap-0.5 rounded-full border border-ink-100 bg-surface p-1 shadow-pop dark:border-ink-700"
+          >
+            {REACTION_EMOJI.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setPickerOpen(false);
+                  onReact?.(emoji);
+                }}
+                aria-label={`React with ${emoji}`}
+                className={cn("flex h-8 w-8 items-center justify-center rounded-full text-base hover:bg-ink-100 dark:hover:bg-ink-800", focusRing)}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

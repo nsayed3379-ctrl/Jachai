@@ -5,6 +5,9 @@ import { cn } from "@/lib/utils";
 export interface BusinessTab {
   key: string;
   label: string;
+  /** This is where the customer can actually place an order / make a booking —
+   *  called out so it doesn't get lost among the other, purely informational tabs. */
+  highlight?: boolean;
 }
 
 /**
@@ -40,13 +43,15 @@ export function BusinessTabs({
             aria-selected={isActive}
             onClick={() => onChange(tab.key)}
             className={cn(
-              "shrink-0 -mb-px border-b-2 px-4 py-3 text-sm font-medium transition-colors",
+              "shrink-0 -mb-px flex items-center gap-1 rounded-t-md border-b-2 px-4 py-3 text-sm font-medium transition-colors",
               isActive
                 ? "border-crimson-600 text-crimson-700"
-                : "border-transparent text-ink-500 hover:text-ink-800"
+                : "border-transparent text-ink-500 hover:text-ink-800",
+              tab.highlight && !isActive && "bg-crimson-50 text-crimson-700 dark:bg-crimson-500/15 dark:text-crimson-400"
             )}
           >
             {tab.label}
+            {tab.highlight && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-crimson-600" aria-hidden="true" />}
           </button>
         );
       })}

@@ -13,6 +13,7 @@ import { errorMessage, useToast } from "@/lib/toast-context";
 import { cn, focusRing } from "@/lib/utils";
 import type { BusinessResponse, ReviewResponse, ReviewSortOption } from "@/lib/types";
 import { modulesForKind, moduleHasData, type ModuleKey } from "@/lib/category-modules";
+import { canBook, canSellDirect } from "@/lib/commerce";
 import { trackEvent, trackProfileView } from "@/lib/analytics";
 import { StarDisplay } from "@/components/star-rating";
 import { VerifiedBadge } from "@/components/verified-badge";
@@ -354,11 +355,20 @@ export default function BusinessDetailPage() {
     moduleHasData(m.key, business.categoryModules)
   );
 
+  // Menu (restaurants) and Services (salons) are the only module tabs that lead
+  // to a live order/booking flow today — call that one out so it doesn't read
+  // as just another informational tab like Photos or Updates.
+  const commerceModuleKey = canSellDirect(business.categoryKind)
+    ? "menu"
+    : canBook(business.categoryKind)
+      ? "services"
+      : null;
+
   // A tab is only offered when that business actually has content for it.
   const visibleTabs: BusinessTab[] = [
     { key: "reviews", label: "Reviews" },
     ...(hasAboutData ? [{ key: "about", label: "About" }] : []),
-    ...moduleDefs.map((m) => ({ key: m.key as string, label: m.publicLabel })),
+    ...moduleDefs.map((m) => ({ key: m.key as string, label: m.publicLabel, highlight: m.key === commerceModuleKey })),
     ...(photos.length > 0 ? [{ key: "photos", label: "Photos" }] : []),
     ...(business.hasUpdates ? [{ key: "updates", label: "Updates" }] : []),
     { key: "location", label: "Location" },

@@ -7,6 +7,13 @@ import type { BubbleStatus } from "./MessageBubble";
 
 const POLL_INTERVAL_MS = 8000;
 
+/** Defends against a backend that hasn't picked up the reactions field yet (e.g. not
+ *  redeployed) — without this, an older API response with no `reactions` key at all
+ *  crashes every read of `message.reactions` downstream. */
+function normalizeMessage(m: Message): Message {
+  return { ...m, reactions: m.reactions ?? [] };
+}
+
 interface PendingMessage {
   tempId: string;
   content: string;
@@ -44,7 +51,7 @@ export function useMessageThread({
     messageApi
       .history(id, 0, 50)
       .then((res) => {
-        setMessages(res.content);
+        setMessages(res.content.map(normalizeMessage));
         setError(null);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Couldn't load messages"))
@@ -71,7 +78,9 @@ export function useMessageThread({
 
     try {
       const currentThreadId = threadIdRef.current;
-      const result = currentThreadId ? await messageApi.reply(currentThreadId, content) : await messageApi.send(businessId!, content);
+      const result = normalizeMessage(
+        currentThreadId ? await messageApi.reply(currentThreadId, content) : await messageApi.send(businessId!, content)
+      );
       setPending((prev) => prev.filter((p) => p.tempId !== tempId));
       setMessages((prev) => [...prev, result]);
       if (!currentThreadId) setThreadId(result.threadId);
@@ -88,7 +97,7 @@ export function useMessageThread({
     const resolvedThreadId = await send(autoReply.question);
     if (!resolvedThreadId) return;
     try {
-      const reply = await messageApi.triggerAutoReply(resolvedThreadId, autoReply.id);
+      const reply = normalizeMessage(await messageApi.triggerAutoReply(resolvedThreadId, autoReply.id));
       setMessages((prev) => [...prev, reply]);
     } catch {
       // The question itself already sent successfully — a failed auto-reply just means
