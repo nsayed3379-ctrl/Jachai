@@ -5,7 +5,7 @@ import { Modal } from "./modal";
 import { BottomSheet } from "./bottom-sheet";
 
 /** True at >= 640px (Tailwind's `sm`, this app's established mobile/desktop pivot). */
-function useIsDesktop() {
+export function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(false);
   useEffect(() => {
     const mql = window.matchMedia("(min-width: 640px)");

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Sora, Inter, JetBrains_Mono, Noto_Sans_Bengali } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
@@ -38,6 +38,14 @@ export const metadata: Metadata = {
   title: "Jachai — Verified local businesses",
   description:
     "Find and review verified local businesses in Bangladesh — search by category, area, and rating, with verified trust badges.",
+};
+
+// resizes-content keeps a fixed-position composer (e.g. the chat widget) above the
+// on-screen keyboard on Android/iOS, instead of the keyboard just covering it.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { Flag, MoreHorizontal, Share2 } from "lucide-react";
 import { businessApi, referenceApi, reviewApi } from "@/lib/api";
 import { rememberBusiness } from "@/lib/business-cache";
 import { REPORT_REASON_LABELS } from "@/lib/config";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthModal } from "@/lib/auth-modal-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
+import { cn, focusRing } from "@/lib/utils";
 import type { BusinessResponse, ReviewResponse, ReviewSortOption } from "@/lib/types";
 import { modulesForKind, moduleHasData, type ModuleKey } from "@/lib/category-modules";
 import { trackEvent, trackProfileView } from "@/lib/analytics";
@@ -16,12 +18,14 @@ import { StarDisplay } from "@/components/star-rating";
 import { VerifiedBadge } from "@/components/verified-badge";
 import { MapPreview } from "@/components/map-preview";
 import { ShareButton } from "@/components/share-button";
-import { BookmarkButton } from "@/components/bookmark-button";
+import { BusinessActions } from "@/components/business-actions";
+import { BusinessReactionBar } from "@/components/business-reaction-bar";
 import { ClaimBusinessModal } from "@/components/claim-business-modal";
 import { CreateBusinessAccountModal } from "@/components/create-business-account-modal";
 import { ReportButton } from "@/components/report-button";
+import { IconButton } from "@/components/ui/icon-button";
+import { BusinessMessageSidebarCard, BusinessMessageWidget, type MessageWidgetState } from "@/components/business-message-widget";
 import { SimilarBusinessCard } from "@/components/similar-business-card";
-import { MessageOwnerCard } from "@/components/message-owner-card";
 import { BusinessHeroGallery } from "@/components/business-hero-gallery";
 import { OfferBusinessBanner } from "@/components/offer-business-banner";
 import { BusinessTabs, type BusinessTab } from "@/components/business-tabs";
@@ -40,6 +44,94 @@ import { ReviewForm } from "@/components/review-form";
 import { RatingBreakdownChart } from "@/components/rating-breakdown-chart";
 import { EmptyState, ErrorBanner, PageSpinner, Pagination } from "@/components/ui/misc";
 import { Button } from "@/components/ui/button";
+
+/** Header overflow menu — Share and Report are occasional actions, not primary
+ *  ones, so they live behind ⋯ rather than as their own always-visible buttons. */
+function BusinessHeaderMenu({ business }: { business: BusinessResponse }) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(e: PointerEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  const itemClass = cn(
+    "flex min-h-11 w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-ink-700 hover:bg-ink-50 dark:text-ink-300 dark:hover:bg-ink-800",
+    focusRing
+  );
+  // A separate string, not itemClass + a color override — cn() has no tailwind-merge,
+  // so itemClass's own `text-ink-700` would otherwise sit in the DOM alongside this
+  // one's `text-rose-600` with no reliable winner (see lib/utils.ts#focusRing).
+  const itemClassDanger = cn(
+    "flex min-h-11 w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-rose-600 hover:bg-rose-500/10 dark:text-rose-400",
+    focusRing
+  );
+
+  return (
+    <div ref={containerRef} className="relative shrink-0">
+      <IconButton variant="ghost" size="sm" onClick={() => setOpen((v) => !v)} aria-label="More options" aria-haspopup="menu" aria-expanded={open}>
+        <MoreHorizontal size={18} strokeWidth={1.75} />
+      </IconButton>
+      <div
+        role="menu"
+        className={cn(
+          "absolute right-0 top-full z-20 mt-1 w-44 origin-top-right rounded-lg border border-ink-100 bg-surface p-1 shadow-pop dark:border-ink-700",
+          open ? "block animate-scale-in" : "hidden"
+        )}
+      >
+        <ShareButton
+          url={`/business/${business.slug}`}
+          title={business.name}
+          trigger={(onClick) => (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={(e) => {
+                setOpen(false);
+                onClick(e);
+              }}
+              className={itemClass}
+            >
+              <Share2 size={15} />
+              Share
+            </button>
+          )}
+        />
+        <div className="my-1 border-t border-ink-100 dark:border-ink-700" />
+        <ReportButton
+          targetType="LISTING"
+          targetId={business.id}
+          trigger={(openModal) => (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                openModal();
+              }}
+              className={itemClassDanger}
+            >
+              <Flag size={15} />
+              Report
+            </button>
+          )}
+        />
+      </div>
+    </div>
+  );
+}
 
 export default function BusinessDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -64,6 +156,7 @@ export default function BusinessDetailPage() {
 
   const [claimModalOpen, setClaimModalOpen] = useState(false);
   const [createBizModalOpen, setCreateBizModalOpen] = useState(false);
+  const [messageWidgetState, setMessageWidgetState] = useState<MessageWidgetState>("closed");
   const [switchingForClaim, setSwitchingForClaim] = useState(false);
 
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -299,19 +392,34 @@ export default function BusinessDetailPage() {
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Main column */}
         <div className="lg:col-span-2">
-          {/* Action row: Yelp-style — a prominent primary CTA, then icon+label utility actions.
-              Name/rating/category/hours now live in the hero overlay itself. */}
+          {/* Action row: a prominent primary CTA, then a header ⋯ menu for the
+              occasional actions (Share/Report) right next to it — not pushed to the
+              far edge with justify-between, which left an odd empty gap between them. */}
           <div className="flex flex-wrap items-center gap-2">
-            {user && user.id !== business.ownerUserId && !showReviewForm && !editingReview && (
-              myReview ? (
-                <Button variant="outline" onClick={openEditMyReview}>Edit your review</Button>
-              ) : (
-                <Button onClick={openReviewForm}>Write a Review</Button>
-              )
-            )}
-            <BookmarkButton businessId={business.id} />
-            <ShareButton name={business.name} slug={business.slug} />
-            <ReportButton targetType="LISTING" targetId={business.id} />
+            <div>
+              {user && user.id !== business.ownerUserId && !showReviewForm && !editingReview && (
+                myReview ? (
+                  <Button variant="outline" onClick={openEditMyReview}>Edit your review</Button>
+                ) : (
+                  <Button onClick={openReviewForm}>Write a Review</Button>
+                )
+              )}
+            </div>
+            <BusinessHeaderMenu business={business} />
+          </div>
+
+          {/* Google-Maps-place-sheet-style primary actions, then the reaction row. */}
+          <div className="mt-3">
+            <BusinessActions
+              businessId={business.id}
+              contactNumber={business.contactNumber}
+              latitude={business.latitude}
+              longitude={business.longitude}
+              onMessageClick={() => setMessageWidgetState("open")}
+            />
+          </div>
+          <div className="mt-3">
+            <BusinessReactionBar business={business} />
           </div>
 
           <BusinessTabs tabs={visibleTabs} active={activeTab} onChange={setActiveTab} />
@@ -395,7 +503,10 @@ export default function BusinessDetailPage() {
           {/* Location */}
           <section role="tabpanel" aria-label="Location" hidden={activeTab !== "location"}>
             <h2 className="font-display text-lg font-semibold text-ink-900 mb-3">Location</h2>
-            <MapPreview latitude={business.latitude} longitude={business.longitude} name={business.name} />
+            {/* Directions live in the map overlay pill (MapPreview) and the
+                BusinessActions grid above — a third standalone pill here
+                would just be the same action a third time. */}
+            <MapPreview latitude={business.latitude} longitude={business.longitude} name={business.name} businessId={business.id} />
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
               <p className="flex items-start gap-2.5 text-sm text-ink-700">
                 <svg viewBox="0 0 24 24" className="mt-0.5 h-4 w-4 flex-none text-ink-400" fill="none" stroke="currentColor" strokeWidth="2">
@@ -406,18 +517,6 @@ export default function BusinessDetailPage() {
                   {business.areaName}, {business.cityName}
                 </span>
               </p>
-              <a
-                href={`https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => trackEvent(business.id, "DIRECTIONS_CLICK")}
-                className="inline-flex items-center gap-1.5 rounded-full border border-ink-200 px-3 py-1.5 text-sm font-medium text-ink-700 hover:border-crimson-300 hover:text-crimson-700"
-              >
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="m22 2-7 20-4-9-9-4Z" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                Get directions
-              </a>
             </div>
           </section>
 
@@ -432,7 +531,10 @@ export default function BusinessDetailPage() {
                   <select
                     value={reviewSort}
                     onChange={(e) => changeReviewSort(e.target.value as ReviewSortOption)}
-                    className="rounded-full border border-ink-200 bg-surface px-3 py-1.5 text-xs font-medium text-ink-700"
+                    className={cn(
+                      "min-h-11 rounded-full border border-ink-200 bg-surface px-3 text-xs font-medium text-ink-700 dark:border-ink-700",
+                      focusRing
+                    )}
                   >
                     <option value="newest">Newest</option>
                     <option value="highest">Highest rated</option>
@@ -558,7 +660,7 @@ export default function BusinessDetailPage() {
         <div className="space-y-5 lg:sticky lg:top-20">
           <OfferBusinessBanner businessId={business.id} />
 
-          <MapPreview latitude={business.latitude} longitude={business.longitude} name={business.name} />
+          <MapPreview latitude={business.latitude} longitude={business.longitude} name={business.name} businessId={business.id} />
 
           {business.verified && (
             <div className="rounded-xl border border-brand-200 bg-brand-50 p-4">
@@ -620,6 +722,12 @@ export default function BusinessDetailPage() {
           />
           <CreateBusinessAccountModal open={createBizModalOpen} onClose={() => setCreateBizModalOpen(false)} />
 
+          {/* Desktop only — mobile reaches the same chat via the BusinessActions grid's
+              Message tile above, no need for a second, redundant entry point. */}
+          <div className="hidden sm:block">
+            <BusinessMessageSidebarCard business={business} onOpen={() => setMessageWidgetState("open")} />
+          </div>
+
           <div className="rounded-xl border border-ink-100/70 bg-surface p-4 shadow-card space-y-3">
             <a
               href={`tel:${business.contactNumber}`}
@@ -650,17 +758,6 @@ export default function BusinessDetailPage() {
               </span>
             </div>
           </div>
-
-          <MessageOwnerCard
-            businessId={business.id}
-            businessName={business.name}
-            ownerLogoUrl={business.logoUrl}
-            isLoggedIn={!!user}
-            isOwnBusiness={user?.id === business.ownerUserId}
-            onLogin={openLogin}
-            structuredHours={business.structuredHours}
-            hoursExceptions={business.hoursExceptions}
-          />
         </div>
       </div>
 
@@ -672,7 +769,20 @@ export default function BusinessDetailPage() {
         initialIndex={photosModalIndex}
       />
 
-      <CartBar businessId={business.id} businessSlug={business.slug} />
+      {/* Hidden while the chat is open (full-screen on mobile, floating bottom-right on
+          desktop) so it can't visually collide with either. */}
+      {messageWidgetState !== "open" && <CartBar businessId={business.id} businessSlug={business.slug} />}
+
+      <BusinessMessageWidget
+        state={messageWidgetState}
+        onClose={() => setMessageWidgetState("closed")}
+        onMinimize={() => setMessageWidgetState("minimized")}
+        onMaximize={() => setMessageWidgetState("open")}
+        business={business}
+        currentUserId={user?.id}
+        isLoggedIn={!!user}
+        onLogin={openLogin}
+      />
     </div>
   );
 }

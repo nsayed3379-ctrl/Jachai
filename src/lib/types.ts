@@ -382,6 +382,24 @@ export interface FaqBody {
   answer: string;
 }
 
+/** Quick-reply chip for the chat widget — see components/chat. `language` is set
+ *  ("en"/"bn") on a system-seeded default, null on an owner-authored entry (shown
+ *  to everyone regardless of site language). */
+export interface AutoReply {
+  id: string;
+  businessId: string;
+  question: string;
+  answer: string;
+  language: string | null;
+  systemDefault: boolean;
+  sortOrder: number;
+  createdAt: string;
+}
+export interface AutoReplyBody {
+  question: string;
+  answer: string;
+}
+
 // ---------------------------------------------------------------------------
 // Commerce & Fulfillment — Phase A: restaurant direct ordering
 // ---------------------------------------------------------------------------
@@ -972,6 +990,12 @@ export interface MessageThread {
   unreadCount: number;
 }
 
+export interface ReactionSummary {
+  emoji: string;
+  count: number;
+  reactedByMe: boolean;
+}
+
 export interface Message {
   id: string;
   threadId: string;
@@ -980,6 +1004,7 @@ export interface Message {
   content: string;
   readAt: string | null;
   createdAt: string;
+  reactions: ReactionSummary[];
 }
 
 // ---------------------------------------------------------------------------

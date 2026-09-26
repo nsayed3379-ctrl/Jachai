@@ -8,7 +8,10 @@ import {
 import type {
   ApiError,
   AuditLog,
+  AutoReply,
+  AutoReplyBody,
   AvailabilityResponse,
+  ReactionSummary,
   Booking,
   BookingStatus,
   Bookmark,
@@ -791,6 +794,15 @@ export const messageApi = {
   reply: (threadId: string, content: string) =>
     request<Message>(`/api/v1/messages/threads/${threadId}/reply`, { method: "POST", body: { content } }),
 
+  /** Posts an auto-reply's configured answer as if from the owner — content is looked up
+   *  server-side by id, never sent from here (see components/chat/use-message-thread.ts). */
+  triggerAutoReply: (threadId: string, autoReplyId: string) =>
+    request<Message>(`/api/v1/messages/threads/${threadId}/auto-reply`, { method: "POST", body: { autoReplyId } }),
+
+  /** Tapping the same emoji again removes it; a different one replaces it — returns the message's updated reaction list. */
+  react: (messageId: string, emoji: string) =>
+    request<ReactionSummary[]>(`/api/v1/messages/${messageId}/reactions`, { method: "POST", body: { emoji } }),
+
   markRead: (threadId: string) =>
     request<void>(`/api/v1/messages/threads/${threadId}/read`, { method: "POST" }),
 
@@ -920,6 +932,22 @@ export const catalogApi = {
     request<void>(`/api/v1/businesses/${businessId}/faqs/${id}`, { method: "DELETE" }),
   reorderFaqs: (businessId: string, orderedIds: string[]) =>
     request<Faq[]>(`/api/v1/businesses/${businessId}/faqs/reorder`, { method: "PATCH", body: { orderedIds } }),
+};
+
+// ---------------------------------------------------------------------------
+// Quick-reply auto-answers — chat widget shortcuts (see components/chat)
+// ---------------------------------------------------------------------------
+export const autoReplyApi = {
+  list: (businessId: string) =>
+    request<AutoReply[]>(`/api/v1/businesses/${businessId}/auto-replies`, { auth: false }),
+  create: (businessId: string, body: AutoReplyBody) =>
+    request<AutoReply>(`/api/v1/businesses/${businessId}/auto-replies`, { method: "POST", body }),
+  update: (businessId: string, id: string, body: AutoReplyBody) =>
+    request<AutoReply>(`/api/v1/businesses/${businessId}/auto-replies/${id}`, { method: "PUT", body }),
+  remove: (businessId: string, id: string) =>
+    request<void>(`/api/v1/businesses/${businessId}/auto-replies/${id}`, { method: "DELETE" }),
+  reorder: (businessId: string, orderedIds: string[]) =>
+    request<AutoReply[]>(`/api/v1/businesses/${businessId}/auto-replies/reorder`, { method: "PATCH", body: { orderedIds } }),
 };
 
 // ---------------------------------------------------------------------------

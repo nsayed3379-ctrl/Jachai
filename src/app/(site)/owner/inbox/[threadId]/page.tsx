@@ -1,26 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 import { messageApi } from "@/lib/api";
-import { MessageThreadView } from "@/components/message-thread-view";
+import { lookupBusiness } from "@/lib/business-cache";
+import type { MessageThread } from "@/lib/types";
+import { ChatPane } from "@/components/chat/ChatPane";
 import { PageSpinner } from "@/components/ui/misc";
 
 export default function OwnerMessageThreadPage() {
   const { threadId } = useParams<{ threadId: string }>();
-  const [title, setTitle] = useState<string | null>(null);
+  const router = useRouter();
+  const { user } = useAuth();
+  const [thread, setThread] = useState<MessageThread | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
     messageApi
       .businessInbox()
-      .then((threads) => {
-        const t = threads.find((th) => th.id === threadId);
-        if (t) {
-          setTitle(t.consumerName || `Customer ${t.consumerUserId.slice(0, 8)}…`);
-        }
-      })
+      .then((threads) => setThread(threads.find((th) => th.id === threadId) ?? null))
       .finally(() => setLoading(false));
   }, [threadId]);
 
@@ -32,5 +32,17 @@ export default function OwnerMessageThreadPage() {
     );
   }
 
-  return <MessageThreadView threadId={threadId} title={title ?? "Conversation"} />;
+  const name = thread?.consumerName || (thread ? `Customer ${thread.consumerUserId.slice(0, 8)}…` : "Conversation");
+  const cachedBusiness = thread ? lookupBusiness(thread.businessId) : null;
+
+  return (
+    <ChatPane
+      threadId={threadId}
+      currentUserId={user?.id}
+      otherPartyName={name}
+      headerSubtitle={cachedBusiness ? `Re: ${cachedBusiness.name}` : undefined}
+      onBack={() => router.push("/owner/inbox")}
+      onViewBusiness={cachedBusiness ? () => router.push(`/business/${cachedBusiness.slug}`) : undefined}
+    />
+  );
 }

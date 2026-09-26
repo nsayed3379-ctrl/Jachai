@@ -1,18 +1,19 @@
-
-
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 import { messageApi } from "@/lib/api";
 import { lookupBusiness } from "@/lib/business-cache";
-import { errorMessage } from "@/lib/toast-context";
-import { MessageThreadView } from "@/components/message-thread-view";
+import type { CachedBusinessSummary } from "@/lib/types";
+import { ChatPane } from "@/components/chat/ChatPane";
 import { PageSpinner } from "@/components/ui/misc";
 
 export default function ConsumerMessageThreadPage() {
   const { threadId } = useParams<{ threadId: string }>();
-  const [title, setTitle] = useState<string | null>(null);
+  const router = useRouter();
+  const { user } = useAuth();
+  const [business, setBusiness] = useState<CachedBusinessSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,12 +22,8 @@ export default function ConsumerMessageThreadPage() {
       .myThreads()
       .then((threads) => {
         const t = threads.find((th) => th.id === threadId);
-        if (t) {
-          const cached = lookupBusiness(t.businessId);
-          setTitle(cached?.name ?? `Business ${t.businessId.slice(0, 8)}…`);
-        }
+        if (t) setBusiness(lookupBusiness(t.businessId));
       })
-      .catch((err) => errorMessage(err))
       .finally(() => setLoading(false));
   }, [threadId]);
 
@@ -38,5 +35,18 @@ export default function ConsumerMessageThreadPage() {
     );
   }
 
-  return <MessageThreadView threadId={threadId} title={title ?? "Conversation"} />;
+  const name = business?.name ?? "Conversation";
+
+  return (
+    <ChatPane
+      threadId={threadId}
+      businessId={business?.id}
+      currentUserId={user?.id}
+      otherPartyName={name}
+      otherPartyAvatarUrl={business?.coverPhotoUrl}
+      onBack={() => router.push("/me/messages")}
+      onViewBusiness={business ? () => router.push(`/business/${business.slug}`) : undefined}
+      showQuickReplies
+    />
+  );
 }

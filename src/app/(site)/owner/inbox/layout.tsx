@@ -20,20 +20,10 @@ function MessagesShell({ children }: { children: React.ReactNode }) {
     <div className="w-full max-w-5xl mx-auto py-2 sm:py-6 md:py-8">
       <div className="flex flex-col md:flex-row h-[calc(100dvh-9rem)] min-h-[420px] md:h-[75vh] rounded-2xl border border-ink-200/70 bg-white shadow-xl shadow-ink-900/5 overflow-hidden">
         <ThreadsSidebar />
-        <main className={cn("flex-1 flex-col min-w-0 min-h-0", hasThread ? "flex" : "hidden md:flex")}>
-          {hasThread && (
-            <Link
-              href="/owner/inbox"
-              className="md:hidden flex shrink-0 items-center gap-1.5 border-b border-ink-100 px-4 py-2.5 text-sm font-medium text-ink-600 hover:text-crimson-700"
-            >
-              <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2">
-                <path d="M12 15l-5-5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Inbox
-            </Link>
-          )}
-          {children}
-        </main>
+        {/* No manual back-link here anymore — ChatPane's own ChatHeader renders a
+            back arrow (md:hidden) via its onBack prop, so there's one back
+            affordance, not two stacked on top of each other. */}
+        <main className={cn("flex-1 flex-col min-w-0 min-h-0", hasThread ? "flex" : "hidden md:flex")}>{children}</main>
       </div>
     </div>
   );

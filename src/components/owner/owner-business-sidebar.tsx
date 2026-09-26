@@ -56,6 +56,7 @@ function buildNavGroups(
         { label: "Reviews", href: `${base}/reviews` },
         { label: "Rating trend", href: `${base}/insights` },
         { label: "Messages", href: "/owner/inbox", external: true },
+        { label: "Quick replies", href: `${base}/quick-replies` },
       ],
     },
     {
