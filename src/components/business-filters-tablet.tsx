@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PriceTier, SortOption } from "@/lib/types";
 import { Button } from "./ui/button";
@@ -169,7 +170,8 @@ export function TabletFilters({ value, onChange, onUseMyLocation, locationStatus
         </Select>
 
         <Button type="button" variant="outline" onClick={onUseMyLocation} loading={locationStatus === "locating"} className={searchRowControl}>
-          📍 {locationStatus === "granted" ? "Using your location" : "Near me"}
+          <MapPin size={16} strokeWidth={1.75} />
+          {locationStatus === "granted" ? "Using your location" : "Near me"}
         </Button>
 
         <FiltersPopover value={value} onChange={onChange} />

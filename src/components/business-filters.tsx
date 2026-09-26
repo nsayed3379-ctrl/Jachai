@@ -145,7 +145,8 @@ export function FilterOptionPill<T extends string | number>({
 
 // Every control in the primary search row shares this height so selects and the
 // "Near me" button line up pixel-for-pixel regardless of native rendering differences.
-export const searchRowControl = "h-10 rounded-full px-4";
+// min-h- (not h-), matching the 44px touch-target minimum — content still centers fine.
+export const searchRowControl = "min-h-11 rounded-full px-4";
 
 export const PRICE_OPTIONS: DropdownOption<PriceTier>[] = [
   { value: undefined, label: "Any price" },

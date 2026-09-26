@@ -7,7 +7,7 @@ import { MoreHorizontal, X } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthModal } from "@/lib/auth-modal-context";
 import { useCommunityUsernameModal } from "@/lib/community-username-modal-context";
-import { cn } from "@/lib/utils";
+import { cn, focusRing, interactiveTransition } from "@/lib/utils";
 import { COMMUNITY_ITEMS, SOCIAL_ITEMS, type NavItem } from "./community-sidebar";
 
 /** The 3 most-reached-for destinations, kept as always-visible icon buttons — everything
@@ -78,8 +78,12 @@ export function CommunityMobileNav({ className }: { className?: string }) {
         href={resolvedHref(item)}
         onClick={(e) => handleDrawerItemClick(e, item)}
         className={cn(
-          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150",
-          active ? "bg-crimson-50 text-crimson-700" : "text-ink-600 hover:bg-ink-50 hover:text-ink-900"
+          "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
+          interactiveTransition,
+          focusRing,
+          active
+            ? "bg-crimson-50 text-crimson-700 dark:bg-crimson-500/15 dark:text-crimson-400"
+            : "text-ink-600 hover:bg-ink-50 hover:text-ink-900 dark:text-ink-300 dark:hover:bg-ink-800 dark:hover:text-ink-100"
         )}
       >
         <item.icon size={17} className="shrink-0" strokeWidth={1.75} />
@@ -98,8 +102,12 @@ export function CommunityMobileNav({ className }: { className?: string }) {
           aria-haspopup="menu"
           aria-expanded={open}
           className={cn(
-            "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-colors duration-150",
-            open ? "border-ink-300 bg-ink-100 text-ink-900" : "border-ink-200 text-ink-600 hover:bg-ink-50"
+            "flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full border",
+            interactiveTransition,
+            focusRing,
+            open
+              ? "border-ink-300 bg-ink-100 text-ink-900 dark:border-ink-600 dark:bg-ink-800 dark:text-ink-100"
+              : "border-ink-200 text-ink-600 hover:bg-ink-50 dark:border-ink-700 dark:text-ink-300 dark:hover:bg-ink-800"
           )}
         >
           {open ? <X size={18} /> : <MoreHorizontal size={18} />}
@@ -115,8 +123,12 @@ export function CommunityMobileNav({ className }: { className?: string }) {
                 aria-label={item.label}
                 title={item.label}
                 className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-full border transition-colors duration-150",
-                  active ? "border-crimson-200 bg-crimson-50 text-crimson-700" : "border-ink-200 text-ink-600 hover:bg-ink-50"
+                  "flex min-h-11 min-w-11 items-center justify-center rounded-full border",
+                  interactiveTransition,
+                  focusRing,
+                  active
+                    ? "border-crimson-200 bg-crimson-50 text-crimson-700 dark:border-crimson-800 dark:bg-crimson-500/15 dark:text-crimson-400"
+                    : "border-ink-200 text-ink-600 hover:bg-ink-50 dark:border-ink-700 dark:text-ink-300 dark:hover:bg-ink-800"
                 )}
               >
                 <item.icon size={17} strokeWidth={1.75} />
@@ -129,7 +141,7 @@ export function CommunityMobileNav({ className }: { className?: string }) {
       {open && (
         <div
           role="menu"
-          className="absolute left-0 top-full z-30 mt-2 w-64 animate-scale-in rounded-xl border border-ink-100 bg-surface p-2 shadow-pop"
+          className="absolute left-0 top-full z-30 mt-2 w-64 animate-scale-in rounded-xl border border-ink-100 bg-surface p-2 shadow-pop dark:border-ink-700"
         >
           <p className="px-3 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-ink-400">Community</p>
           <div className="space-y-0.5">{COMMUNITY_ITEMS.map(renderDrawerRow)}</div>

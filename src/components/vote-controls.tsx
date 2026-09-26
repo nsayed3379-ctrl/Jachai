@@ -5,7 +5,7 @@ import { ArrowBigDown, ArrowBigUp } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthModal } from "@/lib/auth-modal-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
-import { cn } from "@/lib/utils";
+import { cn, focusRing } from "@/lib/utils";
 import type { CommunityPostVoteType } from "@/lib/types";
 
 /**
@@ -62,13 +62,20 @@ export function VoteControls({
   const isUp = myVote === "UPVOTE";
   const isDown = myVote === "DOWNVOTE";
 
+  // The visual pill stays small (~30-36px) by design — Reddit/Quora-style vote arrows
+  // are meant to read as compact. Rather than growing the button itself to 44px (which
+  // would blow up the pill), an invisible ::after pseudo-element extends the actual tap
+  // target to 44x44 past the button's own edges. `relative` is required for the ::after
+  // to position against this button, not some further-out ancestor.
+  const voteHitArea = "relative after:absolute after:-inset-3 after:content-['']";
+
   // Grouped pill (used by the vertical layout below) — up arrow, score, and
   // down arrow read as one control, tinted to show the current vote state.
   const pillTone = isUp
-    ? "border-crimson-200 bg-crimson-50"
+    ? "border-crimson-200 bg-crimson-50 dark:border-crimson-800 dark:bg-crimson-500/15"
     : isDown
-      ? "border-ink-300 bg-ink-200/60"
-      : "border-ink-200 bg-ink-50";
+      ? "border-ink-300 bg-ink-200/60 dark:border-ink-600"
+      : "border-ink-200 bg-ink-50 dark:border-ink-700";
 
   if (orientation === "split") {
     // Two separate pills — "Upvote · N" (word + count, count hidden at zero) and a
@@ -84,6 +91,7 @@ export function VoteControls({
           title="Upvote"
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors duration-150",
+            focusRing,
             "disabled:cursor-not-allowed disabled:opacity-50",
             isUp ? "border-crimson-200 bg-crimson-50 text-crimson-700" : "border-ink-200 text-ink-600 hover:border-ink-300 hover:bg-ink-50"
           )}
@@ -100,6 +108,8 @@ export function VoteControls({
           title="Downvote"
           className={cn(
             "flex items-center justify-center rounded-full border p-1.5 transition-colors duration-150",
+            focusRing,
+            voteHitArea,
             "disabled:cursor-not-allowed disabled:opacity-50",
             isDown ? "border-ink-300 bg-ink-200/60 text-ink-900" : "border-ink-200 text-ink-400 hover:border-ink-300 hover:text-ink-700"
           )}
@@ -130,7 +140,8 @@ export function VoteControls({
           className={cn(
             "flex items-center justify-center rounded-full transition-colors duration-150 ease-out",
             size === "sm" ? "p-1" : "p-1.5",
-            "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-crimson-500",
+            focusRing,
+            voteHitArea,
             "disabled:cursor-not-allowed disabled:opacity-50 active:scale-95",
             isUp ? "text-crimson-600" : "text-ink-400 hover:text-crimson-500"
           )}
@@ -160,7 +171,8 @@ export function VoteControls({
           className={cn(
             "flex items-center justify-center rounded-full transition-colors duration-150 ease-out",
             size === "sm" ? "p-1" : "p-1.5",
-            "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-crimson-500",
+            focusRing,
+            voteHitArea,
             "disabled:cursor-not-allowed disabled:opacity-50 active:scale-95",
             isDown ? "text-ink-900" : "text-ink-400 hover:text-ink-700"
           )}
@@ -182,7 +194,9 @@ export function VoteControls({
         title="Upvote"
         className={cn(
           "flex items-center justify-center rounded-full p-1 transition-all duration-150 ease-out",
-          "hover:bg-white/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-crimson-500",
+          "hover:bg-white/80",
+          focusRing,
+          voteHitArea,
           "disabled:cursor-not-allowed disabled:opacity-50 active:scale-90",
           isUp ? "text-crimson-600" : "text-ink-400 hover:text-crimson-500"
         )}
@@ -211,7 +225,9 @@ export function VoteControls({
         title="Downvote"
         className={cn(
           "flex items-center justify-center rounded-full p-1 transition-all duration-150 ease-out",
-          "hover:bg-white/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-crimson-500",
+          "hover:bg-white/80",
+          focusRing,
+          voteHitArea,
           "disabled:cursor-not-allowed disabled:opacity-50 active:scale-90",
           isDown ? "text-ink-900" : "text-ink-400 hover:text-ink-700"
         )}

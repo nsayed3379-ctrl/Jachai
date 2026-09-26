@@ -4,6 +4,17 @@ export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
 }
 
+/** Shared focus-visible style — every interactive element (Button, IconButton, Chip,
+ *  and any hand-rolled control) should include this so keyboard users always get a
+ *  visible ring, not just the handful of components that happened to have one. */
+export const focusRing =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-crimson-500";
+
+/** Shared motion style for interactive elements — only the properties that actually
+ *  change (color/background/border/transform/opacity), not `transition-all`, so a
+ *  toggle never animates layout properties like width/height by accident. */
+export const interactiveTransition = "transition-[color,background-color,border-color,transform,opacity] duration-150 ease-out";
+
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   try {

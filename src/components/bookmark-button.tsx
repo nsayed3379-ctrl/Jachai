@@ -6,9 +6,20 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthModal } from "@/lib/auth-modal-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
 import type { Collection } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, focusRing, interactiveTransition } from "@/lib/utils";
+import { Button } from "./ui/button";
+import { IconButton } from "./ui/icon-button";
 
-export function BookmarkButton({ businessId, iconOnly }: { businessId: string; iconOnly?: boolean }) {
+export function BookmarkButton({
+  businessId,
+  iconOnly,
+  tile,
+}: {
+  businessId: string;
+  iconOnly?: boolean;
+  /** BusinessActions grid look — flex-col icon-over-label tile, matches Call/Directions/Message. */
+  tile?: boolean;
+}) {
   const { user } = useAuth();
   const { openLogin } = useAuthModal();
   const { show } = useToast();
@@ -101,14 +112,19 @@ export function BookmarkButton({ businessId, iconOnly }: { businessId: string; i
 
   if (iconOnly) {
     return (
-      <button
-        type="button"
+      // unstyled, not a color variant — this floats over a photo of unknown color, so it
+      // needs its own translucent-white chrome plus a conditional (bookmarked/not) text
+      // color; a preset variant's own unconditional color class would sit in the DOM
+      // alongside that override with no reliable winner (see theme-toggle.tsx's comment).
+      <IconButton
+        variant="unstyled"
+        size="sm"
         onClick={quickToggle}
         disabled={busy}
         aria-label={bookmarked ? "Remove bookmark" : "Save business"}
         title={bookmarked ? "Remove bookmark" : "Save business"}
         className={cn(
-          "flex h-9 w-9 items-center justify-center rounded-full bg-white/90 shadow-sm ring-1 ring-black/5 backdrop-blur-sm transition-colors hover:bg-white disabled:cursor-default",
+          "bg-white/90 shadow-sm ring-1 ring-black/5 hover:bg-white disabled:cursor-default",
           bookmarked ? "text-crimson-600" : "text-ink-600"
         )}
       >
@@ -125,6 +141,48 @@ export function BookmarkButton({ businessId, iconOnly }: { businessId: string; i
             strokeLinejoin="round"
           />
         </svg>
+      </IconButton>
+    );
+  }
+
+  if (tile) {
+    // quickToggle (default-collection, no picker) — same reasoning as iconOnly: a
+    // collection-picker dropdown popping out of one tile in a tight 4-up grid would
+    // likely get clipped by its neighbors or misalign; the full picker stays on the
+    // labeled variant below, which has room for it.
+    return (
+      <button
+        type="button"
+        onClick={quickToggle}
+        disabled={busy || !checked}
+        aria-pressed={bookmarked}
+        className={cn(
+          "flex h-16 flex-1 flex-col items-center justify-center gap-1 rounded-xl hover:bg-ink-50 disabled:cursor-default disabled:opacity-60 dark:hover:bg-ink-800",
+          interactiveTransition,
+          focusRing
+        )}
+      >
+        <span
+          className={cn(
+            "flex size-10 items-center justify-center rounded-full",
+            bookmarked ? "bg-crimson-50 dark:bg-crimson-500/15" : "bg-ink-100 dark:bg-ink-800"
+          )}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className={cn("h-[22px] w-[22px]", bookmarked ? "text-crimson-600 dark:text-crimson-400" : "text-ink-700 dark:text-ink-300")}
+            fill={bookmarked ? "currentColor" : "none"}
+            stroke="currentColor"
+            strokeWidth="1.7"
+          >
+            <path
+              d="M12 20.5s-7.5-4.6-9.8-9.3C.7 7.9 2.3 4.8 5.4 4.1c2-.4 3.9.5 5 2.1a5.8 5.8 0 0 1 5-2.1c3.1.7 4.7 3.8 3.2 7.1-2.3 4.7-9.6 9.3-9.6 9.3Z"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+        <span className="text-xs font-medium text-ink-700 dark:text-ink-300">{bookmarked ? "Saved" : "Save"}</span>
       </button>
     );
   }
@@ -133,21 +191,18 @@ export function BookmarkButton({ businessId, iconOnly }: { businessId: string; i
 
   return (
     <div className="relative">
-      <button
+      <Button
+        variant={bookmarked ? "secondary" : "outline"}
+        size="sm"
         onClick={toggle}
         disabled={busy}
-        className={cn(
-          "inline-flex items-center gap-1.5 rounded border px-3 py-1.5 text-sm",
-          bookmarked
-            ? "border-gold-400 bg-gold-50 text-gold-700"
-            : "border-ink-200 text-ink-700 hover:bg-ink-50"
-        )}
+        className="min-h-11"
       >
         <svg viewBox="0 0 20 20" className="h-4 w-4" fill={bookmarked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6">
           <path d="M5 3h10v14l-5-3.5L5 17V3z" />
         </svg>
         {bookmarked ? "Bookmarked" : "Bookmark"}
-      </button>
+      </Button>
 
       {open && (
         <div className="absolute right-0 z-20 mt-2 w-56 rounded-md border border-ink-100 bg-surface p-1.5 shadow-pop">

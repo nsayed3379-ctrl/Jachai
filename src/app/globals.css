@@ -136,6 +136,18 @@
   }
 }
 
+/* Leaflet renders its own zoom control DOM (map-preview.tsx / leaflet-location-picker.tsx)
+   outside React's render — the only way to touch it is a global selector. Default buttons
+   are 26x26; below md that's under the 44px touch-target minimum. Desktop keeps the
+   library's own compact size since a mouse pointer doesn't need the bigger target. */
+@media (max-width: 767px) {
+  .leaflet-control-zoom a {
+    width: 44px !important;
+    height: 44px !important;
+    line-height: 44px !important;
+  }
+}
+
 /* Respect the OS-level "reduce motion" setting — everything above still
    renders, it just stops moving. */
 @media (prefers-reduced-motion: reduce) {

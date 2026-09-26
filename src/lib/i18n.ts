@@ -141,6 +141,9 @@ export const dictionary: Record<PreferredLanguage, Record<string, string>> = {
     "review_card.mark_useful": "Mark useful",
     "review_card.mark_funny": "Mark funny",
     "review_card.mark_cool": "Mark cool",
+    "review_card.useful_short": "Useful",
+    "review_card.funny_short": "Funny",
+    "review_card.cool_short": "Cool",
     "review_card.edit_window_closed": "72h edit window closed",
     "review_card.owner_response": "Response from the owner",
 
@@ -439,6 +442,9 @@ export const dictionary: Record<PreferredLanguage, Record<string, string>> = {
     "review_card.mark_useful": "উপকারী চিহ্নিত করুন",
     "review_card.mark_funny": "মজার চিহ্নিত করুন",
     "review_card.mark_cool": "দারুণ চিহ্নিত করুন",
+    "review_card.useful_short": "উপকারী",
+    "review_card.funny_short": "মজার",
+    "review_card.cool_short": "দারুণ",
     "review_card.edit_window_closed": "৭২ ঘণ্টার সম্পাদনা সময় শেষ",
     "review_card.owner_response": "মালিকের উত্তর",
 

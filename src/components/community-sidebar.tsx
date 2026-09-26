@@ -6,7 +6,7 @@ import { Bookmark, Compass, HelpCircle, Home, MapPin, MessageSquare, Settings, S
 import { useAuth } from "@/lib/auth-context";
 import { useAuthModal } from "@/lib/auth-modal-context";
 import { useCommunityUsernameModal } from "@/lib/community-username-modal-context";
-import { cn } from "@/lib/utils";
+import { cn, focusRing, interactiveTransition } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
 interface NavItem {
@@ -98,8 +98,12 @@ export function CommunitySidebar({ className }: { className?: string }) {
                 href={resolvedHref(item)}
                 onClick={(e) => handleGatedClick(e, item)}
                 className={cn(
-                  "flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors duration-150",
-                  active ? "bg-crimson-50 text-crimson-700" : "text-ink-600 hover:bg-ink-50 hover:text-ink-900"
+                  "flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium",
+                  interactiveTransition,
+                  focusRing,
+                  active
+                    ? "bg-crimson-50 text-crimson-700 dark:bg-crimson-500/15 dark:text-crimson-400"
+                    : "text-ink-600 hover:bg-ink-50 hover:text-ink-900 dark:text-ink-300 dark:hover:bg-ink-800 dark:hover:text-ink-100"
                 )}
               >
                 <item.icon size={15} className="shrink-0" strokeWidth={1.75} />

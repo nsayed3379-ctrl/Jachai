@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Menu, X } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthModal } from "@/lib/auth-modal-context";
 import { useCommunityUsernameModal } from "@/lib/community-username-modal-context";
@@ -10,7 +11,7 @@ import { useHomeSearch } from "@/lib/home-search-context";
 import { useLanguage } from "@/lib/language-context";
 import { useBusinessInboxUnreadCount } from "@/lib/use-business-inbox-unread";
 import { errorMessage, useToast } from "@/lib/toast-context";
-import { cn } from "@/lib/utils";
+import { cn, focusRing, interactiveTransition } from "@/lib/utils";
 import { PrimarySearchBar } from "./business-filters";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -143,12 +144,18 @@ export function Navbar() {
   }, [isHero]);
 
   const transparent = isHero && !scrolled;
-  const linkClass = transparent
-    ? "whitespace-nowrap px-2.5 lg:px-3 py-2 rounded-full hover:bg-white/15 text-white"
-    : "whitespace-nowrap px-2.5 lg:px-3 py-2 rounded-full hover:bg-crimson-50 hover:text-crimson-700 text-ink-700";
-  const accountLinkClass = transparent
-    ? "whitespace-nowrap px-2.5 lg:px-3 py-2 rounded-full text-sm lg:text-base font-medium text-white hover:bg-white/15"
-    : "whitespace-nowrap px-2.5 lg:px-3 py-2 rounded-full text-sm lg:text-base font-medium text-ink-600 hover:bg-ink-100";
+  const linkClass = cn(
+    "inline-flex min-h-11 items-center whitespace-nowrap px-2.5 lg:px-3 rounded-full",
+    interactiveTransition,
+    focusRing,
+    transparent ? "hover:bg-white/15 text-white" : "hover:bg-crimson-50 hover:text-crimson-700 text-ink-700"
+  );
+  const accountLinkClass = cn(
+    "inline-flex min-h-11 items-center whitespace-nowrap px-2.5 lg:px-3 rounded-full text-sm lg:text-base font-medium",
+    interactiveTransition,
+    focusRing,
+    transparent ? "text-white hover:bg-white/15" : "text-ink-600 hover:bg-ink-100"
+  );
 
   // Close the mobile menu whenever the route changes (e.g. browser back).
   useEffect(() => {
@@ -404,18 +411,18 @@ export function Navbar() {
         </Link>
 
         <button
-          className={cn("md:hidden shrink-0 p-2 rounded-full", transparent ? "text-white hover:bg-white/15" : "hover:bg-ink-100")}
+          type="button"
+          className={cn(
+            "md:hidden shrink-0 min-h-11 min-w-11 flex items-center justify-center rounded-full",
+            interactiveTransition,
+            focusRing,
+            transparent ? "text-white hover:bg-white/15" : "hover:bg-ink-100"
+          )}
           onClick={() => setMenuOpen((v) => !v)}
           aria-label="Toggle menu"
           aria-expanded={menuOpen}
         >
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-            {menuOpen ? (
-              <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
-            ) : (
-              <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
-            )}
-          </svg>
+          {menuOpen ? <X size={20} strokeWidth={1.75} /> : <Menu size={20} strokeWidth={1.75} />}
         </button>
       </div>
 

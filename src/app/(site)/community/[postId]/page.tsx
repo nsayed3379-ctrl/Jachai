@@ -158,25 +158,6 @@ export default function CommunityPostDetailPage() {
     }
   }
 
-  async function handleShare() {
-    if (!post) return;
-    const url = `${window.location.origin}/community/${post.id}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ url, title: post.title ?? "Jachai Community" });
-      } catch {
-        // user cancelled the share sheet — not an error
-      }
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      show("Link copied", "success");
-    } catch {
-      show(url, "info");
-    }
-  }
-
   function focusCommentInput() {
     commentInputRef.current?.focus();
     commentInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -253,7 +234,8 @@ export default function CommunityPostDetailPage() {
           <VoteControls score={post.score} myVote={post.myVote} onVote={handleVote} orientation="horizontal" />
           <PostActions
             commentCount={isQuestion ? post.answerCount : post.commentCount}
-            onShare={handleShare}
+            shareUrl={`/community/${post.id}`}
+            shareTitle={post.title ?? "Jachai Community"}
             onCommentClick={focusCommentInput}
             label={isQuestion ? "Answer" : "Comment"}
           />
@@ -297,6 +279,7 @@ export default function CommunityPostDetailPage() {
             postId={post.id}
             comments={comments}
             isPostAuthor={isAuthor}
+            postAuthorId={post.author.id}
             isQuestion={isQuestion}
             onCommentAdded={handleCommentAdded}
             onCommentChanged={handleCommentChanged}

@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { BadgeCheck } from "lucide-react";
+import { BadgeCheck, Check } from "lucide-react";
 import { communityApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthModal } from "@/lib/auth-modal-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
-import { avatarColorClass, avatarInitials, cn, timeAgo } from "@/lib/utils";
+import { avatarColorClass, avatarInitials, cn, focusRing, interactiveTransition, timeAgo } from "@/lib/utils";
 import type { CommunityAreaSummary, CommunityAuthorSummary } from "@/lib/types";
 
 /**
@@ -92,29 +92,36 @@ export function PostHeader({
             <Link
               href={`/community/u/${author.communityUsername}`}
               onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-0.5 truncate font-semibold text-ink-800 hover:underline"
+              className={cn(
+                "inline-flex items-center gap-0.5 truncate py-2 font-semibold text-ink-800 hover:underline dark:text-ink-100",
+                focusRing
+              )}
             >
               {displayName}
               {author.verified && <BadgeCheck size={size === "md" ? 15 : 13} className="shrink-0 text-brand-600" aria-label="Verified member" />}
             </Link>
           ) : (
-            <span className="truncate font-semibold text-ink-800">{displayName}</span>
+            <span className="truncate font-semibold text-ink-800 dark:text-ink-100">{displayName}</span>
           )}
           {!isSelf && author.communityUsername && (
-            <>
-              <span className="text-ink-300">·</span>
-              <button
-                type="button"
-                onClick={handleFollow}
-                disabled={toggling}
-                className={cn(
-                  "font-semibold transition-colors duration-150 disabled:opacity-50",
-                  following ? "text-ink-400 hover:text-ink-600" : "text-crimson-600 hover:text-crimson-700 hover:underline"
-                )}
-              >
-                {following ? "Following" : "Follow"}
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={handleFollow}
+              disabled={toggling}
+              aria-pressed={following}
+              className={cn(
+                "relative inline-flex h-8 shrink-0 items-center gap-1 rounded-full px-3 text-sm font-semibold after:absolute after:-inset-2 after:content-['']",
+                interactiveTransition,
+                focusRing,
+                "disabled:opacity-50",
+                following
+                  ? "text-ink-500 hover:bg-ink-100 dark:text-ink-400 dark:hover:bg-ink-800"
+                  : "border border-crimson-200 text-crimson-600 hover:bg-crimson-50 dark:border-crimson-800 dark:text-crimson-400 dark:hover:bg-crimson-500/15"
+              )}
+            >
+              {following && <Check size={14} strokeWidth={2} />}
+              {following ? "Following" : "Follow"}
+            </button>
           )}
         </p>
         <p className="text-xs text-ink-400">

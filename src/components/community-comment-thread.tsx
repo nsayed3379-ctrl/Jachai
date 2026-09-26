@@ -9,7 +9,7 @@ import { useAuthModal } from "@/lib/auth-modal-context";
 import { useCommunityUsernameModal } from "@/lib/community-username-modal-context";
 import { applyVoteDelta } from "@/lib/community-vote";
 import { errorMessage, useToast } from "@/lib/toast-context";
-import { avatarColorClass, avatarInitials, cn, timeAgo } from "@/lib/utils";
+import { avatarColorClass, avatarInitials, cn, focusRing, interactiveTransition, timeAgo } from "@/lib/utils";
 import type { CommunityCommentResponse, CommunityPostVoteType } from "@/lib/types";
 import { Badge } from "./ui/misc";
 import { VoteControls } from "./vote-controls";
@@ -20,6 +20,8 @@ interface ThreadProps {
   postId: string;
   comments: CommunityCommentResponse[];
   isPostAuthor: boolean;
+  /** The post author's communityProfileId — marks their comments with an "OP" badge. */
+  postAuthorId: string;
   /** Top-level items are "Answers" (with Best Answer marking) instead of plain "Comments". */
   isQuestion?: boolean;
   onCommentAdded: (comment: CommunityCommentResponse) => void;
@@ -35,6 +37,7 @@ export function CommunityCommentThread({
   postId,
   comments,
   isPostAuthor,
+  postAuthorId,
   isQuestion = false,
   onCommentAdded,
   onCommentChanged,
@@ -61,6 +64,7 @@ export function CommunityCommentThread({
           allComments={comments}
           postId={postId}
           isPostAuthor={isPostAuthor}
+          postAuthorId={postAuthorId}
           isQuestion={isQuestion}
           onCommentAdded={onCommentAdded}
           onCommentChanged={onCommentChanged}
@@ -78,6 +82,7 @@ interface CommentNodeProps {
   allComments: CommunityCommentResponse[];
   postId: string;
   isPostAuthor: boolean;
+  postAuthorId: string;
   isQuestion: boolean;
   onCommentAdded: (comment: CommunityCommentResponse) => void;
   onCommentChanged: (comment: CommunityCommentResponse) => void;
@@ -91,6 +96,7 @@ function CommentNode({
   allComments,
   postId,
   isPostAuthor,
+  postAuthorId,
   isQuestion,
   onCommentAdded,
   onCommentChanged,
@@ -114,6 +120,7 @@ function CommentNode({
   const canDelete = isCommentAuthor || isPostAuthor;
   const displayName = comment.author.communityUsername ? `u/${comment.author.communityUsername}` : "[deleted]";
   const isAnswer = isQuestion && comment.depth === 0;
+  const isOP = comment.author.id === postAuthorId;
 
   async function handleVote(type: CommunityPostVoteType) {
     await communityApi.voteComment(postId, comment.id, type);
@@ -213,11 +220,19 @@ function CommentNode({
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-semibold text-ink-800">
               {comment.author.communityUsername ? (
-                <Link href={`/community/u/${comment.author.communityUsername}`} className="hover:underline">
+                <Link
+                  href={`/community/u/${comment.author.communityUsername}`}
+                  className={cn("inline-block py-2 hover:underline", focusRing)}
+                >
                   {displayName}
                 </Link>
               ) : (
                 displayName
+              )}
+              {isOP && (
+                <Badge tone="crimson" className="ml-1 px-1.5 py-0 text-[10px] uppercase tracking-wide">
+                  OP
+                </Badge>
               )}
               {comment.author.verified && (
                 <span title="Verified member" className="ml-1 text-brand-600">
@@ -228,9 +243,14 @@ function CommentNode({
             </p>
             {canDelete && (
               <button
+                type="button"
                 onClick={handleDelete}
                 disabled={deleting}
-                className="shrink-0 text-[11px] text-ink-400 hover:text-rose-600 disabled:opacity-50"
+                className={cn(
+                  "relative shrink-0 text-[11px] text-ink-400 hover:text-rose-600 disabled:opacity-50 after:absolute after:-inset-2 after:content-['']",
+                  interactiveTransition,
+                  focusRing
+                )}
               >
                 Delete
               </button>
@@ -247,7 +267,15 @@ function CommentNode({
               orientation="horizontal"
             />
             {comment.depth < MAX_REPLY_DEPTH && (
-              <button type="button" onClick={startReply} className="text-xs font-medium text-ink-500 hover:text-crimson-700">
+              <button
+                type="button"
+                onClick={startReply}
+                className={cn(
+                  "inline-flex min-h-11 items-center rounded-full px-3 text-xs font-medium text-ink-500 hover:bg-ink-100 hover:text-crimson-700 dark:text-ink-400 dark:hover:bg-ink-800",
+                  interactiveTransition,
+                  focusRing
+                )}
+              >
                 Reply
               </button>
             )}
@@ -257,7 +285,9 @@ function CommentNode({
                 onClick={handleToggleBestAnswer}
                 disabled={markingBest}
                 className={cn(
-                  "inline-flex items-center gap-1 text-xs font-medium disabled:opacity-50",
+                  "relative inline-flex items-center gap-1 text-xs font-medium disabled:opacity-50 after:absolute after:-inset-2 after:content-['']",
+                  interactiveTransition,
+                  focusRing,
                   comment.isBestAnswer ? "text-gold-700 hover:text-gold-800" : "text-ink-500 hover:text-crimson-700"
                 )}
               >
@@ -278,13 +308,13 @@ function CommentNode({
                   if (e.key === "Escape") setReplying(false);
                 }}
                 placeholder={`Reply to ${displayName}…`}
-                className="flex-1 rounded-full border border-ink-200 bg-surface px-3.5 py-1.5 text-sm placeholder:text-ink-300 focus:outline-none focus:ring-2 focus:ring-crimson-500/30 focus:border-crimson-500"
+                className="flex-1 rounded-full border border-ink-200 bg-surface px-3.5 py-1.5 text-sm placeholder:text-ink-300 focus:outline-none focus:ring-2 focus:ring-crimson-500/30 focus:border-crimson-500 dark:border-ink-700"
               />
               <button
                 type="button"
                 onClick={submitReply}
                 disabled={submittingReply || !replyText.trim()}
-                className="text-sm font-semibold text-crimson-700 disabled:opacity-40"
+                className={cn("min-h-11 rounded-full px-3 text-sm font-semibold text-crimson-700 disabled:opacity-40", focusRing)}
               >
                 Reply
               </button>
@@ -302,6 +332,7 @@ function CommentNode({
               allComments={allComments}
               postId={postId}
               isPostAuthor={isPostAuthor}
+              postAuthorId={postAuthorId}
               isQuestion={isQuestion}
               onCommentAdded={onCommentAdded}
               onCommentChanged={onCommentChanged}

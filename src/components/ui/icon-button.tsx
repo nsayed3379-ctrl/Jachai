@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn, focusRing, interactiveTransition } from "@/lib/utils";
 import { ButtonHTMLAttributes, forwardRef } from "react";
 import { buttonVariantClasses, type ButtonVariant } from "./button";
 
@@ -24,8 +24,9 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
         ref={ref}
         type="button"
         className={cn(
-          "inline-flex min-h-11 min-w-11 items-center justify-center rounded-full transition-all",
-          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-crimson-500",
+          "inline-flex min-h-11 min-w-11 items-center justify-center rounded-full",
+          interactiveTransition,
+          focusRing,
           "disabled:cursor-not-allowed disabled:opacity-50",
           size === "md" && "min-h-12 min-w-12",
           buttonVariantClasses[variant],

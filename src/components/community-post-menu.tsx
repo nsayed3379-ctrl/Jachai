@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Flag, Lock, LockOpen, MoreHorizontal, Trash2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Copy, EyeOff, Flag, Lock, LockOpen, MoreHorizontal, Trash2 } from "lucide-react";
+import { useToast } from "@/lib/toast-context";
+import { cn, focusRing } from "@/lib/utils";
 import type { CommunityQuestionStatus } from "@/lib/types";
 import { ReportButton } from "./report-button";
+import { IconButton } from "./ui/icon-button";
 
 /**
  * Three-dot overflow menu replacing the old always-visible "Delete" text
@@ -22,6 +24,7 @@ export function PostMenu({
   questionStatus,
   onCloseQuestion,
   onReopenQuestion,
+  onHide,
 }: {
   isAuthor: boolean;
   canReport: boolean;
@@ -32,7 +35,10 @@ export function PostMenu({
   questionStatus?: CommunityQuestionStatus | null;
   onCloseQuestion?: () => void;
   onReopenQuestion?: () => void;
+  /** "Not interested" — local-only feed dismissal. Present on the feed card, absent on the post detail page. */
+  onHide?: (e: React.MouseEvent) => void;
 }) {
+  const { show } = useToast();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -54,10 +60,31 @@ export function PostMenu({
     };
   }, [open]);
 
-  if (!isAuthor && !canReport) return null;
+  if (!isAuthor && !canReport && !onHide) return null;
 
-  const itemClass =
-    "flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-ink-700 transition-colors duration-150 hover:bg-ink-50 disabled:cursor-not-allowed disabled:opacity-50";
+  async function copyLink() {
+    setOpen(false);
+    const url = `${window.location.origin}/community/${targetId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      show("Link copied", "success");
+    } catch {
+      show(url, "info");
+    }
+  }
+
+  const itemClass = cn(
+    "flex min-h-11 w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-ink-700 hover:bg-ink-50 disabled:cursor-not-allowed disabled:opacity-50 dark:text-ink-300 dark:hover:bg-ink-800",
+    focusRing
+  );
+  // Separate from itemClass rather than an override — Report's rose color is
+  // its resting state (not just a hover tint), and cn() has no tailwind-merge
+  // to resolve two competing `text-*` classes if this were layered on top of
+  // itemClass's own `text-ink-700`.
+  const itemClassDanger = cn(
+    "flex min-h-11 w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-rose-600 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-50",
+    focusRing
+  );
 
   return (
     <div
@@ -69,16 +96,16 @@ export function PostMenu({
         e.stopPropagation();
       }}
     >
-      <button
-        type="button"
+      <IconButton
+        variant="ghost"
+        size="sm"
         onClick={() => setOpen((v) => !v)}
         aria-label="Post options"
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex h-7 w-7 items-center justify-center rounded-full text-ink-400 transition-colors duration-150 hover:bg-ink-100 hover:text-ink-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-crimson-500"
       >
-        <MoreHorizontal size={17} />
-      </button>
+        <MoreHorizontal size={18} strokeWidth={1.75} />
+      </IconButton>
 
       {/*
         Kept mounted at all times (visibility toggled via the "hidden" class,
@@ -92,10 +119,28 @@ export function PostMenu({
       <div
         role="menu"
         className={cn(
-          "absolute right-0 top-full z-20 mt-1 w-40 origin-top-right rounded-lg border border-ink-100 bg-surface p-1 shadow-pop",
+          "absolute right-0 top-full z-20 mt-1 w-48 origin-top-right rounded-lg border border-ink-100 bg-surface p-1 shadow-pop dark:border-ink-700",
           open ? "block animate-scale-in" : "hidden"
         )}
       >
+        {onHide && (
+          <button
+            type="button"
+            role="menuitem"
+            onClick={(e) => {
+              setOpen(false);
+              onHide(e);
+            }}
+            className={itemClass}
+          >
+            <EyeOff size={15} />
+            Hide post
+          </button>
+        )}
+        <button type="button" role="menuitem" onClick={copyLink} className={itemClass}>
+          <Copy size={15} />
+          Copy link
+        </button>
         {isAuthor && questionStatus && questionStatus !== "CLOSED" && (
           <button
             type="button"
@@ -140,24 +185,27 @@ export function PostMenu({
           </button>
         )}
         {!isAuthor && canReport && (
-          <ReportButton
-            targetType="COMMUNITY_POST"
-            targetId={targetId}
-            trigger={(openModal) => (
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setOpen(false);
-                  openModal();
-                }}
-                className={itemClass}
-              >
-                <Flag size={15} />
-                Report
-              </button>
-            )}
-          />
+          <>
+            <div className="my-1 border-t border-ink-100 dark:border-ink-700" />
+            <ReportButton
+              targetType="COMMUNITY_POST"
+              targetId={targetId}
+              trigger={(openModal) => (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setOpen(false);
+                    openModal();
+                  }}
+                  className={itemClassDanger}
+                >
+                  <Flag size={15} />
+                  Report
+                </button>
+              )}
+            />
+          </>
         )}
       </div>
     </div>

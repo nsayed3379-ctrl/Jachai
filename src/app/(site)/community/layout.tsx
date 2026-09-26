@@ -26,9 +26,19 @@ export default function CommunityLayout({ children }: { children: React.ReactNod
       </aside>
 
       <div className="min-w-0 flex-1">
-        <Suspense fallback={null}>
-          <CommunityMobileNav className="mb-0.5 lg:hidden" />
-        </Suspense>
+        {/* Sticks right under the fixed main navbar (h-16) while the feed scrolls under it —
+            was a plain in-flow row before, so it scrolled away with the rest of the page.
+            A wrapping div carries the sticky positioning rather than passing it through
+            CommunityMobileNav's own className, which already sets `position: relative`
+            internally (for its dropdown menu) — two position utilities on the same
+            element would fight over the same CSS property with no reliable winner.
+            Hidden at lg+ (same breakpoint CommunityMobileNav itself hides at) since the
+            desktop sidebar takes over then — no point keeping an empty sticky box around. */}
+        <div className="sticky top-16 z-40 -mx-4 mb-2 border-b border-ink-100 bg-surface/95 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6 lg:hidden dark:border-ink-700">
+          <Suspense fallback={null}>
+            <CommunityMobileNav />
+          </Suspense>
+        </div>
         {children}
       </div>
 

@@ -2,14 +2,16 @@
 
 import { useState, type ReactNode } from "react";
 import Image from "next/image";
+import { MoreHorizontal } from "lucide-react";
 import { reviewApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useLanguage } from "@/lib/language-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
-import { avatarColorClass, avatarInitials, cn, timeAgo, truncateId } from "@/lib/utils";
+import { avatarColorClass, avatarInitials, cn, focusRing, interactiveTransition, timeAgo, truncateId } from "@/lib/utils";
 import type { ReviewResponse, VoteType } from "@/lib/types";
 import { StarDisplay } from "./star-rating";
 import { Badge } from "./ui/misc";
+import { IconButton } from "./ui/icon-button";
 import { ReportButton } from "./report-button";
 import { PhotoGalleryModal } from "./photo-gallery-modal";
 
@@ -98,7 +100,15 @@ export function ReviewCard({
             </div>
           </div>
         </div>
-        <ReportButton targetType="REVIEW" targetId={review.id} />
+        <ReportButton
+          targetType="REVIEW"
+          targetId={review.id}
+          trigger={(openModal) => (
+            <IconButton variant="ghost" size="sm" onClick={openModal} aria-label="Report this review">
+              <MoreHorizontal size={18} strokeWidth={1.75} />
+            </IconButton>
+          )}
+        />
       </div>
 
       {content && (
@@ -153,7 +163,7 @@ export function ReviewCard({
       />
 
       {review.ownerReply && (
-        <div className="mt-3 rounded-lg border border-ink-100 bg-sand-50/70 p-3">
+        <div className="mt-3 rounded-r-lg border-l-2 border-ink-200 bg-ink-50/60 pl-3 py-2 dark:border-ink-700 dark:bg-ink-800/40">
           <p className="text-xs font-bold text-ink-700">
             {t("review_card.owner_response")}
             {review.ownerRepliedAt && (
@@ -172,6 +182,7 @@ export function ReviewCard({
             active={reacted.has("USEFUL")}
             disabled={!user || voting !== null}
             label={t("review_card.mark_useful")}
+            displayLabel={t("review_card.useful_short")}
             onClick={() => vote("USEFUL")}
           />
           <ReactionButton
@@ -180,6 +191,7 @@ export function ReviewCard({
             active={reacted.has("FUNNY")}
             disabled={!user || voting !== null}
             label={t("review_card.mark_funny")}
+            displayLabel={t("review_card.funny_short")}
             onClick={() => vote("FUNNY")}
           />
           <ReactionButton
@@ -188,16 +200,26 @@ export function ReviewCard({
             active={reacted.has("COOL")}
             disabled={!user || voting !== null}
             label={t("review_card.mark_cool")}
+            displayLabel={t("review_card.cool_short")}
             onClick={() => vote("COOL")}
           />
         </div>
 
         {isOwnReview && review.editable && (
           <div className="flex gap-3 text-xs">
-            <button onClick={() => onEdit?.(review)} className="text-crimson-700 hover:underline font-medium">
+            <button
+              type="button"
+              onClick={() => onEdit?.(review)}
+              className={cn("rounded font-medium text-crimson-700 hover:underline", focusRing)}
+            >
               {t("common.edit")}
             </button>
-            <button onClick={handleDelete} disabled={deleting} className="text-rose-600 hover:underline font-medium">
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              className={cn("rounded font-medium text-rose-600 hover:underline disabled:opacity-50", focusRing)}
+            >
               {t("common.delete")}
             </button>
           </div>
@@ -216,6 +238,7 @@ function ReactionButton({
   active,
   disabled,
   label,
+  displayLabel,
   onClick,
 }: {
   icon: ReactNode;
@@ -223,6 +246,7 @@ function ReactionButton({
   active: boolean;
   disabled: boolean;
   label: string;
+  displayLabel: string;
   onClick: () => void;
 }) {
   return (
@@ -230,15 +254,21 @@ function ReactionButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
+      aria-pressed={active}
       aria-label={label}
       title={label}
       className={cn(
-        "flex items-center gap-1.5 text-sm font-medium transition-colors disabled:cursor-default",
-        active ? "text-crimson-700" : "text-ink-400 hover:text-crimson-600 disabled:hover:text-ink-400"
+        "inline-flex min-h-9 items-center gap-1.5 rounded-full px-2.5 text-sm font-medium disabled:cursor-default disabled:opacity-60",
+        interactiveTransition,
+        focusRing,
+        active
+          ? "bg-crimson-50 text-crimson-600 dark:bg-crimson-500/15 dark:text-crimson-400"
+          : "text-ink-400 hover:bg-ink-100 hover:text-ink-700 disabled:hover:bg-transparent disabled:hover:text-ink-400 dark:hover:bg-ink-800 dark:hover:text-ink-200"
       )}
     >
       {icon}
-      <span>{count}</span>
+      <span className="hidden sm:inline">{displayLabel}</span>
+      <span className="tabular-nums">{count}</span>
     </button>
   );
 }

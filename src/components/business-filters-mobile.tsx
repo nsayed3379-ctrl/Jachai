@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ChevronDown, MapPin, Search } from "lucide-react";
+import { cn, focusRing, interactiveTransition } from "@/lib/utils";
 import type { PriceTier, SortOption } from "@/lib/types";
 import { Button } from "./ui/button";
 import { BottomSheet } from "./ui/bottom-sheet";
@@ -61,8 +61,10 @@ function CompactSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         className={cn(
-          "flex h-9 w-full items-center justify-between gap-1 rounded-xl border bg-surface px-2.5 text-xs font-medium text-ink-800 transition-colors duration-150",
-          open ? "border-crimson-400" : "border-ink-200"
+          "flex min-h-11 w-full items-center justify-between gap-1 rounded-xl border bg-surface px-2.5 text-xs font-medium text-ink-800 dark:bg-surface dark:text-ink-100",
+          interactiveTransition,
+          focusRing,
+          open ? "border-crimson-400" : "border-ink-200 dark:border-ink-700"
         )}
       >
         <span className="truncate">{selected?.label ?? options[0]?.label}</span>
@@ -85,8 +87,9 @@ function CompactSelect({
                 setOpen(false);
               }}
               className={cn(
-                "block w-full rounded-lg px-3 py-2 text-left text-sm transition-colors duration-150",
-                opt.value === value ? "bg-crimson-50 font-semibold text-crimson-700" : "text-ink-700 hover:bg-ink-50"
+                "block min-h-11 w-full rounded-lg px-3 py-2 text-left text-sm transition-colors duration-150 dark:hover:bg-ink-800",
+                focusRing,
+                opt.value === value ? "bg-crimson-50 font-semibold text-crimson-700 dark:bg-crimson-500/15 dark:text-crimson-400" : "text-ink-700 dark:text-ink-300"
               )}
             >
               {opt.label}
@@ -129,9 +132,14 @@ function FiltersSheetContent({
       <button
         type="button"
         onClick={onUseMyLocation}
-        className="w-full flex items-center gap-2.5 h-12 px-4 rounded-xl border border-ink-200 text-sm font-medium text-ink-700 hover:border-crimson-300 hover:text-crimson-700 transition-colors"
+        className={cn(
+          "w-full flex items-center gap-2.5 h-12 px-4 rounded-xl border border-ink-200 text-sm font-medium text-ink-700 hover:border-crimson-300 hover:text-crimson-700 dark:border-ink-700 dark:text-ink-300",
+          interactiveTransition,
+          focusRing
+        )}
       >
-        📍 {locationStatus === "granted" ? "Using your location" : "Use my location"}
+        <MapPin size={18} strokeWidth={1.75} className="shrink-0" />
+        {locationStatus === "granted" ? "Using your location" : "Use my location"}
       </button>
 
       <div className="mt-6">
@@ -214,12 +222,12 @@ export function MobileFilters({ value, onChange, onUseMyLocation, locationStatus
       </div>
 
       <div className="flex gap-1.5">
-        <Button className="flex-1 h-9 rounded-xl text-sm" onClick={onSearch}>
-          🔍 Search
+        <Button className="flex-1 min-h-11 rounded-xl text-sm" onClick={onSearch}>
+          <Search size={16} strokeWidth={1.75} /> Search
         </Button>
         <Button
           variant="outline"
-          className="relative h-9 rounded-xl px-4 text-sm"
+          className="relative min-h-11 rounded-xl px-4 text-sm"
           onClick={() => setSheetOpen(true)}
         >
           Filters

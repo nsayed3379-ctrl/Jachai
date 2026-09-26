@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Flag } from "lucide-react";
 import { reportApi } from "@/lib/api";
 import { REPORT_REASON_LABELS } from "@/lib/config";
 import { useAuth } from "@/lib/auth-context";
@@ -56,15 +57,17 @@ export function ReportButton({
       {trigger ? (
         trigger(() => setOpen(true))
       ) : (
-        <button
+        // unstyled — kept deliberately quiet (ink-400, not ghost's darker ink-700 default)
+        // since Report is meant to stay low-priority, not compete visually with real actions.
+        <Button
+          variant="unstyled"
+          size="sm"
           onClick={() => setOpen(true)}
-          className="text-xs text-ink-400 hover:text-rose-600 inline-flex items-center gap-1"
+          className="min-h-11 text-ink-400 hover:bg-rose-500/10 hover:text-rose-600"
         >
-          <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M4 3v14M4 3h9l-1.5 3L13 9H4" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <Flag size={14} strokeWidth={1.75} />
           Report
-        </button>
+        </Button>
       )}
 
       {/*

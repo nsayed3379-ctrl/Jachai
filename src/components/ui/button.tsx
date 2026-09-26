@@ -1,7 +1,7 @@
-import { cn } from "@/lib/utils";
+import { cn, focusRing, interactiveTransition } from "@/lib/utils";
 import { ButtonHTMLAttributes, forwardRef } from "react";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "outline";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "outline" | "link-external" | "unstyled";
 type Size = "sm" | "md" | "lg";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -17,6 +17,16 @@ export const buttonVariantClasses: Record<ButtonVariant, string> = {
   outline: "border border-ink-200 text-ink-800 bg-surface hover:border-crimson-300 hover:text-crimson-700 disabled:text-ink-300",
   ghost: "text-ink-700 hover:bg-ink-100 disabled:text-ink-300",
   danger: "bg-rose-500 text-white hover:bg-rose-600 disabled:bg-ink-200",
+  // Same look as outline — for links to external destinations (social profiles, websites).
+  // A distinct name so call sites read as intent ("this leaves the site"), not just styling.
+  "link-external": "border border-ink-200 text-ink-800 bg-surface hover:border-crimson-300 hover:text-crimson-700 disabled:text-ink-300",
+  // No color/background at all — an escape hatch for one-off controls (e.g. a save button
+  // floating over a photo) that need full, conditional control over their own color via
+  // className. Since `cn()` is plain clsx with no tailwind-merge, any *other* variant here
+  // would leave its own color classes in the DOM alongside a caller's override, and which
+  // one wins would depend on unpredictable CSS source order — this variant contributes no
+  // classes, so there's nothing to conflict with.
+  unstyled: "",
 };
 
 const sizeClasses: Record<Size, string> = {
@@ -32,8 +42,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={cn(
-          "inline-flex items-center justify-center rounded-full font-semibold transition-all",
-          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-crimson-500",
+          "inline-flex items-center justify-center rounded-full font-semibold",
+          interactiveTransition,
+          focusRing,
           "disabled:cursor-not-allowed disabled:shadow-none",
           buttonVariantClasses[variant],
           sizeClasses[size],

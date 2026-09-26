@@ -4,7 +4,7 @@ import { useState, type TouchEvent } from "react";
 import { getOpenStatus } from "@/lib/business-hours";
 import { PRICE_TIER_LABELS } from "@/lib/config";
 import type { BusinessResponse } from "@/lib/types";
-import { cn, distanceKm, formatDistance } from "@/lib/utils";
+import { cn, distanceKm, focusRing, formatDistance, interactiveTransition } from "@/lib/utils";
 import { BranchSwitcher } from "./branch-switcher";
 import { GalleryImage } from "./gallery-image";
 import { PhotoGalleryModal } from "./photo-gallery-modal";
@@ -182,7 +182,7 @@ export function BusinessHeroGallery({
                 type="button"
                 onClick={onShowDistance}
                 disabled={locationStatus === "locating"}
-                className="pointer-events-auto underline decoration-white/50 hover:decoration-white disabled:opacity-60"
+                className={cn("pointer-events-auto rounded underline decoration-white/50 hover:decoration-white disabled:opacity-60", focusRing)}
               >
                 {locationStatus === "locating" ? "Locating…" : "Show distance from me"}
               </button>
@@ -233,7 +233,11 @@ export function BusinessHeroGallery({
                 type="button"
                 onClick={() => shift(-1)}
                 aria-label="Show previous photo"
-                className="absolute left-3 sm:left-6 top-[38%] sm:top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-ink-700 shadow-lift transition-colors hover:bg-white"
+                className={cn(
+                  "absolute left-3 sm:left-6 top-[38%] sm:top-1/2 -translate-y-1/2 flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white/90 text-ink-700 shadow-lift hover:bg-white",
+                  interactiveTransition,
+                  focusRing
+                )}
               >
                 <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2">
                   <path d="M12 15l-5-5 5-5" strokeLinecap="round" strokeLinejoin="round" />
@@ -243,7 +247,11 @@ export function BusinessHeroGallery({
                 type="button"
                 onClick={() => shift(1)}
                 aria-label="Show next photo"
-                className="absolute right-3 sm:right-6 top-[38%] sm:top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-ink-700 shadow-lift transition-colors hover:bg-white"
+                className={cn(
+                  "absolute right-3 sm:right-6 top-[38%] sm:top-1/2 -translate-y-1/2 flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white/90 text-ink-700 shadow-lift hover:bg-white",
+                  interactiveTransition,
+                  focusRing
+                )}
               >
                 <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2">
                   <path d="M8 15l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />

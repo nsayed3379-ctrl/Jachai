@@ -3,6 +3,11 @@ import type { Config } from "tailwindcss";
 const config: Config = {
   darkMode: "class",
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
+  future: {
+    // Hover styles only apply on devices that actually support :hover (mouse/trackpad) —
+    // otherwise a tapped element on touch screens can get stuck showing its hover state.
+    hoverOnlyWhenSupported: true,
+  },
   theme: {
     extend: {
       screens: {

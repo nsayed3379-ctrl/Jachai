@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BadgeCheck, Store, X } from "lucide-react";
+import { BadgeCheck, Store } from "lucide-react";
 import { communityApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
@@ -77,26 +77,6 @@ export function CommunityPostCard({
     onDeleted(post.id);
   }
 
-  async function handleShare(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    const url = `${window.location.origin}/community/${post.id}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ url, title: post.title ?? "Jachai Community" });
-      } catch {
-        // user cancelled the share sheet — not an error
-      }
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      show("Link copied", "success");
-    } catch {
-      show(url, "info");
-    }
-  }
-
   // Plain div instead of a wrapping <Link> — the header and business badge
   // below render their own <a> tags, and nested anchors are invalid HTML
   // that Next hydrates differently than the browser parses (causes the
@@ -122,15 +102,6 @@ export function CommunityPostCard({
     >
       <div className="flex items-start justify-between gap-2">
         <PostHeader author={post.author} area={post.area} createdAt={post.createdAt} size="sm" />
-        <button
-          type="button"
-          onClick={handleHide}
-          aria-label="Hide this post"
-          title="Not interested — hide this post"
-          className="shrink-0 rounded-full p-1 text-ink-400 transition-colors duration-150 hover:bg-ink-100 hover:text-ink-700"
-        >
-          <X size={16} />
-        </button>
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -183,8 +154,7 @@ export function CommunityPostCard({
         </span>
       )}
 
-      {/* Quora-style action row: separate "Upvote · N" / bare-downvote pills
-          (not one fused Reddit-style score pill), matching the reference feed card. */}
+      {/* Reddit-style action row: one fused vote pill, comment/share pills, and a ⋯ menu. */}
       <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
           <VoteControls
@@ -193,11 +163,12 @@ export function CommunityPostCard({
             myVote={post.myVote}
             onVote={handleVote}
             size="sm"
-            orientation="split"
+            orientation="horizontal"
           />
           <PostActions
             commentCount={post.postType === "QUESTION" ? post.answerCount : post.commentCount}
-            onShare={handleShare}
+            shareUrl={`/community/${post.id}`}
+            shareTitle={post.title ?? "Jachai Community"}
             label={post.postType === "QUESTION" ? "Answer" : "Comment"}
           />
         </div>
@@ -207,6 +178,7 @@ export function CommunityPostCard({
           targetId={post.id}
           onDelete={handleDelete}
           deleting={deleting}
+          onHide={handleHide}
         />
       </div>
     </div>

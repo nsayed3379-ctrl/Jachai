@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn, focusRing, interactiveTransition } from "@/lib/utils";
 
 export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
@@ -87,9 +87,14 @@ export function Pagination({
   return (
     <div className="flex items-center justify-center gap-1.5 mt-6">
       <button
+        type="button"
         onClick={() => onChange(Math.max(0, page - 1))}
         disabled={page === 0}
-        className="px-4 py-1.5 text-sm font-medium rounded-full border border-ink-200 disabled:opacity-30 hover:border-crimson-300 hover:text-crimson-700"
+        className={cn(
+          "min-h-11 px-4 text-sm font-medium rounded-full border border-ink-200 disabled:opacity-30 hover:border-crimson-300 hover:text-crimson-700 dark:border-ink-700 dark:hover:border-crimson-700",
+          interactiveTransition,
+          focusRing
+        )}
       >
         Prev
       </button>
@@ -97,9 +102,14 @@ export function Pagination({
         Page {page + 1} of {totalPages}
       </span>
       <button
+        type="button"
         onClick={() => onChange(Math.min(totalPages - 1, page + 1))}
         disabled={page >= totalPages - 1}
-        className="px-4 py-1.5 text-sm font-medium rounded-full border border-ink-200 disabled:opacity-30 hover:border-crimson-300 hover:text-crimson-700"
+        className={cn(
+          "min-h-11 px-4 text-sm font-medium rounded-full border border-ink-200 disabled:opacity-30 hover:border-crimson-300 hover:text-crimson-700 dark:border-ink-700 dark:hover:border-crimson-700",
+          interactiveTransition,
+          focusRing
+        )}
       >
         Next
       </button>

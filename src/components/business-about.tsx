@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { Globe, Mail } from "lucide-react";
 import { getOpenStatus } from "@/lib/business-hours";
 import type { BusinessResponse } from "@/lib/types";
 import { trackEvent } from "@/lib/analytics";
+import { cn, focusRing, interactiveTransition } from "@/lib/utils";
+import { Facebook, Instagram, WhatsApp } from "./icons/brand";
 
 const ABOUT_PREVIEW_LENGTH = 280;
 
@@ -50,6 +53,38 @@ function externalHref(raw: string) {
   return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
 }
 
+/** One glyph in the SocialLinks row — 44px hit area, brand-icon-or-Lucide inside a neutral circle. */
+function SocialIconLink({
+  href,
+  label,
+  external = true,
+  onClick,
+  children,
+}: {
+  href: string;
+  label: string;
+  external?: boolean;
+  onClick?: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className={cn(
+        "flex size-11 items-center justify-center rounded-full bg-ink-100 text-ink-700 hover:bg-ink-200 dark:bg-ink-800 dark:text-ink-300 dark:hover:bg-ink-700",
+        interactiveTransition,
+        focusRing
+      )}
+    >
+      {children}
+    </a>
+  );
+}
+
 /**
  * "About" section (spec) — renders only the information that exists. No empty
  * fields, no empty cards. Fed entirely from the single business response, so
@@ -58,6 +93,7 @@ function externalHref(raw: string) {
 export function BusinessAbout({ business }: { business: BusinessResponse }) {
   const {
     id,
+    name,
     description,
     contactNumber,
     whatsappNumber,
@@ -107,92 +143,45 @@ export function BusinessAbout({ business }: { business: BusinessResponse }) {
               </Row>
             )}
 
-            {whatsappNumber && (
-              <Row
-                icon={
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 21l2.2-5.3A8.5 8.5 0 1 1 21 11.5Z" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                }
-              >
-                <a
-                  href={waLink(whatsappNumber)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => trackEvent(id, "WHATSAPP_CLICK")}
-                  className="hover:text-crimson-700"
-                >
-                  WhatsApp {whatsappNumber}
-                </a>
-              </Row>
-            )}
-
-            {email && (
-              <Row
-                icon={
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="5" width="18" height="14" rx="2" />
-                    <path d="m3 7 9 6 9-6" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                }
-              >
-                <a href={`mailto:${email}`} className="hover:text-crimson-700 break-all">
-                  {email}
-                </a>
-              </Row>
-            )}
-
-            {websiteUrl && (
-              <Row
-                icon={
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                }
-              >
-                <a
-                  href={externalHref(websiteUrl)}
-                  target="_blank"
-                  rel="noopener nofollow noreferrer"
-                  onClick={() => trackEvent(id, "WEBSITE_CLICK")}
-                  className="hover:text-crimson-700 break-all"
-                >
-                  {websiteUrl.replace(/^https?:\/\//i, "")}
-                </a>
-              </Row>
-            )}
-
-            {facebookUrl && (
-              <Row
-                icon={
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
-                    <path d="M13.5 21v-8h2.7l.4-3h-3.1V8.1c0-.87.24-1.46 1.5-1.46H17V4.06C16.7 4.02 15.8 3.93 14.76 3.93c-2.17 0-3.66 1.32-3.66 3.75V10H8.4v3h2.7v8Z" />
-                  </svg>
-                }
-              >
-                <a href={externalHref(facebookUrl)} target="_blank" rel="noopener noreferrer" className="hover:text-crimson-700">
-                  Facebook
-                </a>
-              </Row>
-            )}
-
-            {instagramUrl && (
-              <Row
-                icon={
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="3" width="18" height="18" rx="5" />
-                    <circle cx="12" cy="12" r="4" />
-                    <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
-                  </svg>
-                }
-              >
-                <a href={externalHref(instagramUrl)} target="_blank" rel="noopener noreferrer" className="hover:text-crimson-700">
-                  Instagram
-                </a>
-              </Row>
-            )}
           </div>
+
+          {(whatsappNumber || email || websiteUrl || facebookUrl || instagramUrl) && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {whatsappNumber && (
+                <SocialIconLink
+                  href={waLink(whatsappNumber)}
+                  label={`Open ${name} on WhatsApp (new tab)`}
+                  onClick={() => trackEvent(id, "WHATSAPP_CLICK")}
+                >
+                  <WhatsApp className="h-5 w-5" />
+                </SocialIconLink>
+              )}
+              {email && (
+                <SocialIconLink href={`mailto:${email}`} label={`Email ${name}`} external={false}>
+                  <Mail size={20} strokeWidth={1.75} />
+                </SocialIconLink>
+              )}
+              {websiteUrl && (
+                <SocialIconLink
+                  href={externalHref(websiteUrl)}
+                  label={`Open ${name}'s website (new tab)`}
+                  onClick={() => trackEvent(id, "WEBSITE_CLICK")}
+                >
+                  <Globe size={20} strokeWidth={1.75} />
+                </SocialIconLink>
+              )}
+              {facebookUrl && (
+                <SocialIconLink href={externalHref(facebookUrl)} label={`Open ${name} on Facebook (new tab)`}>
+                  <Facebook className="h-5 w-5" />
+                </SocialIconLink>
+              )}
+              {instagramUrl && (
+                <SocialIconLink href={externalHref(instagramUrl)} label={`Open ${name} on Instagram (new tab)`}>
+                  <Instagram className="h-5 w-5" />
+                </SocialIconLink>
+              )}
+            </div>
+          )}
         </section>
       )}
 

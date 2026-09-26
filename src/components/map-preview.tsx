@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import "leaflet/dist/leaflet.css";
+import { trackEvent } from "@/lib/analytics";
+import { cn, focusRing, interactiveTransition } from "@/lib/utils";
 
 /**
  * Spec §17(b): consumer-side profile map. Interactive OpenStreetMap tiles via
@@ -14,10 +16,13 @@ export function MapPreview({
   latitude,
   longitude,
   name,
+  businessId,
 }: {
   latitude: number;
   longitude: number;
   name: string;
+  /** Optional — only the business detail page has a business to attribute the click to. */
+  businessId?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("leaflet").Map | null>(null);
@@ -70,7 +75,12 @@ export function MapPreview({
         href={directionsUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="absolute bottom-3 right-3 z-[500] rounded-full bg-surface/95 px-3 py-1.5 text-xs font-medium text-ink-700 shadow hover:bg-surface"
+        onClick={() => businessId && trackEvent(businessId, "DIRECTIONS_CLICK")}
+        className={cn(
+          "absolute bottom-3 right-3 z-[500] rounded-full bg-surface/95 px-3 py-1.5 text-xs font-medium text-ink-700 shadow hover:bg-surface",
+          interactiveTransition,
+          focusRing
+        )}
       >
         Get directions →
       </a>
