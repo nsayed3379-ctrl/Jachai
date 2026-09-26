@@ -1,265 +1,166 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { userApi, uploadFileToPresignedUrl } from "@/lib/api";
-import { RoleGate } from "@/components/role-gate";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Bookmark, Languages, Moon, Phone, Receipt, Smile, Star, Store, Tag, User } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { useCommunityUsernameModal } from "@/lib/community-username-modal-context";
 import { useLanguage } from "@/lib/language-context";
 import { useTheme } from "@/lib/theme-context";
 import { errorMessage, useToast } from "@/lib/toast-context";
-import type { PreferredLanguage } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import { Input, Label } from "@/components/ui/field";
-import { ErrorBanner, PageSpinner } from "@/components/ui/misc";
+import { avatarInitials, cn, focusRing } from "@/lib/utils";
+import { PageSpinner } from "@/components/ui/misc";
+import { Sheet } from "@/components/ui/sheet";
+import { ScreenHeader } from "@/components/account/screen-header";
+import { LanguageOptions } from "@/components/account/preferences-screen";
+import { ProfileEditScreen } from "@/components/account/profile-edit-screen";
+import {
+  SettingsCard,
+  SettingsDangerRow,
+  SettingsNavRow,
+  SettingsSectionTitle,
+  SettingsToggleRow,
+  SettingsValueRow,
+} from "@/components/account/settings-row";
 
-function AccountContent() {
-  const { show } = useToast();
-  const { setProfile: setAuthProfile } = useAuth();
-  const { theme, setTheme } = useTheme();
+function MobileSettingsList() {
+  const router = useRouter();
+  const { user, profile, logout, switchAccount } = useAuth();
   const { t } = useLanguage();
-  const fileRef = useRef<HTMLInputElement>(null);
+  const { theme, setTheme } = useTheme();
+  const { show } = useToast();
+  const { openModal } = useCommunityUsernameModal();
+  const [languageSheetOpen, setLanguageSheetOpen] = useState(false);
+  const [switching, setSwitching] = useState(false);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  if (!profile) return <PageSpinner />;
 
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [name, setName] = useState("");
-  const [preferredLanguage, setPreferredLanguage] = useState<PreferredLanguage>("en");
-  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
-  const [communityUsername, setCommunityUsername] = useState<string | null>(null);
-  const [communityAvatarUrl, setCommunityAvatarUrl] = useState<string | null>(null);
-  const [uploadingCommunityAvatar, setUploadingCommunityAvatar] = useState(false);
-  const communityAvatarFileRef = useRef<HTMLInputElement>(null);
+  const isBusinessAccount = user?.role === "BUSINESS_OWNER";
+  const canSwitchAccount = Boolean(profile.hasLinkedAccount);
 
-  useEffect(() => {
-    userApi
-      .me()
-      .then((profile) => {
-        setPhoneNumber(profile.phoneNumber);
-        setName(profile.name ?? "");
-        setPreferredLanguage(profile.preferredLanguage);
-        setProfilePhotoUrl(profile.profilePhotoUrl);
-        setCommunityUsername(profile.communityUsername);
-        setCommunityAvatarUrl(profile.communityAvatarUrl);
-        setAuthProfile(profile);
-      })
-      .catch((err) => setError(errorMessage(err)))
-      .finally(() => setLoading(false));
-  }, []);
-
-  async function handlePhotoUpload(file: File | undefined) {
-    if (!file) return;
-    setUploadingPhoto(true);
+  async function handleSwitchAccount() {
+    setSwitching(true);
     try {
-      const presigned = await userApi.requestPhotoUploadUrl(file.name);
-      await uploadFileToPresignedUrl(presigned.uploadUrl, file);
-      setProfilePhotoUrl(presigned.cdnUrlAfterUpload);
+      await switchAccount();
+      router.push(isBusinessAccount ? "/" : "/owner");
     } catch (err) {
       show(errorMessage(err), "error");
     } finally {
-      setUploadingPhoto(false);
-      if (fileRef.current) fileRef.current.value = "";
+      setSwitching(false);
     }
   }
 
-  // Saved immediately on upload (its own endpoint/toggle), unlike the account photo above which
-  // only takes effect once "Save" is pressed — this avatar is a separate identity from the rest
-  // of this form, so it shouldn't be bundled into the same unsaved-changes state.
-  async function handleCommunityAvatarUpload(file: File | undefined) {
-    if (!file) return;
-    setUploadingCommunityAvatar(true);
-    try {
-      const presigned = await userApi.requestCommunityAvatarUploadUrl(file.name);
-      await uploadFileToPresignedUrl(presigned.uploadUrl, file);
-      const updated = await userApi.updateCommunityAvatar(presigned.cdnUrlAfterUpload);
-      setCommunityAvatarUrl(updated.communityAvatarUrl);
-      setAuthProfile(updated);
-      show(t("account.community_avatar.toast.updated"), "success");
-    } catch (err) {
-      show(errorMessage(err), "error");
-    } finally {
-      setUploadingCommunityAvatar(false);
-      if (communityAvatarFileRef.current) communityAvatarFileRef.current.value = "";
+  function handleCommunityProfileClick() {
+    if (profile!.communityUsername) {
+      router.push("/account/community");
+    } else {
+      openModal(() => router.push("/account/community"));
     }
   }
-
-  async function removeCommunityAvatar() {
-    setUploadingCommunityAvatar(true);
-    try {
-      const updated = await userApi.updateCommunityAvatar(null);
-      setCommunityAvatarUrl(null);
-      setAuthProfile(updated);
-    } catch (err) {
-      show(errorMessage(err), "error");
-    } finally {
-      setUploadingCommunityAvatar(false);
-    }
-  }
-
-  async function save() {
-    setSaving(true);
-    try {
-      const updated = await userApi.update(name.trim() || null, preferredLanguage, profilePhotoUrl);
-      setAuthProfile(updated);
-      show(t("account.toast.updated"), "success");
-    } catch (err) {
-      show(errorMessage(err), "error");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  if (loading) return <PageSpinner />;
-  if (error) return <ErrorBanner message={error} />;
 
   return (
-    <div className="max-w-sm mx-auto">
-      <h1 className="font-display text-2xl font-bold text-ink-900 text-center">{t("account.title")}</h1>
+    <div>
+      <ScreenHeader title="Settings" onBack={() => router.back()} />
 
-      <div className="mt-6 space-y-4">
-        <div>
-          <Label htmlFor="phone">{t("account.mobile_number")}</Label>
-          <Input id="phone" value={phoneNumber} disabled />
-        </div>
-
-        <div>
-          <Label htmlFor="name">{t("account.name")}</Label>
-          <Input
-            id="name"
-            placeholder={t("account.name_placeholder")}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </div>
-
-        <div>
-          <Label>{t("account.profile_picture")}</Label>
-          <div className="flex items-center gap-3">
-            {profilePhotoUrl ? (
+      <div className="pb-10">
+        <SettingsCard className="mt-4">
+          <button
+            type="button"
+            onClick={() => router.push("/account/profile")}
+            className={cn("flex w-full items-center gap-3 px-4 py-3 text-left active:bg-ink-50 dark:active:bg-ink-800", focusRing)}
+          >
+            {profile.profilePhotoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={profilePhotoUrl}
-                alt="Profile"
-                className="h-12 w-12 rounded-full object-cover border border-ink-200"
-              />
+              <img src={profile.profilePhotoUrl} alt="" className="size-16 shrink-0 rounded-full object-cover" />
             ) : (
-              <div className="h-12 w-12 rounded-full bg-ink-100 border border-ink-200" />
-            )}
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={(e) => handlePhotoUpload(e.target.files?.[0])}
-              className="text-xs text-ink-500"
-            />
-          </div>
-          {uploadingPhoto && <span className="text-xs text-ink-400">{t("account.uploading")}</span>}
-        </div>
-
-        <div className="rounded-lg border border-dashed border-ink-200 p-3">
-          <Label>{t("account.community_avatar.label")}</Label>
-          {communityUsername ? (
-            <>
-              <div className="flex items-center gap-3">
-                {communityAvatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={communityAvatarUrl}
-                    alt="Community avatar"
-                    className="h-12 w-12 rounded-full object-cover border border-ink-200"
-                  />
-                ) : (
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-crimson-50 text-sm font-bold text-crimson-700 border border-ink-200">
-                    {communityUsername.slice(0, 2).toUpperCase()}
-                  </div>
-                )}
-                <input
-                  ref={communityAvatarFileRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={(e) => handleCommunityAvatarUpload(e.target.files?.[0])}
-                  className="text-xs text-ink-500"
-                />
+              <div className="flex size-16 shrink-0 items-center justify-center rounded-full bg-ink-100 text-lg font-bold text-ink-400 dark:bg-ink-800">
+                {avatarInitials(profile.name)}
               </div>
-              {uploadingCommunityAvatar && <span className="text-xs text-ink-400">{t("account.uploading")}</span>}
-              {communityAvatarUrl && !uploadingCommunityAvatar && (
-                <button
-                  type="button"
-                  onClick={removeCommunityAvatar}
-                  className="mt-1.5 text-xs font-medium text-rose-600 hover:underline"
-                >
-                  {t("account.community_avatar.remove")}
-                </button>
-              )}
-              <p className="mt-1.5 text-xs text-ink-400">{t("account.community_avatar.hint")}</p>
-            </>
-          ) : (
-            <p className="text-xs text-ink-400">{t("account.community_avatar.no_username_hint")}</p>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[17px] font-semibold text-ink-900 dark:text-ink-100">
+                {profile.name || profile.phoneNumber}
+              </p>
+              <p className="truncate text-sm text-ink-500">
+                {profile.phoneNumber} · {isBusinessAccount ? "Business account" : "Personal account"}
+              </p>
+              <p className="text-sm font-medium text-crimson-600">Edit profile ›</p>
+            </div>
+          </button>
+        </SettingsCard>
+
+        <SettingsSectionTitle>Account</SettingsSectionTitle>
+        <SettingsCard>
+          <SettingsNavRow icon={User} label="Edit profile" href="/account/profile" />
+          <SettingsNavRow
+            icon={Smile}
+            label="Community profile"
+            value={profile.communityUsername ? `u/${profile.communityUsername}` : undefined}
+            onClick={handleCommunityProfileClick}
+          />
+          <SettingsValueRow icon={Phone} label={t("account.mobile_number")} value={profile.phoneNumber} />
+          {canSwitchAccount && (
+            <SettingsNavRow
+              icon={Store}
+              label={isBusinessAccount ? "Switch to personal account" : "Switch to business account"}
+              onClick={handleSwitchAccount}
+              disabled={switching}
+            />
           )}
+        </SettingsCard>
+
+        <SettingsSectionTitle>Preferences</SettingsSectionTitle>
+        <SettingsCard>
+          <SettingsNavRow
+            icon={Languages}
+            label="Language"
+            value={profile.preferredLanguage === "bn" ? t("account.language.bn") : t("account.language.en")}
+            onClick={() => setLanguageSheetOpen(true)}
+          />
+          <SettingsToggleRow
+            icon={Moon}
+            label="Dark mode"
+            checked={theme === "dark"}
+            onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+          />
+        </SettingsCard>
+
+        <SettingsSectionTitle>Activity</SettingsSectionTitle>
+        <SettingsCard>
+          <SettingsNavRow icon={Star} label="My reviews" href="/me/reviews" />
+          <SettingsNavRow icon={Bookmark} label="Saved" href="/me/bookmarks" />
+          <SettingsNavRow icon={Receipt} label="Orders & bookings" href="/orders" />
+          <SettingsNavRow icon={Tag} label="My offers" href="/me/offers" />
+        </SettingsCard>
+
+        <div className="mt-6">
+          <SettingsCard>
+            <SettingsDangerRow label="Log out" onClick={() => logout()} />
+          </SettingsCard>
         </div>
 
-        <div>
-          <Label>{t("account.language")}</Label>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setPreferredLanguage("en")}
-              className={`rounded border px-3 py-2 text-sm ${
-                preferredLanguage === "en" ? "border-crimson-600 bg-crimson-50 text-crimson-800" : "border-ink-200 text-ink-600"
-              }`}
-            >
-              {t("account.language.en")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setPreferredLanguage("bn")}
-              className={`rounded border px-3 py-2 text-sm ${
-                preferredLanguage === "bn" ? "border-crimson-600 bg-crimson-50 text-crimson-800" : "border-ink-200 text-ink-600"
-              }`}
-            >
-              {t("account.language.bn")}
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <Label>{t("account.appearance")}</Label>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setTheme("light")}
-              className={`rounded border px-3 py-2 text-sm ${
-                theme === "light" ? "border-crimson-600 bg-crimson-50 text-crimson-800" : "border-ink-200 text-ink-600"
-              }`}
-            >
-              {t("account.theme.light")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setTheme("dark")}
-              className={`rounded border px-3 py-2 text-sm ${
-                theme === "dark" ? "border-crimson-600 bg-crimson-50 text-crimson-800" : "border-ink-200 text-ink-600"
-              }`}
-            >
-              {t("account.theme.dark")}
-            </button>
-          </div>
-        </div>
-
-        <Button className="w-full" onClick={save} loading={saving || uploadingPhoto}>
-          {t("account.save")}
-        </Button>
+        <p className="mt-8 text-center text-xs text-ink-400">Jachai · v1.0.0</p>
       </div>
+
+      <Sheet open={languageSheetOpen} onClose={() => setLanguageSheetOpen(false)} labelledBy="language-sheet-heading">
+        <h2 id="language-sheet-heading" className="px-4 pt-4 text-sm font-semibold text-ink-500">
+          {t("account.language")}
+        </h2>
+        <LanguageOptions onSelected={() => setLanguageSheetOpen(false)} />
+      </Sheet>
     </div>
   );
 }
 
 export default function AccountPage() {
   return (
-    <RoleGate>
-      <AccountContent />
-    </RoleGate>
+    <>
+      <div className="md:hidden">
+        <MobileSettingsList />
+      </div>
+      <div className="hidden md:block">
+        <ProfileEditScreen />
+      </div>
+    </>
   );
 }
